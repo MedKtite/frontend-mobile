@@ -2,24 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../models/book.dart';
+import '../models/catalog_book.dart';
 import '../screens/auth/check_email_screen.dart';
 import '../screens/auth/forgot_password_screen.dart';
 import '../screens/auth/login_screen.dart';
 import '../screens/auth/register_screen.dart';
 import '../screens/auth/reset_password_screen.dart';
 import '../screens/home/home_screen.dart';
-import '../screens/library/library_screen.dart';
+import '../screens/discovery/catalog_book_screen.dart';
+import '../screens/discovery/discovery_screen.dart';
 import '../screens/onboarding/onboarding_screen.dart';
 import '../screens/reading/reading_screen.dart';
 import '../screens/search/search_screen.dart';
 import '../screens/settings/settings_screen.dart';
 import '../screens/splash/splash_screen.dart';
 
-/// Route vocabulary ([Routes]) and the app-wide [GoRouter] ([appRouter]) in one
-/// file. Reference the [Routes] constants instead of bare strings so a typo is a
-/// compile error and renames stay in one place. Screens import this file only
-/// for the [Routes] vocabulary — the resulting screen↔routes import cycle is
-/// resolved lazily by Dart and is harmless (no top-level init depends on it).
 abstract final class Routes {
   static const splash = '/splash';
   static const onboarding = '/onboarding';
@@ -33,27 +30,24 @@ abstract final class Routes {
   static const library = '/library';
   static const settings = '/settings';
 
-  /// Reading view. The actual GoRoute path is `'$reading/:bookId'`; build a
-  /// concrete location with [readingPath].
+
   static const reading = '/reading';
   static String readingPath(String bookId) => '$reading/$bookId';
+
+  static const catalogBook = '/catalog-book';
 }
 
-/// App-wide [GoRouter]. Splash is the entry; it auto-advances into onboarding.
 final GoRouter appRouter = GoRouter(
   initialLocation: Routes.splash,
   routes: [
     GoRoute(
       path: Routes.splash,
       builder: (context, state) => SplashScreen(
-        // First launch → onboarding. (Returning user → Home once auth lands.)
         onComplete: () => context.go(Routes.onboarding),
       ),
     ),
     GoRoute(
       path: Routes.onboarding,
-      // Dissolve in from the splash (§17 — the repeated wordmark morphs).
-      // OnboardingScreen links to Login/Register itself (see its CTAs).
       pageBuilder: (context, state) => CustomTransitionPage(
         key: state.pageKey,
         transitionDuration: const Duration(milliseconds: 400),
@@ -94,7 +88,6 @@ final GoRouter appRouter = GoRouter(
     ),
     GoRoute(
       path: Routes.library,
-      // The Add sheet can request the search field be focused on arrival.
       builder: (context, state) =>
           LibraryScreen(autofocusSearch: state.extra as bool? ?? false),
     ),
@@ -103,8 +96,11 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) => const SettingsScreen(),
     ),
     GoRoute(
-      // Library hands over the full Book via `extra`; Home passes only the id
-      // (ReadingScreen fetches it). Push onto the current tab so back returns.
+      path: Routes.catalogBook,
+      builder: (context, state) =>
+          CatalogBookScreen(book: state.extra as CatalogBook),
+    ),
+    GoRoute(
       path: '${Routes.reading}/:bookId',
       builder: (context, state) => ReadingScreen(
         bookId: state.pathParameters['bookId']!,

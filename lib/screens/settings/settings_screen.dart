@@ -7,6 +7,7 @@ import '../../app/theme/tokens/colors.dart';
 import '../../app/theme/tokens/radii.dart';
 import '../../app/theme/tokens/spacing.dart';
 import '../../app/theme/tokens/typography.dart';
+import '../../core/widgets/app_snackbar.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/state/auth_state.dart';
 import '../../widgets/auth_scaffold.dart';
@@ -17,11 +18,8 @@ import '../../widgets/auth_scaffold.dart';
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
-  void _comingSoon(BuildContext context, String what) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text('$what — coming soon')));
-  }
+  void _comingSoon(BuildContext context, String what) =>
+      showAppSnack(context, '$what — coming soon');
 
   Future<void> _signOut(BuildContext context, WidgetRef ref) async {
     await ref.read(authProvider.notifier).logout();
@@ -30,7 +28,6 @@ class SettingsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final colors = context.appColors;
     final auth = ref.watch(authProvider);
     final user = auth is AuthAuthenticated ? auth.user : null;
 
@@ -40,7 +37,6 @@ class SettingsScreen extends ConsumerWidget {
         user?.avatarInitial ?? (name.isEmpty ? '?' : name[0].toUpperCase());
 
     return Scaffold(
-      backgroundColor: colors.bg,
       body: SafeArea(
         child: Column(
           children: [

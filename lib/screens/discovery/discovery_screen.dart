@@ -10,6 +10,7 @@ import '../../app/theme/tokens/radii.dart';
 import '../../app/theme/tokens/spacing.dart';
 import '../../app/theme/tokens/typography.dart';
 import '../../core/dio_client.dart';
+import '../../core/widgets/app_snackbar.dart';
 import '../../models/book.dart';
 import '../../models/book_create_request.dart';
 import '../../models/book_update_request.dart';
@@ -40,13 +41,7 @@ enum _Filter {
       };
 }
 
-/// Library tab — the 3-column cover grid over the user's own collection
-/// (`GET /me/books`), with status filters. The one search field does double
-/// duty: it filters your own shelves *and* (debounced) searches the Google
-/// Books catalog, so a query surfaces your matches first and the catalog
-/// (with Add buttons) right below — no separate "add a book" screen.
-///
-/// [autofocusSearch] lets the Add sheet drop you straight into that field.
+
 class LibraryScreen extends ConsumerStatefulWidget {
   const LibraryScreen({super.key, this.autofocusSearch = false});
 
@@ -63,7 +58,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
   final _searchFocus = FocusNode();
   Timer? _debounce;
 
-  String _query = ''; // live text → instant local filter
+  String _query = ''; 
   String _catalogQuery = ''; // debounced text → catalog (Google Books) search
 
   // Per-result add state, keyed by [_key] (catalog rows).
@@ -136,10 +131,8 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
       case NavTab.profile:
         context.push(Routes.settings);
       default:
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(SnackBar(content: Text(
-              '${tab.name[0].toUpperCase()}${tab.name.substring(1)} — coming soon')));
+        showAppSnack(context,
+            '${tab.name[0].toUpperCase()}${tab.name.substring(1)} — coming soon');
     }
   }
 
@@ -159,9 +152,9 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     if (error == null) {
       ref.invalidate(libraryBooksProvider);
       messenger.showSnackBar(
-          SnackBar(content: Text('Moved “${book.title}” to $shelf')));
+          appSnackBar('Moved “${book.title}” to $shelf', SnackType.success));
     } else {
-      messenger.showSnackBar(SnackBar(content: Text(error)));
+      messenger.showSnackBar(appSnackBar(error, SnackType.error));
     }
   }
 
@@ -178,10 +171,10 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     final messenger = ScaffoldMessenger.of(context)..hideCurrentSnackBar();
     if (error == null) {
       ref.invalidate(libraryBooksProvider);
-      messenger
-          .showSnackBar(SnackBar(content: Text('Removed “${book.title}”')));
+      messenger.showSnackBar(
+          appSnackBar('Removed “${book.title}”', SnackType.success));
     } else {
-      messenger.showSnackBar(SnackBar(content: Text(error)));
+      messenger.showSnackBar(appSnackBar(error, SnackType.error));
     }
   }
 
@@ -246,10 +239,10 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     final messenger = ScaffoldMessenger.of(context)..hideCurrentSnackBar();
     if (error == null) {
       ref.invalidate(libraryBooksProvider);
-      messenger
-          .showSnackBar(SnackBar(content: Text('Added “${c.title}” to $shelf')));
+      messenger.showSnackBar(
+          appSnackBar('Added “${c.title}” to $shelf', SnackType.success));
     } else {
-      messenger.showSnackBar(SnackBar(content: Text(error)));
+      messenger.showSnackBar(appSnackBar(error, SnackType.error));
     }
   }
 
@@ -259,7 +252,6 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     final booksAsync = ref.watch(libraryBooksProvider);
 
     return Scaffold(
-      backgroundColor: colors.bg,
       extendBody: true,
       bottomNavigationBar: GlassNavBar(current: NavTab.library, onSelect: _onTab),
       floatingActionButton: FloatingActionButton(
@@ -306,7 +298,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
             ],
           ),
           const SizedBox(height: AppSpacing.sm),
-          Text('Library', style: AppTypography.display(colors.text)),
+          Text('Discovery', style: AppTypography.display(colors.text)),
           const SizedBox(height: AppSpacing.xs),
           Text(
             '${books.length} ${books.length == 1 ? 'volume' : 'volumes'}',
@@ -403,6 +395,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
               added: _added,
               keyOf: _key,
               onAdd: _add,
+              onOpen: (c) => context.push(Routes.catalogBook, extra: c),
             ),
     );
   }
@@ -535,6 +528,7 @@ class _CatalogGrid extends StatelessWidget {
     required this.added,
     required this.keyOf,
     required this.onAdd,
+    required this.onOpen,
   });
 
   final List<CatalogBook> books;
@@ -542,6 +536,7 @@ class _CatalogGrid extends StatelessWidget {
   final Set<String> added;
   final String Function(CatalogBook) keyOf;
   final ValueChanged<CatalogBook> onAdd;
+  final ValueChanged<CatalogBook> onOpen;
 
   @override
   Widget build(BuildContext context) {
@@ -562,6 +557,7 @@ class _CatalogGrid extends StatelessWidget {
                   adding: adding.contains(keyOf(b)),
                   added: added.contains(keyOf(b)),
                   onAdd: () => onAdd(b),
+                  onOpen: () => onOpen(b),
                 ),
               ),
           ],
@@ -578,6 +574,7 @@ class _CatalogGridCell extends StatelessWidget {
     required this.adding,
     required this.added,
     required this.onAdd,
+    required this.onOpen,
   });
 
   final CatalogBook book;
@@ -585,6 +582,7 @@ class _CatalogGridCell extends StatelessWidget {
   final bool adding;
   final bool added;
   final VoidCallback onAdd;
+  final VoidCallback onOpen;
 
   @override
   Widget build(BuildContext context) {
@@ -598,9 +596,10 @@ class _CatalogGridCell extends StatelessWidget {
           height: width * 1.5,
           child: Stack(
             children: [
-              // Tap the cover (or the badge) to add; no reader exists yet.
+              // Tap the cover → full book page (buy/request/add); the corner
+              // badge stays as the quick-add.
               GestureDetector(
-                onTap: busy ? null : onAdd,
+                onTap: onOpen,
                 child: BookCover(
                   title: book.title,
                   author: book.author ?? '',

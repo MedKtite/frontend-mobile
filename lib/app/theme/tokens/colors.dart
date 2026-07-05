@@ -25,6 +25,11 @@ class AppColors {
   // Destructive actions (e.g. Sign out). Not in §15; added for the auth/settings
   // frames. Tag colors are annotation-only (§2) so they can't be reused here.
   static const lightDanger      = Color(0xFFC0463E);
+  // Feedback tones (snackbars/status). Not in §15; muted to sit with the
+  // literary palette — success leans sage, warning leans amber-orange
+  // (kept apart from `gilt`, which is brand gold, not a status).
+  static const lightSuccess     = Color(0xFF4E7C5B);
+  static const lightWarning     = Color(0xFFB4702A);
 
   // ── Dark ────────────────────────────────────────────────────────
   static const darkBg           = Color(0xFF1A1A1C);
@@ -41,6 +46,8 @@ class AppColors {
   static const darkAccentSoft   = Color(0x143E5C76);
   static const darkGilt         = Color(0xFFC8A75C);
   static const darkDanger       = Color(0xFFE0746B);
+  static const darkSuccess      = Color(0xFF83B393);
+  static const darkWarning      = Color(0xFFD99A55);
 
   // ── Tag (identical in both modes) ──────────────────────────────
   static const tagUrgent    = Color(0xFFFF6B6B);
@@ -83,6 +90,8 @@ class AppColorsExtension extends ThemeExtension<AppColorsExtension> {
   final Color accentSoft;
   final Color gilt;
   final Color danger;
+  final Color success;
+  final Color warning;
 
   const AppColorsExtension({
     required this.bg,
@@ -99,6 +108,8 @@ class AppColorsExtension extends ThemeExtension<AppColorsExtension> {
     required this.accentSoft,
     required this.gilt,
     required this.danger,
+    required this.success,
+    required this.warning,
   });
 
   static const light = AppColorsExtension(
@@ -116,6 +127,8 @@ class AppColorsExtension extends ThemeExtension<AppColorsExtension> {
     accentSoft:   AppColors.lightAccentSoft,
     gilt:         AppColors.lightGilt,
     danger:       AppColors.lightDanger,
+    success:      AppColors.lightSuccess,
+    warning:      AppColors.lightWarning,
   );
 
   static const dark = AppColorsExtension(
@@ -133,6 +146,8 @@ class AppColorsExtension extends ThemeExtension<AppColorsExtension> {
     accentSoft:   AppColors.darkAccentSoft,
     gilt:         AppColors.darkGilt,
     danger:       AppColors.darkDanger,
+    success:      AppColors.darkSuccess,
+    warning:      AppColors.darkWarning,
   );
 
   @override
@@ -140,6 +155,7 @@ class AppColorsExtension extends ThemeExtension<AppColorsExtension> {
     Color? bg, Color? surface, Color? surface2, Color? rail, Color? quote,
     Color? border, Color? borderStrong, Color? text, Color? text2, Color? text3,
     Color? accent, Color? accentSoft, Color? gilt, Color? danger,
+    Color? success, Color? warning,
   }) {
     return AppColorsExtension(
       bg:           bg ?? this.bg,
@@ -156,6 +172,8 @@ class AppColorsExtension extends ThemeExtension<AppColorsExtension> {
       accentSoft:   accentSoft ?? this.accentSoft,
       gilt:         gilt ?? this.gilt,
       danger:       danger ?? this.danger,
+      success:      success ?? this.success,
+      warning:      warning ?? this.warning,
     );
   }
 
@@ -177,6 +195,8 @@ class AppColorsExtension extends ThemeExtension<AppColorsExtension> {
       accentSoft:   Color.lerp(accentSoft, other.accentSoft, t)!,
       gilt:         Color.lerp(gilt, other.gilt, t)!,
       danger:       Color.lerp(danger, other.danger, t)!,
+      success:      Color.lerp(success, other.success, t)!,
+      warning:      Color.lerp(warning, other.warning, t)!,
     );
   }
 }

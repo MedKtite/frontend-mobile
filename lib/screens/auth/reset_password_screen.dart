@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../app/routes.dart';
 import '../../app/theme/tokens/spacing.dart';
+import '../../core/widgets/app_snackbar.dart';
 import '../../services/frontend/auth_validators.dart';
 import '../../widgets/auth_scaffold.dart';
 import '../../widgets/auth_text_field.dart';
@@ -42,11 +43,8 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     FocusScope.of(context).unfocus();
     // TODO: call the reset endpoint with the recovery token once it exists.
     context.go(Routes.login);
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        const SnackBar(content: Text('Password updated — sign in to continue')),
-      );
+    showAppSnack(context, 'Password updated — sign in to continue',
+        type: SnackType.success);
   }
 
   @override

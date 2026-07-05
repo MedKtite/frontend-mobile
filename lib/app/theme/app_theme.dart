@@ -18,7 +18,10 @@ class AppTheme {
 
     final base = ThemeData(brightness: brightness, useMaterial3: true);
     return base.copyWith(
-      scaffoldBackgroundColor: ext.bg,
+      // Transparent: the AppBackground texture (MaterialApp.builder) is the
+      // real page surface. Screens needing an opaque surface (reading view)
+      // set their Scaffold color explicitly.
+      scaffoldBackgroundColor: Colors.transparent,
       colorScheme: base.colorScheme.copyWith(
         brightness: brightness,
         surface:    ext.surface,
@@ -70,6 +73,17 @@ class AppTheme {
         labelStyle: AppTypography.label(ext.text2),
       ),
       dividerColor: ext.border,
+      // Android's zoom page transition snapshots the outgoing screen with
+      // toImageSync — liquid_glass_renderer's transform tracker then calls
+      // markNeedsPaint mid-paint and asserts. Rendering the transition live
+      // (no snapshot) looks identical and avoids the crash entirely.
+      pageTransitionsTheme: const PageTransitionsTheme(
+        builders: {
+          TargetPlatform.android:
+              ZoomPageTransitionsBuilder(allowSnapshotting: false),
+          TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+        },
+      ),
       extensions: <ThemeExtension<dynamic>>[ext],
     );
   }

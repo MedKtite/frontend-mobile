@@ -54,7 +54,6 @@ class _SplashScreenState extends State<SplashScreen>
     final colors = context.appColors;
 
     return Scaffold(
-      backgroundColor: colors.bg,
       body: SafeArea(
         child: Stack(
           children: [

@@ -30,11 +30,16 @@ final dioProvider = Provider<Dio>((ref) {
 class DioFactory {
   DioFactory._();
 
-  /// On the Android emulator, `localhost` points to the emulator itself.
-  /// Use 10.0.2.2 to reach the host machine where the backend runs.
-  static String get defaultBaseUrl => Platform.isAndroid
-      ? 'http://10.0.2.2:8080'
-      : 'http://localhost:8080';
+  /// Backend base URL, overridable at build time for real-device testing:
+  ///   flutter run -d `<phone>` --dart-define=API_BASE_URL=http://192.168.1.6:8080
+  /// Default: 10.0.2.2 on the Android emulator (its alias for the host
+  /// machine — a REAL phone can't reach it), localhost elsewhere.
+  static const _envBaseUrl = String.fromEnvironment('API_BASE_URL');
+  static String get defaultBaseUrl => _envBaseUrl.isNotEmpty
+      ? _envBaseUrl
+      : Platform.isAndroid
+          ? 'http://10.0.2.2:8080'
+          : 'http://localhost:8080';
 
   static Future<Dio> create({String? baseUrl}) async {
     final docs = await getApplicationDocumentsDirectory();

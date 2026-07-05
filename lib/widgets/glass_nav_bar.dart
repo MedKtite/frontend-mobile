@@ -1,20 +1,13 @@
 import 'dart:ui';
-
 import 'package:flutter/material.dart';
-
+import 'package:liquid_glass_renderer/liquid_glass_renderer.dart';
 import '../app/theme/tokens/colors.dart';
 import '../app/theme/tokens/radii.dart';
 import '../app/theme/tokens/spacing.dart';
 import '../app/theme/tokens/typography.dart';
 
-/// The five main-tab destinations, in order.
 enum NavTab { home, search, library, insights, profile }
 
-/// Compact frosted bottom navigation (design-system.md §16).
-///
-/// A light `BackdropFilter` frost over a translucent surface tint, a rounded
-/// top, a hairline top border, and five tappable destinations. Content scrolls
-/// beneath it — use with `extendBody: true`.
 class GlassNavBar extends StatelessWidget {
   const GlassNavBar({
     super.key,
@@ -25,9 +18,10 @@ class GlassNavBar extends StatelessWidget {
   final NavTab current;
   final ValueChanged<NavTab> onSelect;
 
-  static const double _radius = 24; // top-corner radius (bottom corners 0)
-  static const double _barHeight = 56; // content height; +safe-area inset below
-  static const double _blur = 18;
+  static const double _radius = 28;
+  static const double _barHeight = 72; // Figma: 72px + safe-area inset below
+  static const double _blur = 20; // Figma: BACKGROUND_BLUR 20
+  static const double _glassThickness = 12; // refraction depth (liquid only)
 
   // (tab, inactive icon, active icon, label).
   static const _items = <(NavTab, IconData, IconData, String)>[
@@ -43,37 +37,58 @@ class GlassNavBar extends StatelessWidget {
     final colors = context.appColors;
     final isLight = Theme.of(context).brightness == Brightness.light;
 
-    // Translucent surface so the frost reads, but opaque enough for legibility.
-    final tint = colors.surface.withValues(alpha: isLight ? 0.82 : 0.86);
-
-    return ClipRRect(
-      borderRadius:
-          const BorderRadius.vertical(top: Radius.circular(_radius)),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: _blur, sigmaY: _blur),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: tint,
-            border: Border(top: BorderSide(color: colors.border, width: 0.5)),
-          ),
-          child: SafeArea(
-            top: false,
-            child: SizedBox(
-              height: _barHeight,
-              child: Row(
-                children: [
-                  for (final (tab, icon, activeIcon, label) in _items)
-                    Expanded(
-                      child: _NavItem(
-                        icon: tab == current ? activeIcon : icon,
-                        label: label,
-                        active: tab == current,
-                        onTap: () => onSelect(tab),
-                      ),
-                    ),
-                ],
+    final bar = SafeArea(
+      top: false,
+      child: SizedBox(
+        height: _barHeight,
+        child: Row(
+          children: [
+            for (final (tab, icon, activeIcon, label) in _items)
+              Expanded(
+                child: _NavItem(
+                  icon: tab == current ? activeIcon : icon,
+                  label: label,
+                  active: tab == current,
+                  onTap: () => onSelect(tab),
+                ),
               ),
-            ),
+          ],
+        ),
+      ),
+    );
+
+    Border hairline() =>
+        Border(top: BorderSide(color: colors.border, width: 0.5));
+
+    if (!ImageFilter.isShaderFilterSupported) {
+      // ── Skia fallback (tests, older devices): plain frost per Figma. ──
+      final tint = colors.surface.withValues(alpha: isLight ? 0.82 : 0.86);
+      return ClipRRect(
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(_radius)),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: _blur, sigmaY: _blur),
+          child: DecoratedBox(
+            decoration: BoxDecoration(color: tint, border: hairline()),
+            child: bar,
+          ),
+        ),
+      );
+    }
+
+    final tint = colors.surface.withValues(alpha: isLight ? 0.55 : 0.65);
+    return ClipRRect(
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(_radius)),
+      child: LiquidGlassLayer(
+        settings: LiquidGlassSettings(
+          glassColor: tint,
+          blur: _blur,
+          thickness: _glassThickness,
+        ),
+        child: LiquidGlass(
+          shape: LiquidRoundedSuperellipse(borderRadius: _radius),
+          child: DecoratedBox(
+            decoration: BoxDecoration(border: hairline()),
+            child: bar,
           ),
         ),
       ),
@@ -97,7 +112,6 @@ class _NavItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    // §16: active = full-strength brand ink, inactive = muted. Both from tokens.
     final color = active ? colors.accent : colors.text3;
 
     return InkWell(

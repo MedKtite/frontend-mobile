@@ -22,14 +22,27 @@ CatalogBook _$CatalogBookFromJson(Map<String, dynamic> json) {
 /// @nodoc
 mixin _$CatalogBook {
   String get title => throw _privateConstructorUsedError;
+  String? get source =>
+      throw _privateConstructorUsedError; // GUTENBERG | GOOGLE
+  String? get contentAvailability =>
+      throw _privateConstructorUsedError; // FULL | METADATA_ONLY
+  int? get gutenbergId => throw _privateConstructorUsedError;
   String? get googleId => throw _privateConstructorUsedError;
   String? get author => throw _privateConstructorUsedError;
   String? get publisher => throw _privateConstructorUsedError;
   int? get publishedYear => throw _privateConstructorUsedError;
   String? get isbn13 => throw _privateConstructorUsedError;
   int? get pageCount => throw _privateConstructorUsedError;
+  String? get language => throw _privateConstructorUsedError;
   String? get thumbnailUrl => throw _privateConstructorUsedError;
   String? get description => throw _privateConstructorUsedError;
+  double? get averageRating =>
+      throw _privateConstructorUsedError; // Google community rating 1–5, if any
+  int? get ratingsCount =>
+      throw _privateConstructorUsedError; // Google: number of ratings behind averageRating
+  int? get downloadCount =>
+      throw _privateConstructorUsedError; // Gutenberg: lifetime downloads ("readers" KPI)
+  String? get previewUrl => throw _privateConstructorUsedError;
 
   /// Serializes this CatalogBook to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -50,14 +63,22 @@ abstract class $CatalogBookCopyWith<$Res> {
   @useResult
   $Res call({
     String title,
+    String? source,
+    String? contentAvailability,
+    int? gutenbergId,
     String? googleId,
     String? author,
     String? publisher,
     int? publishedYear,
     String? isbn13,
     int? pageCount,
+    String? language,
     String? thumbnailUrl,
     String? description,
+    double? averageRating,
+    int? ratingsCount,
+    int? downloadCount,
+    String? previewUrl,
   });
 }
 
@@ -77,14 +98,22 @@ class _$CatalogBookCopyWithImpl<$Res, $Val extends CatalogBook>
   @override
   $Res call({
     Object? title = null,
+    Object? source = freezed,
+    Object? contentAvailability = freezed,
+    Object? gutenbergId = freezed,
     Object? googleId = freezed,
     Object? author = freezed,
     Object? publisher = freezed,
     Object? publishedYear = freezed,
     Object? isbn13 = freezed,
     Object? pageCount = freezed,
+    Object? language = freezed,
     Object? thumbnailUrl = freezed,
     Object? description = freezed,
+    Object? averageRating = freezed,
+    Object? ratingsCount = freezed,
+    Object? downloadCount = freezed,
+    Object? previewUrl = freezed,
   }) {
     return _then(
       _value.copyWith(
@@ -92,6 +121,18 @@ class _$CatalogBookCopyWithImpl<$Res, $Val extends CatalogBook>
                 ? _value.title
                 : title // ignore: cast_nullable_to_non_nullable
                       as String,
+            source: freezed == source
+                ? _value.source
+                : source // ignore: cast_nullable_to_non_nullable
+                      as String?,
+            contentAvailability: freezed == contentAvailability
+                ? _value.contentAvailability
+                : contentAvailability // ignore: cast_nullable_to_non_nullable
+                      as String?,
+            gutenbergId: freezed == gutenbergId
+                ? _value.gutenbergId
+                : gutenbergId // ignore: cast_nullable_to_non_nullable
+                      as int?,
             googleId: freezed == googleId
                 ? _value.googleId
                 : googleId // ignore: cast_nullable_to_non_nullable
@@ -116,6 +157,10 @@ class _$CatalogBookCopyWithImpl<$Res, $Val extends CatalogBook>
                 ? _value.pageCount
                 : pageCount // ignore: cast_nullable_to_non_nullable
                       as int?,
+            language: freezed == language
+                ? _value.language
+                : language // ignore: cast_nullable_to_non_nullable
+                      as String?,
             thumbnailUrl: freezed == thumbnailUrl
                 ? _value.thumbnailUrl
                 : thumbnailUrl // ignore: cast_nullable_to_non_nullable
@@ -123,6 +168,22 @@ class _$CatalogBookCopyWithImpl<$Res, $Val extends CatalogBook>
             description: freezed == description
                 ? _value.description
                 : description // ignore: cast_nullable_to_non_nullable
+                      as String?,
+            averageRating: freezed == averageRating
+                ? _value.averageRating
+                : averageRating // ignore: cast_nullable_to_non_nullable
+                      as double?,
+            ratingsCount: freezed == ratingsCount
+                ? _value.ratingsCount
+                : ratingsCount // ignore: cast_nullable_to_non_nullable
+                      as int?,
+            downloadCount: freezed == downloadCount
+                ? _value.downloadCount
+                : downloadCount // ignore: cast_nullable_to_non_nullable
+                      as int?,
+            previewUrl: freezed == previewUrl
+                ? _value.previewUrl
+                : previewUrl // ignore: cast_nullable_to_non_nullable
                       as String?,
           )
           as $Val,
@@ -141,14 +202,22 @@ abstract class _$$CatalogBookImplCopyWith<$Res>
   @useResult
   $Res call({
     String title,
+    String? source,
+    String? contentAvailability,
+    int? gutenbergId,
     String? googleId,
     String? author,
     String? publisher,
     int? publishedYear,
     String? isbn13,
     int? pageCount,
+    String? language,
     String? thumbnailUrl,
     String? description,
+    double? averageRating,
+    int? ratingsCount,
+    int? downloadCount,
+    String? previewUrl,
   });
 }
 
@@ -167,14 +236,22 @@ class __$$CatalogBookImplCopyWithImpl<$Res>
   @override
   $Res call({
     Object? title = null,
+    Object? source = freezed,
+    Object? contentAvailability = freezed,
+    Object? gutenbergId = freezed,
     Object? googleId = freezed,
     Object? author = freezed,
     Object? publisher = freezed,
     Object? publishedYear = freezed,
     Object? isbn13 = freezed,
     Object? pageCount = freezed,
+    Object? language = freezed,
     Object? thumbnailUrl = freezed,
     Object? description = freezed,
+    Object? averageRating = freezed,
+    Object? ratingsCount = freezed,
+    Object? downloadCount = freezed,
+    Object? previewUrl = freezed,
   }) {
     return _then(
       _$CatalogBookImpl(
@@ -182,6 +259,18 @@ class __$$CatalogBookImplCopyWithImpl<$Res>
             ? _value.title
             : title // ignore: cast_nullable_to_non_nullable
                   as String,
+        source: freezed == source
+            ? _value.source
+            : source // ignore: cast_nullable_to_non_nullable
+                  as String?,
+        contentAvailability: freezed == contentAvailability
+            ? _value.contentAvailability
+            : contentAvailability // ignore: cast_nullable_to_non_nullable
+                  as String?,
+        gutenbergId: freezed == gutenbergId
+            ? _value.gutenbergId
+            : gutenbergId // ignore: cast_nullable_to_non_nullable
+                  as int?,
         googleId: freezed == googleId
             ? _value.googleId
             : googleId // ignore: cast_nullable_to_non_nullable
@@ -206,6 +295,10 @@ class __$$CatalogBookImplCopyWithImpl<$Res>
             ? _value.pageCount
             : pageCount // ignore: cast_nullable_to_non_nullable
                   as int?,
+        language: freezed == language
+            ? _value.language
+            : language // ignore: cast_nullable_to_non_nullable
+                  as String?,
         thumbnailUrl: freezed == thumbnailUrl
             ? _value.thumbnailUrl
             : thumbnailUrl // ignore: cast_nullable_to_non_nullable
@@ -214,6 +307,22 @@ class __$$CatalogBookImplCopyWithImpl<$Res>
             ? _value.description
             : description // ignore: cast_nullable_to_non_nullable
                   as String?,
+        averageRating: freezed == averageRating
+            ? _value.averageRating
+            : averageRating // ignore: cast_nullable_to_non_nullable
+                  as double?,
+        ratingsCount: freezed == ratingsCount
+            ? _value.ratingsCount
+            : ratingsCount // ignore: cast_nullable_to_non_nullable
+                  as int?,
+        downloadCount: freezed == downloadCount
+            ? _value.downloadCount
+            : downloadCount // ignore: cast_nullable_to_non_nullable
+                  as int?,
+        previewUrl: freezed == previewUrl
+            ? _value.previewUrl
+            : previewUrl // ignore: cast_nullable_to_non_nullable
+                  as String?,
       ),
     );
   }
@@ -221,24 +330,40 @@ class __$$CatalogBookImplCopyWithImpl<$Res>
 
 /// @nodoc
 @JsonSerializable()
-class _$CatalogBookImpl implements _CatalogBook {
+class _$CatalogBookImpl extends _CatalogBook {
   const _$CatalogBookImpl({
     required this.title,
+    this.source,
+    this.contentAvailability,
+    this.gutenbergId,
     this.googleId,
     this.author,
     this.publisher,
     this.publishedYear,
     this.isbn13,
     this.pageCount,
+    this.language,
     this.thumbnailUrl,
     this.description,
-  });
+    this.averageRating,
+    this.ratingsCount,
+    this.downloadCount,
+    this.previewUrl,
+  }) : super._();
 
   factory _$CatalogBookImpl.fromJson(Map<String, dynamic> json) =>
       _$$CatalogBookImplFromJson(json);
 
   @override
   final String title;
+  @override
+  final String? source;
+  // GUTENBERG | GOOGLE
+  @override
+  final String? contentAvailability;
+  // FULL | METADATA_ONLY
+  @override
+  final int? gutenbergId;
   @override
   final String? googleId;
   @override
@@ -252,13 +377,26 @@ class _$CatalogBookImpl implements _CatalogBook {
   @override
   final int? pageCount;
   @override
+  final String? language;
+  @override
   final String? thumbnailUrl;
   @override
   final String? description;
+  @override
+  final double? averageRating;
+  // Google community rating 1–5, if any
+  @override
+  final int? ratingsCount;
+  // Google: number of ratings behind averageRating
+  @override
+  final int? downloadCount;
+  // Gutenberg: lifetime downloads ("readers" KPI)
+  @override
+  final String? previewUrl;
 
   @override
   String toString() {
-    return 'CatalogBook(title: $title, googleId: $googleId, author: $author, publisher: $publisher, publishedYear: $publishedYear, isbn13: $isbn13, pageCount: $pageCount, thumbnailUrl: $thumbnailUrl, description: $description)';
+    return 'CatalogBook(title: $title, source: $source, contentAvailability: $contentAvailability, gutenbergId: $gutenbergId, googleId: $googleId, author: $author, publisher: $publisher, publishedYear: $publishedYear, isbn13: $isbn13, pageCount: $pageCount, language: $language, thumbnailUrl: $thumbnailUrl, description: $description, averageRating: $averageRating, ratingsCount: $ratingsCount, downloadCount: $downloadCount, previewUrl: $previewUrl)';
   }
 
   @override
@@ -267,6 +405,11 @@ class _$CatalogBookImpl implements _CatalogBook {
         (other.runtimeType == runtimeType &&
             other is _$CatalogBookImpl &&
             (identical(other.title, title) || other.title == title) &&
+            (identical(other.source, source) || other.source == source) &&
+            (identical(other.contentAvailability, contentAvailability) ||
+                other.contentAvailability == contentAvailability) &&
+            (identical(other.gutenbergId, gutenbergId) ||
+                other.gutenbergId == gutenbergId) &&
             (identical(other.googleId, googleId) ||
                 other.googleId == googleId) &&
             (identical(other.author, author) || other.author == author) &&
@@ -277,10 +420,20 @@ class _$CatalogBookImpl implements _CatalogBook {
             (identical(other.isbn13, isbn13) || other.isbn13 == isbn13) &&
             (identical(other.pageCount, pageCount) ||
                 other.pageCount == pageCount) &&
+            (identical(other.language, language) ||
+                other.language == language) &&
             (identical(other.thumbnailUrl, thumbnailUrl) ||
                 other.thumbnailUrl == thumbnailUrl) &&
             (identical(other.description, description) ||
-                other.description == description));
+                other.description == description) &&
+            (identical(other.averageRating, averageRating) ||
+                other.averageRating == averageRating) &&
+            (identical(other.ratingsCount, ratingsCount) ||
+                other.ratingsCount == ratingsCount) &&
+            (identical(other.downloadCount, downloadCount) ||
+                other.downloadCount == downloadCount) &&
+            (identical(other.previewUrl, previewUrl) ||
+                other.previewUrl == previewUrl));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -288,14 +441,22 @@ class _$CatalogBookImpl implements _CatalogBook {
   int get hashCode => Object.hash(
     runtimeType,
     title,
+    source,
+    contentAvailability,
+    gutenbergId,
     googleId,
     author,
     publisher,
     publishedYear,
     isbn13,
     pageCount,
+    language,
     thumbnailUrl,
     description,
+    averageRating,
+    ratingsCount,
+    downloadCount,
+    previewUrl,
   );
 
   /// Create a copy of CatalogBook
@@ -312,24 +473,39 @@ class _$CatalogBookImpl implements _CatalogBook {
   }
 }
 
-abstract class _CatalogBook implements CatalogBook {
+abstract class _CatalogBook extends CatalogBook {
   const factory _CatalogBook({
     required final String title,
+    final String? source,
+    final String? contentAvailability,
+    final int? gutenbergId,
     final String? googleId,
     final String? author,
     final String? publisher,
     final int? publishedYear,
     final String? isbn13,
     final int? pageCount,
+    final String? language,
     final String? thumbnailUrl,
     final String? description,
+    final double? averageRating,
+    final int? ratingsCount,
+    final int? downloadCount,
+    final String? previewUrl,
   }) = _$CatalogBookImpl;
+  const _CatalogBook._() : super._();
 
   factory _CatalogBook.fromJson(Map<String, dynamic> json) =
       _$CatalogBookImpl.fromJson;
 
   @override
   String get title;
+  @override
+  String? get source; // GUTENBERG | GOOGLE
+  @override
+  String? get contentAvailability; // FULL | METADATA_ONLY
+  @override
+  int? get gutenbergId;
   @override
   String? get googleId;
   @override
@@ -343,9 +519,19 @@ abstract class _CatalogBook implements CatalogBook {
   @override
   int? get pageCount;
   @override
+  String? get language;
+  @override
   String? get thumbnailUrl;
   @override
   String? get description;
+  @override
+  double? get averageRating; // Google community rating 1–5, if any
+  @override
+  int? get ratingsCount; // Google: number of ratings behind averageRating
+  @override
+  int? get downloadCount; // Gutenberg: lifetime downloads ("readers" KPI)
+  @override
+  String? get previewUrl;
 
   /// Create a copy of CatalogBook
   /// with the given fields replaced by the non-null parameter values.

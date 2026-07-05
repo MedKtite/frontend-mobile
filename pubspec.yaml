@@ -35,6 +35,11 @@ dependencies:
   pdfx: ^2.9.2
   epub_view: ^3.2.0
   webview_flutter: ^4.13.1
+  url_launcher: ^6.3.1
+  # iOS-26-style liquid glass (nav bar). Impeller-only — every use MUST gate on
+  # ImageFilter.isShaderFilterSupported and keep a BackdropFilter fallback
+  # (CLAUDE.md §11: the fallback is what runs under `flutter test` on Windows).
+  liquid_glass_renderer: ^0.2.0-dev.4
 
 dev_dependencies:
   flutter_test:
@@ -51,3 +56,5 @@ flutter:
 
   assets:
     - assets/icons/social/
+    - assets/reader/
+    - lib/assets/images/

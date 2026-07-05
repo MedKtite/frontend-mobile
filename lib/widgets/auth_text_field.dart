@@ -3,9 +3,6 @@ import 'package:flutter/material.dart';
 import '../app/theme/tokens/colors.dart';
 import '../app/theme/tokens/typography.dart';
 
-/// Outlined text field for the auth forms. Decoration (border, radius, focus,
-/// hint color) comes from the app's [InputDecorationTheme] — this only adds the
-/// hint, the entered-text style, and an optional show/hide toggle for passwords.
 class AuthTextField extends StatefulWidget {
   const AuthTextField({
     super.key,
@@ -23,7 +20,6 @@ class AuthTextField extends StatefulWidget {
   final String? Function(String?)? validator;
   final TextInputType? keyboardType;
 
-  /// When true the field starts obscured and shows an eye toggle (passwords).
   final bool obscure;
   final TextInputAction textInputAction;
   final ValueChanged<String>? onSubmitted;
@@ -50,7 +46,6 @@ class _AuthTextFieldState extends State<AuthTextField> {
       style: AppTypography.label(colors.text),
       
       decoration: InputDecoration(
-        // adjust vertical/horizontal padding to control the field height
         isDense: true,
         border: const OutlineInputBorder(),
         filled: true,

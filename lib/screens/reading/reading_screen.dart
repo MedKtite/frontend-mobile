@@ -1,18 +1,14 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 
-// `hide Image`: epub_view re-exports the `image` package, whose `Image` clashes
-// with Flutter's Image widget (used in the EPUB img extension below).
-import 'package:epub_view/epub_view.dart' hide Image;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_html/flutter_html.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-// epub_view and pdfx both export `DefaultBuilderOptions`; hide pdfx's so the
-// EPUB reader can reference epub_view's for the typography text style.
-import 'package:pdfx/pdfx.dart' hide DefaultBuilderOptions;
+import 'package:pdfx/pdfx.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 
 import '../../app/routes.dart';
 import '../../app/theme/tokens/colors.dart';
@@ -20,9 +16,9 @@ import '../../app/theme/tokens/radii.dart';
 import '../../app/theme/tokens/spacing.dart';
 import '../../app/theme/tokens/typography.dart';
 import '../../core/dio_client.dart';
+import '../../core/widgets/app_snackbar.dart';
 import '../../models/book.dart';
 import '../../models/book_update_request.dart';
-import '../../models/highlight.dart';
 import '../../models/highlight_create_request.dart';
 import '../../models/note_create_request.dart';
 import '../../providers/book_file_provider.dart';
@@ -114,7 +110,9 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
                             child: CircularProgressIndicator(
                                 color: colors.accent)),
                   ),
-                  if (displayBook != null)
+                  // EPUB has its own paginated footer (_PagedNavBar); only the
+                  // PDF reader uses the shared progress bar.
+                  if (displayBook?.format == 'pdf')
                     ValueListenableBuilder<_ReaderProgress>(
                       valueListenable: _progress,
                       builder: (_, pr, __) =>
@@ -195,12 +193,19 @@ class _TopBar extends StatelessWidget {
         height: 36,
         child: Stack(
           children: [
+            // Inset past the side controls so a long title ellipsizes between
+            // them instead of running underneath the back arrow / "Aa".
             Align(
-              child: Text(
-                title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: AppTypography.label(colors.text2),
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: AppSpacing.xxxl),
+                child: Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: AppTypography.label(colors.text2),
+                ),
               ),
             ),
             Align(
@@ -337,10 +342,9 @@ class _PdfReaderState extends ConsumerState<_PdfReader> {
   }
 }
 
-enum _Annotate { tag, note }
-
-/// EPUB reader (epub_view). Reflowable text; progress is chapter-based (coarse
-/// but monotonic) and position resumes from a `{"type":"epub","cfi":"…"}` cursor.
+/// Paginated EPUB reader (epub.js in a WebView). Real book-style page turns —
+/// footer prev/next + left/right edge taps — resuming from a
+/// `{"type":"epubjs","cfi":"…"}` cursor, reporting page X of Y and a 0–100%.
 class _EpubReader extends ConsumerStatefulWidget {
   const _EpubReader({
     required this.file,
@@ -357,47 +361,200 @@ class _EpubReader extends ConsumerStatefulWidget {
 }
 
 class _EpubReaderState extends ConsumerState<_EpubReader> {
-  late final EpubController _controller;
+  late final WebViewController _web;
   late final BookService _books;
   Timer? _saveTimer;
+  Timer? _watchdog; // caps how long the spinner may run before failing loudly
+
+  bool _ready = false; // epub.js finished its first paginated render
+  bool _booted = false; // loadBook() was injected once
+  int _page = 0;
   int _total = 0;
   double _pct = 0;
+  String? _cfi;
+  String? _loadError; // set if epub.js can't load/parse the book
 
-  /// Latest selection plain text (epub_view gives no offsets, so the passage
-  /// text + chapter title is the whole anchor we can capture).
-  String? _selectedText;
+  // Active in-book text selection (epub.js `selected` event) → the floating
+  // highlight palette (Figma 237:17), anchored to the selection's rect.
+  String? _selCfi;
+  String? _selText;
+  Rect? _selRect;
 
   @override
   void initState() {
     super.initState();
     _books = ref.read(bookServiceProvider);
-    _controller = EpubController(
-      document: EpubDocument.openFile(widget.file),
-      epubCfi: _cursorCfi(widget.book.cursor),
+    _web = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setBackgroundColor(const Color(0x00000000))
+      ..addJavaScriptChannel('ReaderChannel', onMessageReceived: _onMessage)
+      ..setNavigationDelegate(
+        NavigationDelegate(onPageFinished: (_) => _boot()),
+      );
+    // Load separately from the cascade so a missing-asset failure (hot restart
+    // after adding assets/) becomes a visible message, not an unhandled
+    // exception + endless spinner.
+    unawaited(
+      _web.loadFlutterAsset('assets/reader/reader.html').catchError((Object _) {
+        if (mounted) {
+          setState(() => _loadError =
+              'Reader assets aren’t in this build. Stop the app fully and '
+              'run flutter run again — hot restart can’t bundle new assets.');
+        }
+      }),
     );
-    _controller.currentValueListenable.addListener(_onValue);
   }
 
-  void _onValue() {
-    final v = _controller.currentValueListenable.value;
-    if (v == null) return;
+  /// epub.js "locations" (page-count index) cached beside the EPUB — generating
+  /// it parses the whole book, so it should only ever happen once per file.
+  File get _locationsCache => File('${widget.file.path}.locations.json');
 
-    if (_total <= 0) {
-      _total = _controller.tableOfContentsListenable.value.length;
+  /// Once the shell page loads, hand epub.js the EPUB bytes plus the saved CFI
+  /// to resume from. Guarded — onPageFinished can fire more than once.
+  Future<void> _boot() async {
+    if (_booted) return;
+    _booted = true;
+    final bytes = await widget.file.readAsBytes();
+    // Encoding a multi-MB file is UI-thread jank (skipped frames on open) —
+    // do it in a background isolate.
+    final b64 = await compute(base64Encode, bytes);
+    // One giant runJavaScript string is slow and can silently truncate on
+    // Android — hand the book over in chunks instead. (base64 is quote-safe.)
+    const chunk = 512 * 1024;
+    for (var i = 0; i < b64.length; i += chunk) {
+      final end = (i + chunk < b64.length) ? i + chunk : b64.length;
+      await _web.runJavaScript("window.appendChunk('${b64.substring(i, end)}')");
     }
-    final total = _total > 0 ? _total : 1;
-    final within = v.progress.isFinite ? v.progress.clamp(0, 100) / 100 : 0.0;
-    _pct = (((v.chapterNumber - 1) + within) / total * 100)
-        .clamp(0, 100)
-        .toDouble();
+    final cfi = _cursorCfi(widget.book.cursor);
+    final cfiArg = cfi == null ? 'null' : jsonEncode(cfi);
+    var locArg = 'null';
+    try {
+      if (await _locationsCache.exists()) {
+        locArg = jsonEncode(await _locationsCache.readAsString());
+      }
+    } catch (_) {/* no cache — epub.js regenerates */}
+    _applyTheme();
+    await _web.runJavaScript('window.loadBook($cfiArg, $locArg)');
+    // If neither 'ready' nor an error ever arrives, don't spin forever.
+    _watchdog = Timer(const Duration(seconds: 30), () {
+      if (mounted && !_ready && _loadError == null) {
+        setState(() => _loadError = 'This book took too long to open.');
+      }
+    });
+  }
 
-    final title = v.chapter?.Title?.trim();
-    final label = (title != null && title.isNotEmpty)
-        ? title
-        : 'Chapter ${v.chapterNumber}';
+  /// Push current typography + palette into epub.js (bg, ink, family, size,
+  /// line-height). Called on boot and whenever the "Aa" settings change. Real
+  /// font files aren't in the WebView, so the family maps to a CSS generic.
+  void _applyTheme() {
+    final s = ref.read(readingSettingsProvider);
+    final p = s.palette;
+    final family =
+        s.font == ReaderFont.serif ? 'Georgia, serif' : 'system-ui, sans-serif';
+    _web.runJavaScript(
+      'window.setTheme("${_cssHex(p.bg)}","${_cssHex(p.text)}",'
+      '"$family",${s.fontSize.round()},${s.lineHeight},'
+      '"${_cssHex(p.accent)}")',
+    );
+  }
 
-    widget.progress.value = _ReaderProgress(_pct, label);
-    _scheduleSave();
+  void _onMessage(JavaScriptMessage m) {
+    final data = jsonDecode(m.message);
+    if (data is! Map) return;
+    switch (data['type']) {
+      case 'ready':
+        _watchdog?.cancel();
+        if (mounted) setState(() => _ready = true);
+        unawaited(_applySavedMarks());
+      case 'total':
+        final t = (data['total'] as num?)?.toInt() ?? 0;
+        if (t > 0 && mounted) setState(() => _total = t);
+      case 'location':
+        _cfi = data['cfi'] as String?;
+        final pct = (data['percent'] as num?)?.toDouble() ?? (_pct / 100);
+        final page = (data['page'] as num?)?.toInt() ?? 0;
+        final total = (data['total'] as num?)?.toInt() ?? 0;
+        if (mounted) {
+          setState(() {
+            _pct = (pct * 100).clamp(0, 100).toDouble();
+            if (page > 0) _page = page;
+            if (total > 0) _total = total;
+            // A page turn destroys any in-book selection.
+            _selCfi = null;
+            _selText = null;
+            _selRect = null;
+          });
+        }
+        widget.progress.value = _ReaderProgress(_pct, _label);
+        _scheduleSave();
+      case 'selected':
+        final selCfi = data['cfiRange'] as String?;
+        final selText = (data['text'] as String?)?.trim();
+        if (selCfi != null &&
+            selText != null &&
+            selText.isNotEmpty &&
+            mounted) {
+          final rm = data['rect'];
+          setState(() {
+            _selCfi = selCfi;
+            _selText = selText;
+            _selRect = rm is Map
+                ? Rect.fromLTWH(
+                    (rm['x'] as num?)?.toDouble() ?? 0,
+                    (rm['y'] as num?)?.toDouble() ?? 0,
+                    (rm['w'] as num?)?.toDouble() ?? 0,
+                    (rm['h'] as num?)?.toDouble() ?? 0,
+                  )
+                : null;
+          });
+        }
+      case 'selcleared':
+        if (mounted) {
+          setState(() {
+            _selCfi = null;
+            _selText = null;
+            _selRect = null;
+          });
+        }
+      case 'locations':
+        // Freshly generated page index — cache it so the next open skips the
+        // full-book parse. Best-effort; a failed write just means regenerating.
+        final json = data['json'] as String?;
+        if (json != null && json.isNotEmpty) {
+          unawaited(() async {
+            try {
+              await _locationsCache.writeAsString(json);
+            } catch (_) {}
+          }());
+        }
+      case 'error':
+        // Surface a load/parse failure instead of spinning forever.
+        _watchdog?.cancel();
+        if (mounted) {
+          setState(() => _loadError =
+              (data['message'] as String?) ?? 'Could not open this book.');
+        }
+      case 'jserror':
+        // Uncaught JS inside epub.js: fatal if the book never rendered,
+        // harmless noise once it has.
+        if (!_ready) {
+          _watchdog?.cancel();
+          if (mounted) {
+            setState(() =>
+                _loadError = 'Could not open this book. (${data['message']})');
+          }
+        }
+    }
+  }
+
+  String get _label => _total > 0 ? 'Page $_page of $_total' : 'Reading';
+
+  void _next() {
+    if (_ready) _web.runJavaScript('window.nextPage()');
+  }
+
+  void _prev() {
+    if (_ready) _web.runJavaScript('window.prevPage()');
   }
 
   void _scheduleSave() {
@@ -406,59 +563,114 @@ class _EpubReaderState extends ConsumerState<_EpubReader> {
   }
 
   void _saveNow() {
-    final cfi = _controller.generateEpubCfi();
+    final cfi = _cfi;
+    if (cfi == null) return;
     unawaited(
       _books
           .update(
             widget.book.id,
             BookUpdateRequest(
               progressPct: _pct,
-              cursor:
-                  cfi == null ? null : jsonEncode({'type': 'epub', 'cfi': cfi}),
+              cursor: jsonEncode({'type': 'epubjs', 'cfi': cfi}),
             ),
           )
           .catchError((Object _) => widget.book), // best-effort
     );
   }
 
-  @override
-  void dispose() {
-    _saveTimer?.cancel();
-    _controller.currentValueListenable.removeListener(_onValue);
-    _saveNow();
-    _controller.dispose();
-    super.dispose();
+  // ── Selection → Tag / Note ────────────────────────────────────────────
+
+  /// Paint one highlight into the book text, tag-colored.
+  void _mark(String cfiRange, String tag) {
+    _web.runJavaScript('window.applyMark(${jsonEncode(cfiRange)}, '
+        '"${_cssHex(AppColors.forTag(tag))}")');
   }
 
-  /// Selection → highlight (Tag) or highlight + note (Note). epub_view exposes no
-  /// offsets, so a highlight is anchored by passage text + chapter title only.
-  Future<void> _annotate(_Annotate action) async {
-    final passage = _selectedText?.trim();
-    if (passage == null || passage.isEmpty) return;
-    final chapter =
-        _controller.currentValueListenable.value?.chapter?.Title?.trim();
+  void _clearSelection() {
+    _web.runJavaScript('window.clearSelection()');
+    if (mounted) {
+      setState(() {
+        _selCfi = null;
+        _selText = null;
+        _selRect = null;
+      });
+    }
+  }
+
+  /// Palette color dot: one tap = highlight with that tag, no sheet.
+  Future<void> _quickTag(String tag) async {
+    final cfiRange = _selCfi;
+    final passage = _selText;
+    if (cfiRange == null || passage == null || passage.isEmpty) return;
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await ref.read(highlightServiceProvider).create(HighlightCreateRequest(
+            bookId: widget.book.id,
+            colorTag: tag,
+            passageText: passage,
+            textChapterRef: cfiRange,
+          ));
+      if (!mounted) return;
+      _mark(cfiRange, tag);
+      ref.invalidate(bookHighlightsProvider(widget.book.id));
+      _clearSelection();
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(appSnackBar('Tagged “$tag”', SnackType.success));
+    } on ApiError catch (e) {
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(appSnackBar(e.message, SnackType.error));
+    }
+  }
+
+  void _copySelection() {
+    final text = _selText;
+    if (text == null || text.isEmpty) return;
+    Clipboard.setData(ClipboardData(text: text));
+    _clearSelection();
+    showAppSnack(context, 'Copied', type: SnackType.success);
+  }
+
+  /// Re-paint saved highlights: any whose textChapterRef is an epub.js CFI
+  /// range (that's where we store the anchor) renders inline on open.
+  Future<void> _applySavedMarks() async {
+    try {
+      final hs = await ref.read(bookHighlightsProvider(widget.book.id).future);
+      for (final h in hs) {
+        final cfi = h.textChapterRef;
+        if (cfi != null && cfi.startsWith('epubcfi(')) {
+          _mark(cfi, h.colorTag ?? 'revisit');
+        }
+      }
+    } catch (_) {/* marks are decoration — never block reading */}
+  }
+
+  /// Selection → highlight (Tag) or highlight + note (Note). The CFI range is
+  /// stored in textChapterRef so the inline mark survives reopen + devices.
+  Future<void> _annotate({required bool asNote}) async {
+    final cfiRange = _selCfi;
+    final passage = _selText;
+    if (cfiRange == null || passage == null || passage.isEmpty) return;
     final messenger = ScaffoldMessenger.of(context);
 
     try {
-      if (action == _Annotate.tag) {
+      if (!asNote) {
         final tag = await showTagPickerSheet(context, passage: passage);
         if (tag == null || !mounted) return;
         await ref.read(highlightServiceProvider).create(HighlightCreateRequest(
               bookId: widget.book.id,
               colorTag: tag,
               passageText: passage,
-              textChapterRef: chapter,
+              textChapterRef: cfiRange,
             ));
         if (!mounted) return;
-        ref.invalidate(bookHighlightsProvider(widget.book.id));
+        _mark(cfiRange, tag);
         messenger
           ..hideCurrentSnackBar()
-          ..showSnackBar(SnackBar(content: Text('Tagged “$tag”')));
+          ..showSnackBar(appSnackBar('Tagged “$tag”', SnackType.success));
       } else {
-        final chapterPart = (chapter != null && chapter.isNotEmpty)
-            ? ' · ${chapter.toUpperCase()}'
-            : '';
-        final reference = 'FROM ${widget.book.title.toUpperCase()}$chapterPart';
+        final reference = 'FROM ${widget.book.title.toUpperCase()}';
         final body =
             await showNoteSheet(context, passage: passage, reference: reference);
         if (body == null || !mounted) return;
@@ -469,7 +681,7 @@ class _EpubReaderState extends ConsumerState<_EpubReader> {
               bookId: widget.book.id,
               colorTag: 'revisit',
               passageText: passage,
-              textChapterRef: chapter,
+              textChapterRef: cfiRange,
             ));
         await ref.read(noteServiceProvider).create(NoteCreateRequest(
               bookId: widget.book.id,
@@ -477,113 +689,294 @@ class _EpubReaderState extends ConsumerState<_EpubReader> {
               bodyMd: body,
             ));
         if (!mounted) return;
-        ref.invalidate(bookHighlightsProvider(widget.book.id));
+        _mark(cfiRange, 'revisit');
         messenger
           ..hideCurrentSnackBar()
-          ..showSnackBar(const SnackBar(content: Text('Note saved')));
+          ..showSnackBar(appSnackBar('Note saved', SnackType.success));
       }
+      ref.invalidate(bookHighlightsProvider(widget.book.id));
+      _clearSelection();
     } on ApiError catch (e) {
       messenger
         ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(content: Text(e.message)));
+        ..showSnackBar(appSnackBar(e.message, SnackType.error));
     }
+  }
+
+  /// Palette anchor: 12px above the selection, flipped below it when there's
+  /// no room, and always clamped inside the reader area. No rect → bottom.
+  double _paletteTop(double maxHeight) {
+    const palH = _HighlightPalette.height;
+    final r = _selRect;
+    if (r == null) return maxHeight - palH - AppSpacing.md;
+    var top = r.top - palH - AppSpacing.md;
+    if (top < AppSpacing.sm) top = r.bottom + AppSpacing.md;
+    return top.clamp(AppSpacing.sm, maxHeight - palH - AppSpacing.sm);
+  }
+
+  @override
+  void dispose() {
+    _watchdog?.cancel();
+    _saveTimer?.cancel();
+    _saveNow();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final settings = ref.watch(readingSettingsProvider);
-    final textStyle = settings.bodyTextStyle();
-    final highlights =
-        ref.watch(bookHighlightsProvider(widget.book.id)).valueOrNull ??
-            const <Highlight>[];
-    return SelectionArea(
-      onSelectionChanged: (content) => _selectedText = content?.plainText,
-      contextMenuBuilder: (context, state) =>
-          AdaptiveTextSelectionToolbar.buttonItems(
-        anchors: state.contextMenuAnchors,
-        buttonItems: <ContextMenuButtonItem>[
-          ContextMenuButtonItem(
-            label: 'Tag',
-            onPressed: () {
-              state.hideToolbar();
-              _annotate(_Annotate.tag);
-            },
+    final colors = context.appColors;
+    if (_loadError != null) {
+      return _ReaderMessage(
+        icon: Icons.menu_book_outlined,
+        text: _loadError!,
+      );
+    }
+    // Re-theme epub.js live when the "Aa" sheet changes font/size/theme.
+    ref.listen(readingSettingsProvider, (_, __) {
+      if (_ready) _applyTheme();
+    });
+
+    return Column(
+      children: [
+        Expanded(
+          child: LayoutBuilder(
+            builder: (context, box) => Stack(
+              children: [
+                Positioned.fill(child: ColoredBox(color: colors.bg)),
+                WebViewWidget(controller: _web),
+                if (!_ready)
+                  Center(
+                    child: CircularProgressIndicator(color: colors.accent),
+                  ),
+                // Floating highlight palette (Figma 237:17), anchored just
+                // above the selection; flips below it near the screen top.
+                if (_selText != null)
+                  Positioned(
+                    left: AppSpacing.md,
+                    right: AppSpacing.md,
+                    top: _paletteTop(box.maxHeight),
+                    child: Center(
+                      child: _HighlightPalette(
+                        onQuickTag: _quickTag,
+                        onNote: () => _annotate(asNote: true),
+                        onTag: () => _annotate(asNote: false),
+                        onCopy: _copySelection,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
           ),
-          ContextMenuButtonItem(
-            label: 'Note',
-            onPressed: () {
-              state.hideToolbar();
-              _annotate(_Annotate.note);
-            },
+        ),
+        _PagedNavBar(
+          pct: _pct,
+          label: _label,
+          onPrev: _ready ? _prev : null,
+          onNext: _ready ? _next : null,
+        ),
+      ],
+    );
+  }
+}
+
+
+/// Floating highlight palette (Figma 237:17): dark inverted-ink pill with five
+/// quick-tag color dots (the first five system tags) · hairline divider ·
+/// Note / Tag / Copy. One dot tap = highlight saved with that tag, no sheet.
+class _HighlightPalette extends StatelessWidget {
+  const _HighlightPalette({
+    required this.onQuickTag,
+    required this.onNote,
+    required this.onTag,
+    required this.onCopy,
+  });
+
+  static const double height = 60; // Figma: 22px dots + 19px top/bottom
+
+  final ValueChanged<String> onQuickTag;
+  final VoidCallback onNote;
+  final VoidCallback onTag;
+  final VoidCallback onCopy;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+
+    return Container(
+      height: height,
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: colors.text, // inverted ink, same trick as the primary button
+        borderRadius: BorderRadius.circular(30),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.3),
+            blurRadius: 28,
+            offset: const Offset(0, 12),
           ),
-          ...state.contextMenuButtonItems, // Copy / Select all
         ],
       ),
-      child: EpubView(
-        controller: _controller,
-        onDocumentError: (_) {},
-        builders: EpubViewBuilders<DefaultBuilderOptions>(
-          options: DefaultBuilderOptions(
-            textStyle: textStyle,
-            paragraphPadding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.readingHorizontal),
-          ),
-          chapterBuilder: (ctx, builders, document, chapters, paragraphs, index,
-              chapterIndex, paragraphIndex, onExternalLinkPressed) {
-            if (paragraphs.isEmpty) return const SizedBox.shrink();
-
-            // Approximate inline marks: wrap the first plain-text occurrence of
-            // each saved passage in a tag-colored <mark>. Misses when the quote
-            // spans HTML tags or differs by entities/whitespace.
-            var data = paragraphs[index].element.outerHtml;
-            for (final h in highlights) {
-              final passage = h.passageText;
-              if (passage == null || passage.trim().isEmpty) continue;
-              if (data.contains(passage)) {
-                data = data.replaceFirst(passage,
-                    '<mark class="hl-${h.colorTag ?? 'revisit'}">$passage</mark>');
-              }
-            }
-
-            return Column(
-              children: [
-                if (chapterIndex >= 0 && paragraphIndex == 0)
-                  builders.chapterDividerBuilder(chapters[chapterIndex]),
-                Html(
-                  data: data,
-                  onLinkTap: (href, _, __) => onExternalLinkPressed(href ?? ''),
-                  style: {
-                    'html': Style(
-                      padding: HtmlPaddings.only(
-                        left: AppSpacing.readingHorizontal,
-                        right: AppSpacing.readingHorizontal,
-                      ),
-                    ).merge(Style.fromTextStyle(textStyle)),
-                    for (final tag in kTagNames)
-                      '.hl-$tag': Style(
-                        backgroundColor:
-                            AppColors.forTag(tag).withValues(alpha: 0.35),
-                      ),
-                  },
-                  extensions: [
-                    TagExtension(
-                      tagsToExtend: const {'img'},
-                      builder: (imageContext) {
-                        final url = imageContext.attributes['src']
-                            ?.replaceAll('../', '');
-                        final bytes = url == null
-                            ? null
-                            : document.Content?.Images?[url]?.Content;
-                        if (bytes == null) return const SizedBox.shrink();
-                        return Image(
-                            image: MemoryImage(Uint8List.fromList(bytes)));
-                      },
-                    ),
-                  ],
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (final tag in kTagNames.take(5)) ...[
+            GestureDetector(
+              onTap: () => onQuickTag(tag),
+              child: Container(
+                width: 22,
+                height: 22,
+                decoration: BoxDecoration(
+                  color: AppColors.forTag(tag),
+                  shape: BoxShape.circle,
                 ),
-              ],
-            );
-          },
+              ),
+            ),
+            const SizedBox(width: 6), // Figma: 28px pitch on 22px dots
+          ],
+          const SizedBox(width: AppSpacing.sm),
+          Container(width: 1, height: 24, color: colors.bg),
+          const SizedBox(width: AppSpacing.xs),
+          _PaletteAction(label: 'Note', onTap: onNote),
+          _PaletteAction(label: 'Tag', onTap: onTag),
+          _PaletteAction(label: 'Copy', onTap: onCopy),
+        ],
+      ),
+    );
+  }
+}
+
+class _PaletteAction extends StatelessWidget {
+  const _PaletteAction({required this.label, required this.onTap});
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.sm,
+          vertical: AppSpacing.md,
+        ),
+        // Figma 237:24-26 — Inter Medium 13 in the page (bg) color.
+        child: Text(
+          label,
+          style: AppTypography.sans(TextStyle(
+            color: colors.bg,
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+          )),
+        ),
+      ),
+    );
+  }
+}
+
+/// Footer page-navigation for the paginated EPUB reader: ‹ prev · progress bar +
+/// "Page X of Y" + N% · next ›. Replaces the shared [_BottomBar] for EPUB.
+class _PagedNavBar extends StatelessWidget {
+  const _PagedNavBar({
+    required this.pct,
+    required this.label,
+    required this.onPrev,
+    required this.onNext,
+  });
+
+  final double pct;
+  final String label;
+  final VoidCallback? onPrev;
+  final VoidCallback? onNext;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.md,
+        AppSpacing.sm,
+        AppSpacing.md,
+        AppSpacing.md,
+      ),
+      child: Row(
+        children: [
+          _NavArrow(icon: Icons.chevron_left, onTap: onPrev),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+              child: Column(
+                children: [
+                  ClipRRect(
+                    borderRadius: AppRadii.brFull,
+                    child: SizedBox(
+                      height: 2,
+                      child: Stack(
+                        children: [
+                          Positioned.fill(
+                              child: ColoredBox(color: colors.border)),
+                          FractionallySizedBox(
+                            alignment: Alignment.centerLeft,
+                            widthFactor: (pct / 100).clamp(0, 1).toDouble(),
+                            child: ColoredBox(color: colors.accent),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Flexible(
+                        child: Text(
+                          label,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTypography.caption(colors.text3),
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Text('${pct.round()}%',
+                          style: AppTypography.caption(colors.text3)),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          _NavArrow(icon: Icons.chevron_right, onTap: onNext),
+        ],
+      ),
+    );
+  }
+}
+
+/// A round page-turn button; dimmed + inert until the book is ready.
+class _NavArrow extends StatelessWidget {
+  const _NavArrow({required this.icon, required this.onTap});
+  final IconData icon;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final enabled = onTap != null;
+    return Material(
+      color: colors.surface2,
+      shape: const CircleBorder(),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.sm),
+          child: Icon(
+            icon,
+            size: 24,
+            color: enabled ? colors.text : colors.text3,
+          ),
         ),
       ),
     );
@@ -780,6 +1173,10 @@ class _BottomBar extends StatelessWidget {
   }
 }
 
+/// A [Color] as an opaque CSS `#rrggbb` for epub.js theme overrides.
+String _cssHex(Color c) =>
+    '#${(c.toARGB32() & 0xFFFFFF).toRadixString(16).padLeft(6, '0')}';
+
 // ── Cursor (reading position) helpers ───────────────────────────────────────
 // The backend stores `cursor` as opaque JSONB; we own the shape per format.
 
@@ -800,6 +1197,11 @@ int _cursorPage(String? cursor) {
 }
 
 String? _cursorCfi(String? cursor) {
-  final c = _decodeCursor(cursor)?['cfi'];
+  final m = _decodeCursor(cursor);
+  // Only resume from CFIs we minted with epub.js. Old `{"type":"epub"}`
+  // cursors came from epub_view, whose CFI generator differs — feeding one to
+  // epub.js can crash its parser mid-display.
+  if (m?['type'] != 'epubjs') return null;
+  final c = m?['cfi'];
   return (c is String && c.isNotEmpty) ? c : null;
 }

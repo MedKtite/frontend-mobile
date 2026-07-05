@@ -7,6 +7,7 @@ import '../../app/theme/tokens/colors.dart';
 import '../../app/theme/tokens/radii.dart';
 import '../../app/theme/tokens/spacing.dart';
 import '../../app/theme/tokens/typography.dart';
+import '../../core/widgets/app_snackbar.dart';
 import '../../core/dio_client.dart';
 import '../../models/search_hit.dart';
 import '../../models/search_response.dart';
@@ -97,10 +98,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       case NavTab.profile:
         context.push(Routes.settings);
       default:
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(SnackBar(content: Text(
-              '${tab.name[0].toUpperCase()}${tab.name.substring(1)} — coming soon')));
+        showAppSnack(context,
+            '${tab.name[0].toUpperCase()}${tab.name.substring(1)} — coming soon');
     }
   }
 
@@ -109,7 +108,6 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     final colors = context.appColors;
 
     return Scaffold(
-      backgroundColor: colors.bg,
       extendBody: true,
       bottomNavigationBar: GlassNavBar(current: NavTab.search, onSelect: _onTab),
       body: SafeArea(

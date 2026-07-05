@@ -31,7 +31,8 @@ class AuthScaffold extends StatelessWidget {
     final colors = context.appColors;
 
     return Scaffold(
-      backgroundColor: colors.bg,
+      // Transparent (theme default) — the shared AppBackground texture is
+      // the page surface behind the glass form.
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(
@@ -49,7 +50,8 @@ class AuthScaffold extends StatelessWidget {
                       const SizedBox(height: AppSpacing.xl),
                       Text(title, style: AppTypography.title1(colors.text)),
                       const SizedBox(height: AppSpacing.sm),
-                      Text(subtitle, style: AppTypography.subtitle(colors.text2)),
+                      Text(subtitle,
+                          style: AppTypography.subtitle(colors.text2)),
                       const SizedBox(height: AppSpacing.xxxl),
                       body,
                       const Spacer(),
@@ -149,11 +151,17 @@ class SocialAuthButton extends StatelessWidget {
     required this.glyph,
     required this.label,
     this.onPressed,
+    this.monochrome = true,
   });
 
   final String glyph;
   final String label;
   final VoidCallback? onPressed;
+
+  /// Monochrome brands (X) are tinted to ink so they adapt to dark mode;
+  /// multicolor brands (Google's four-color G) render untouched — the brand
+  /// mark is what makes the button read as a social sign-in.
+  final bool monochrome;
 
   @override
   Widget build(BuildContext context) {
@@ -162,18 +170,22 @@ class SocialAuthButton extends StatelessWidget {
       width: double.infinity,
       child: OutlinedButton(
         onPressed: onPressed,
+        // Solid surface backing so the button reads as a card even over the
+        // glassy auth backdrop.
+        style: OutlinedButton.styleFrom(backgroundColor: colors.surface),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           mainAxisSize: MainAxisSize.min,
           children: [
             SvgPicture.asset(
-              'assets/icons/social/$glyph.svg' ,
-              width: 16,
-              height: 16,
-              colorFilter: ColorFilter.mode(colors.text, BlendMode.srcIn),
+              'assets/icons/social/$glyph.svg',
+              width: 18,
+              height: 18,
+              colorFilter: monochrome
+                  ? ColorFilter.mode(colors.text, BlendMode.srcIn)
+                  : null,
             ),
-           
-            const SizedBox(width: AppSpacing.sm),
+            const SizedBox(width: AppSpacing.md),
             Text(
               label,
               style: AppTypography.label(colors.text)

@@ -8,10 +8,16 @@ import '../../app/theme/tokens/colors.dart';
 import '../../app/theme/tokens/radii.dart';
 import '../../app/theme/tokens/spacing.dart';
 import '../../app/theme/tokens/typography.dart';
+import '../../core/widgets/app_snackbar.dart';
+import '../../models/book.dart';
+import '../../models/catalog_book.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/home_provider.dart';
+import '../../providers/library_provider.dart';
+import '../../providers/recommendations_provider.dart';
 import '../../providers/state/auth_state.dart';
 import '../../providers/state/home_state.dart';
+import '../../providers/trending_provider.dart';
 import '../../widgets/add_to_library_sheet.dart';
 import '../../widgets/book_cover.dart';
 import '../../widgets/glass_nav_bar.dart';
@@ -19,11 +25,8 @@ import '../../widgets/glass_nav_bar.dart';
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
-  void _comingSoon(BuildContext context, String what) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text('$what — coming soon')));
-  }
+  void _comingSoon(BuildContext context, String what) =>
+      showAppSnack(context, '$what — coming soon');
 
   void _onTab(BuildContext context, NavTab tab) {
     switch (tab) {
@@ -57,7 +60,6 @@ class HomeScreen extends ConsumerWidget {
         user?.avatarInitial ?? (name.isEmpty ? '?' : name[0].toUpperCase());
 
     return Scaffold(
-      backgroundColor: colors.bg,
       extendBody: true,
       bottomNavigationBar: GlassNavBar(
         current: NavTab.home,
@@ -315,13 +317,16 @@ class _PopulatedHome extends StatelessWidget {
             style: AppTypography.subtitle(colors.text2),
           ),
           const SizedBox(height: AppSpacing.xxl),
+          const _TrendingSection(),
           if (continueReading != null) ...[
             _ContinueReadingCard(book: continueReading!, onResume: onResume),
             const SizedBox(height: AppSpacing.xxl),
           ],
+          _ContinueRow(excludeId: continueReading?.id),
+          const _RecommendedSection(),
           if (passage != null) ...[
             _SectionLabel('PASSAGE OF THE DAY'),
-            const SizedBox(height: AppSpacing.md),
+            const SizedBox(height: AppSpacing.lg), // Figma 266:2: 16 to quote
             _PassageBlock(passage: passage!),
             const SizedBox(height: AppSpacing.xxl),
           ],
@@ -424,6 +429,271 @@ class _Card extends StatelessWidget {
   }
 }
 
+// ────────────────────────────────────────────────── Continue-reading row ──
+
+/// Horizontal carousel of the OTHER in-progress books (the hero card above
+/// already features the most recent one): small cover · title · author ·
+/// progress bar + %. Hidden while loading, on error, or when there's nothing
+/// beyond the hero — never a broken block.
+class _ContinueRow extends ConsumerWidget {
+  const _ContinueRow({this.excludeId});
+
+  final String? excludeId;
+
+  static const double _cardW = 272;
+  static const double _rowH = 92;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final books = ref.watch(libraryBooksProvider).valueOrNull;
+    if (books == null) return const SizedBox.shrink();
+
+    final reading = [
+      for (final b in books)
+        if (b.status == 'reading' && b.id != excludeId) b,
+    ]..sort((a, b) => (b.lastOpenedAt ?? b.updatedAt ?? '')
+        .compareTo(a.lastOpenedAt ?? a.updatedAt ?? ''));
+    if (reading.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _SectionLabel('CONTINUE READING'),
+        const SizedBox(height: AppSpacing.md),
+        SizedBox(
+          height: _rowH,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: reading.length,
+            separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.md),
+            itemBuilder: (context, i) => _ContinueRowCard(book: reading[i]),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.xxl),
+      ],
+    );
+  }
+}
+
+class _ContinueRowCard extends StatelessWidget {
+  const _ContinueRowCard({required this.book});
+
+  final Book book;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final pct = (book.progressPct ?? 0).clamp(0.0, 100.0);
+
+    return GestureDetector(
+      onTap: () => context.push(Routes.readingPath(book.id), extra: book),
+      child: SizedBox(
+        width: _ContinueRow._cardW,
+        child: _Card(
+          padding: AppSpacing.md,
+          child: Row(
+            children: [
+              BookCover(
+                title: book.title,
+                author: book.author ?? '',
+                bg: coverColorFromHex(book.coverDominantColor),
+                fg: coverFgFor(book.coverDominantColor),
+                coverUrl: proxiedCoverUrl(book.coverUrl),
+                width: 40,
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      book.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.title3(colors.text),
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      book.author ?? '',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.caption(colors.text2),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ClipRRect(
+                            borderRadius: AppRadii.brFull,
+                            child: LinearProgressIndicator(
+                              value: pct / 100,
+                              minHeight: 4,
+                              backgroundColor: colors.border,
+                              color: colors.accent,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.sm),
+                        Text('${pct.round()}%',
+                            style: AppTypography.caption(colors.text3)),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────── Trending section ──
+
+/// "Trending now" — Gutenberg's most-downloaded titles, every one readable
+/// free in-app. Tap → the catalog book page (Add to library — read free).
+/// Loading shows cover-shaped placeholders; an error hides the section
+/// entirely (trending is a bonus, never a blocker).
+class _TrendingSection extends ConsumerWidget {
+  const _TrendingSection();
+
+  static const double _coverW = 96;
+  static const double _rowH = 196; // cover 144 + gaps + two text lines
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final trending = ref.watch(trendingBooksProvider);
+
+    final row = trending.when(
+      error: (_, __) => null,
+      loading: () => ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: 4,
+        separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.md),
+        itemBuilder: (context, _) => _CoverPlaceholder(width: _coverW),
+      ),
+      data: (books) => books.isEmpty
+          ? null
+          : ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: books.length,
+              separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.md),
+              itemBuilder: (context, i) => _TrendingCell(book: books[i]),
+            ),
+    );
+    if (row == null) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _SectionLabel('TRENDING NOW'),
+        const SizedBox(height: AppSpacing.md),
+        SizedBox(height: _rowH, child: row),
+        const SizedBox(height: AppSpacing.xxl),
+      ],
+    );
+  }
+}
+
+/// "Recommended for you" — driven by the user's own catalog searches (the
+/// backend re-runs recent keywords against Google Books). Same cells as
+/// Trending; hidden until there's history to recommend from.
+class _RecommendedSection extends ConsumerWidget {
+  const _RecommendedSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final books = ref.watch(recommendedBooksProvider).valueOrNull;
+    if (books == null || books.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _SectionLabel('RECOMMENDED FOR YOU'),
+        const SizedBox(height: AppSpacing.md),
+        SizedBox(
+          height: _TrendingSection._rowH,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: books.length,
+            separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.md),
+            itemBuilder: (context, i) => _TrendingCell(book: books[i]),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.xxl),
+      ],
+    );
+  }
+}
+
+class _TrendingCell extends StatelessWidget {
+  const _TrendingCell({required this.book});
+
+  final CatalogBook book;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return GestureDetector(
+      onTap: () => context.push(Routes.catalogBook, extra: book),
+      child: SizedBox(
+        width: _TrendingSection._coverW,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            BookCover(
+              title: book.title,
+              author: book.author ?? '',
+              bg: colors.surface2,
+              fg: colors.text2,
+              coverUrl: proxiedCoverUrl(book.thumbnailUrl),
+              width: _TrendingSection._coverW,
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              book.title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppTypography.label(colors.text),
+            ),
+            if (book.author != null && book.author!.isNotEmpty) ...[
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                book.author!,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTypography.caption(colors.text2),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Cover-shaped shimmerless placeholder while trending loads.
+class _CoverPlaceholder extends StatelessWidget {
+  const _CoverPlaceholder({required this.width});
+
+  final double width;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Container(
+      width: width,
+      height: width * 1.5,
+      decoration: BoxDecoration(
+        color: colors.surface2,
+        borderRadius: AppRadii.brSm,
+      ),
+    );
+  }
+}
+
 class _ContinueReadingCard extends StatelessWidget {
   const _ContinueReadingCard({required this.book, required this.onResume});
 
@@ -496,6 +766,9 @@ class _ContinueReadingCard extends StatelessWidget {
   }
 }
 
+/// Passage of the day (Figma 266:2 · nodes 273:137-139): tag-colored marginal
+/// dot hanging into the page margin, the quote in Source Serif 4 italic 17/1.4
+/// with a wavy gilt highlight underline, and an italic-serif source line.
 class _PassageBlock extends StatelessWidget {
   const _PassageBlock({required this.passage});
 
@@ -504,38 +777,59 @@ class _PassageBlock extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final base = AppTypography.subtitle(colors.text);
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Marginal dot — Figma hangs it 8px INTO the left margin (dot x=24 vs
+        // text margin x=32): annotations live in the margins, per the brand.
         Padding(
           padding: const EdgeInsets.only(top: AppSpacing.sm),
-          child: Container(
-            width: 6,
-            height: 6,
-            decoration: BoxDecoration(
-              color: AppColors.forTag(passage.colorTag),
-              shape: BoxShape.circle,
+          child: Transform.translate(
+            offset: const Offset(-8, 0),
+            child: Container(
+              width: 6,
+              height: 6,
+              decoration: BoxDecoration(
+                color: AppColors.forTag(passage.colorTag),
+                shape: BoxShape.circle,
+              ),
             ),
           ),
         ),
-        const SizedBox(width: AppSpacing.md),
+        const SizedBox(width: AppSpacing.xs),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Figma 273:138 — serif italic 17/1.4; the wavy underline marks
+              // the highlight (whole quote here: the passage IS the highlight,
+              // there's no sub-fragment in the data to scope it to).
               Text(
                 passage.text,
-                style: base.copyWith(
+                style: AppTypography.serif(TextStyle(
+                  color: colors.text,
+                  fontSize: 17,
+                  height: 1.4,
+                  fontStyle: FontStyle.italic,
                   decoration: TextDecoration.underline,
+                  decorationStyle: TextDecorationStyle.wavy,
                   decorationColor: colors.gilt,
-                  decorationThickness: 2,
-                ),
+                  decorationThickness: 1,
+                )),
               ),
-              const SizedBox(height: AppSpacing.sm),
-              if (passage.source.isNotEmpty)
-                Text(passage.source, style: AppTypography.caption(colors.text2)),
+              if (passage.source.isNotEmpty) ...[
+                const SizedBox(height: AppSpacing.md), // Figma: 12 to source
+                // Figma 273:139 — serif italic 12, muted ink.
+                Text(
+                  passage.source,
+                  style: AppTypography.serif(TextStyle(
+                    color: colors.text3,
+                    fontSize: 12,
+                    fontStyle: FontStyle.italic,
+                  )),
+                ),
+              ],
             ],
           ),
         ),

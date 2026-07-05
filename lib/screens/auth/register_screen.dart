@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../app/routes.dart';
 import '../../app/theme/tokens/spacing.dart';
+import '../../core/widgets/app_snackbar.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/state/auth_state.dart';
 import '../../services/frontend/auth_validators.dart';
@@ -42,11 +43,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         );
   }
 
-  void _comingSoon(String what) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text('$what — coming soon')));
-  }
+  void _comingSoon(String what) =>
+      showAppSnack(context, '$what — coming soon');
 
   @override
   Widget build(BuildContext context) {
@@ -55,10 +53,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     ref.listen(authProvider, (_, next) {
       if (next is AuthAuthenticated) {
         context.go(Routes.home);
-      } else if (next is AuthUnauthenticated ) {
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(SnackBar(content: Text( 'An error occurred.')));
+      } else if (next is AuthUnauthenticated) {
+        showAppSnack(context, next.message ?? 'An error occurred.',
+            type: SnackType.error);
       }
     });
 
@@ -104,13 +101,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             const OrDivider(),
             const SizedBox(height: AppSpacing.xl),
             SocialAuthButton(
-              glyph: 'G',
+              glyph: 'google', // assets are google.svg / devicon_twitter.svg
               label: 'Continue with Google',
+              monochrome: false,
               onPressed: () => _comingSoon('Google sign-in'),
             ),
             const SizedBox(height: AppSpacing.md),
             SocialAuthButton(
-              glyph: 'X',
+              glyph: 'devicon_twitter',
               label: 'Continue with X',
               onPressed: () => _comingSoon('X sign-in'),
             ),

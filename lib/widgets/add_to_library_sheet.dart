@@ -10,6 +10,7 @@ import '../app/theme/tokens/radii.dart';
 import '../app/theme/tokens/spacing.dart';
 import '../app/theme/tokens/typography.dart';
 import '../core/dio_client.dart';
+import '../core/widgets/app_snackbar.dart';
 import '../models/book_create_request.dart';
 import '../models/presign_upload_request.dart';
 import '../providers/library_provider.dart';
@@ -97,28 +98,25 @@ class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
       router.go(Routes.library);
       messenger
         ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(content: Text('Added “$title”')));
+        ..showSnackBar(appSnackBar('Added “$title”', SnackType.success));
     } on ApiError catch (e) {
       if (!mounted) return;
       setState(() => _busy = false);
       messenger
         ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(content: Text(e.message)));
+        ..showSnackBar(appSnackBar(e.message, SnackType.error));
     } on DioException catch (_) {
       if (!mounted) return;
       setState(() => _busy = false);
       messenger
         ..hideCurrentSnackBar()
-        ..showSnackBar(
-            const SnackBar(content: Text('Upload failed — check your connection.')));
+        ..showSnackBar(appSnackBar(
+            'Upload failed — check your connection.', SnackType.error));
     }
   }
 
-  void _toast(String message) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(message)));
-  }
+  void _toast(String message) =>
+      showAppSnack(context, message, type: SnackType.warning);
 
   @override
   Widget build(BuildContext context) {
@@ -227,7 +225,7 @@ class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
     Navigator.of(context).pop();
     messenger
       ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text('$what — coming soon')));
+      ..showSnackBar(appSnackBar('$what — coming soon', SnackType.info));
   }
 }
 

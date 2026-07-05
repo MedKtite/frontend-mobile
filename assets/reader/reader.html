@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <style>
+    html, body { margin: 0; padding: 0; height: 100%; background: #faf8f5; overflow: hidden; }
+    #viewer { height: 100%; width: 100%; }
+  </style>
+</head>
+<body>
+  <div id="viewer"></div>
+  <script src="jszip.min.js"></script>
+  <script src="epub.min.js"></script>
+  <script>
+    var book, rendition, locationsReady = false;
+    var selecting = false; // an active text selection suppresses page turns
+
+    function hexToRgba(hex, a) {
+      var n = parseInt(hex.slice(1), 16);
+      return 'rgba(' + (n >> 16 & 255) + ',' + (n >> 8 & 255) + ',' + (n & 255) + ',' + a + ')';
+    }
+
+    // Figma 237:2 — selecting text washes it in the reader accent.
+    function applySelectionCss() {
+      if (!rendition) return;
+      try {
+        rendition.getContents().forEach(function (c) {
+          c.addStylesheetRules({
+            '::selection': { 'background-color': hexToRgba(theme.sel, 0.28) }
+          });
+        });
+      } catch (e) {}
+    }
+
+    // Live check across rendered sections — covers the window between the
+    // native selection starting and epub.js's debounced 'selected' event.
+    function hasSelection() {
+      try {
+        var cs = rendition.getContents();
+        for (var i = 0; i < cs.length; i++) {
+          var s = cs[i].window.getSelection();
+          if (s && !s.isCollapsed && s.toString().trim()) return true;
+        }
+      } catch (e) {}
+      return false;
+    }
+    var theme = { bg: '#faf8f5', fg: '#1c1c1e', font: 'serif', size: 18, line: 1.65, sel: '#2b4a6f' };
+
+    function post(o) { try { ReaderChannel.postMessage(JSON.stringify(o)); } catch (e) {} }
+
+    // Anything epub.js throws outside our own chains still reaches Dart —
+    // fatal before first render, log noise after.
+    window.onerror = function (msg) { post({ type: 'jserror', message: String(msg) }); };
+    window.addEventListener('unhandledrejection', function (ev) {
+      post({ type: 'jserror', message: String(ev.reason) });
+    });
+
+    function b64ToBuffer(b64) {
+      var s = atob(b64), n = s.length, a = new Uint8Array(n);
+      for (var i = 0; i < n; i++) a[i] = s.charCodeAt(i);
+      return a.buffer;
+    }
+
+    function applyTheme() {
+      if (!rendition) return;
+      rendition.themes.override('color', theme.fg);
+      rendition.themes.override('background', theme.bg);
+      rendition.themes.override('font-family', theme.font);
+      rendition.themes.override('line-height', String(theme.line));
+      rendition.themes.fontSize(theme.size + 'px');
+      document.body.style.background = theme.bg;
+      applySelectionCss();
+    }
+
+    function report(loc) {
+      if (!loc || !loc.start) return;
+      var cfi = loc.start.cfi;
+      var percent = loc.start.percentage || 0;
+      var page = 0, total = 0;
+      try {
+        if (locationsReady) {
+          page = book.locations.locationFromCfi(cfi) + 1;
+          total = book.locations.total;
+          percent = book.locations.percentageFromCfi(cfi);
+        }
+      } catch (e) {}
+      post({ type: 'location', cfi: cfi, percent: percent, page: page, total: total });
+    }
+
+    // ── Called from Dart ──────────────────────────────────────────────
+    window.setTheme = function (bg, fg, font, size, line, sel) {
+      theme = { bg: bg, fg: fg, font: font, size: size, line: line,
+                sel: sel || theme.sel };
+      applyTheme();
+    };
+    window.nextPage = function () {
+      if (rendition) rendition.next().catch(function () {});
+    };
+    window.prevPage = function () {
+      if (rendition) rendition.prev().catch(function () {});
+    };
+    window.gotoCfi = function (cfi) {
+      if (rendition && cfi) rendition.display(cfi).catch(function () {});
+    };
+    // Paint a saved highlight as a colored wash over its CFI range.
+    window.applyMark = function (cfiRange, colorHex) {
+      try {
+        rendition.annotations.highlight(cfiRange, {}, function () {}, 'hl', {
+          'fill': colorHex, 'fill-opacity': '0.35', 'mix-blend-mode': 'multiply'
+        });
+      } catch (e) {}
+    };
+    window.clearSelection = function () {
+      selecting = false;
+      try {
+        rendition.getContents().forEach(function (c) {
+          c.window.getSelection().removeAllRanges();
+        });
+      } catch (e) {}
+    };
+
+    // The EPUB arrives from Dart in base64 chunks — one giant string through
+    // the JS bridge is slow and can silently truncate on Android.
+    var pending = [];
+    window.appendChunk = function (part) { pending.push(part); };
+
+    window.loadBook = function (startCfi, locationsJson) {
+      try {
+        var b64 = pending.join('');
+        pending = [];
+        book = ePub(b64ToBuffer(b64));
+        rendition = book.renderTo('viewer', {
+          width: '100%', height: '100%',
+          flow: 'paginated', spread: 'none', manager: 'default'
+        });
+        applyTheme();
+        // A stale/foreign CFI (e.g. an old epub_view cursor) can reject — fall
+        // back to page one so the reader never hangs on the spinner.
+        rendition.display(startCfi || undefined)
+          .then(function () { post({ type: 'ready' }); })
+          .catch(function () {
+            // Bad/foreign CFI — retry from page one; if the book itself is
+            // unreadable that fails too, and Dart gets an error instead of
+            // an eternal spinner.
+            rendition.display()
+              .then(function () { post({ type: 'ready' }); })
+              .catch(function (e) { post({ type: 'error', message: 'display: ' + String(e) }); });
+          });
+        rendition.on('relocated', report);
+        // Long-press selection inside the book → hand the CFI range + text to
+        // Dart, which shows the Tag/Note actions.
+        rendition.on('selected', function (cfiRange, contents) {
+          selecting = true;
+          var text = '', rect = null;
+          try {
+            var sel = contents.window.getSelection();
+            text = sel.toString();
+            // Selection bounds (iframe CSS px == Flutter logical px at
+            // initial-scale=1) — Dart anchors the highlight palette to it.
+            var r = sel.getRangeAt(0).getBoundingClientRect();
+            rect = { x: r.left, y: r.top, w: r.width, h: r.height };
+          } catch (e) {}
+          post({ type: 'selected', cfiRange: cfiRange, text: text, rect: rect });
+        });
+        // No click handler on purpose: taps never turn pages, and the
+        // long-press release synthesizes a click — touching the selection
+        // here would kill the one the user just made. Dismissal is
+        // Chromium-native; the selectionchange watchdog syncs Dart's bar.
+        rendition.hooks.content.register(function (contents) {
+          var doc = contents.document;
+
+          // Accent selection wash on every freshly rendered section.
+          try {
+            contents.addStylesheetRules({
+              '::selection': { 'background-color': hexToRgba(theme.sel, 0.28) }
+            });
+          } catch (e) {}
+
+          // Horizontal swipe → page turn. Passive listeners: long-press
+          // selection and handle-dragging stay fully native. A swipe must
+          // START MOVING immediately — any gesture that begins with a still
+          // finger (the long-press-to-select shape) can never turn a page.
+          var sx = 0, sy = 0, st = 0, firstMoveAt = 0;
+          doc.addEventListener('touchstart', function (ev) {
+            var t = ev.changedTouches[0];
+            sx = t.clientX; sy = t.clientY; st = Date.now();
+            firstMoveAt = 0;
+          }, { passive: true });
+          doc.addEventListener('touchmove', function (ev) {
+            if (firstMoveAt) return;
+            var t = ev.changedTouches[0];
+            if (Math.abs(t.clientX - sx) > 10 || Math.abs(t.clientY - sy) > 10) {
+              firstMoveAt = Date.now();
+            }
+          }, { passive: true });
+          doc.addEventListener('touchend', function (ev) {
+            if (selecting || hasSelection()) return;   // never over a selection
+            var t = ev.changedTouches[0];
+            var dx = t.clientX - sx, dy = t.clientY - sy, now = Date.now();
+            if (now - st > 600) return;                // too slow — not a flick
+            if (!firstMoveAt || firstMoveAt - st > 250) return; // held still first → selecting
+            if (Math.abs(dx) < 60) return;             // too short
+            if (Math.abs(dx) < Math.abs(dy) * 1.5) return; // mostly vertical
+            if (dx < 0) rendition.next().catch(function () {});
+            else rendition.prev().catch(function () {});
+          }, { passive: true });
+
+          // When the selection dies natively (Copy tapped, handles collapsed,
+          // toolbar dismissed), retire the Flutter Tag/Note bar too.
+          doc.addEventListener('selectionchange', function () {
+            setTimeout(function () {
+              var s = contents.window.getSelection();
+              if ((!s || s.isCollapsed || !s.toString().trim()) && selecting) {
+                selecting = false;
+                post({ type: 'selcleared' });
+              }
+            }, 300);
+          });
+        });
+        // Global page counts need a location index. Generating one parses the
+        // whole book, so prefer the cached copy Dart hands over; only a fresh
+        // generate is posted back for caching.
+        book.ready.then(function () {
+          if (locationsJson) {
+            try { book.locations.load(locationsJson); return 'cached'; }
+            catch (e) { /* corrupt cache — fall through and regenerate */ }
+          }
+          return book.locations.generate(1200);
+        }).then(function (how) {
+          locationsReady = true;
+          post({ type: 'total', total: book.locations.total });
+          if (how !== 'cached') post({ type: 'locations', json: book.locations.save() });
+          try {
+            // rendition.manager is undefined when rendering never started —
+            // touching currentLocation() then throws inside epub.js.
+            if (rendition && rendition.manager) report(rendition.currentLocation());
+          } catch (e) {}
+        }).catch(function (e) { post({ type: 'error', message: 'open: ' + String(e) }); });
+      } catch (e) { post({ type: 'error', message: String(e) }); }
+    };
+  </script>
+</body>
+</html>

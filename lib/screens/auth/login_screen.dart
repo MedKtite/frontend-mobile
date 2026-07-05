@@ -6,11 +6,13 @@ import '../../app/routes.dart';
 import '../../app/theme/tokens/colors.dart';
 import '../../app/theme/tokens/spacing.dart';
 import '../../app/theme/tokens/typography.dart';
+import '../../core/widgets/app_snackbar.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/state/auth_state.dart';
 import '../../services/frontend/auth_validators.dart';
 import '../../widgets/auth_scaffold.dart';
 import '../../widgets/auth_text_field.dart';
+import '../../widgets/glass_panel.dart';
 
 /// Login — authenticate a returning user (frame `78:66`).
 class LoginScreen extends ConsumerStatefulWidget {
@@ -41,11 +43,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         );
   }
 
-  void _comingSoon(String what) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text('$what — coming soon')));
-  }
+  void _comingSoon(String what) =>
+      showAppSnack(context, '$what — coming soon');
 
   @override
   Widget build(BuildContext context) {
@@ -55,10 +54,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     ref.listen(authProvider, (_, next) {
       if (next is AuthAuthenticated) {
         context.go(Routes.home);
-      } else if (next is AuthUnauthenticated ) {
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(SnackBar(content: Text( 'An error occurred.')));
+      } else if (next is AuthUnauthenticated) {
+        showAppSnack(context, next.message ?? 'An error occurred.',
+            type: SnackType.error);
       }
     });
 
@@ -71,13 +69,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         subtitle: 'Sign in to continue your reading.',
         onBack: () =>
             context.canPop() ? context.pop() : context.go(Routes.onboarding),
-        body: 
-        Container(
+        body:
+        // Liquid-glass form surface (frost fallback off-Impeller) — the auth
+        // background art shows through with refraction at the edges.
+        GlassPanel(
           padding: const EdgeInsets.all(AppSpacing.lg),
-          decoration: BoxDecoration(
-            color: colors.surface,
-            borderRadius: BorderRadius.circular(AppSpacing.md),
-          ),
           child:
         Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -158,6 +154,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             SocialAuthButton(
               glyph: 'google',
               label: 'Continue with Google',
+              monochrome: false, // keep the four-color G — it's the brand cue
               onPressed: () => _comingSoon('Google sign-in'),
             ),
             const SizedBox(height: AppSpacing.md),

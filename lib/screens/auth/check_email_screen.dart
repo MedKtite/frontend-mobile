@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../app/theme/tokens/colors.dart';
 import '../../app/theme/tokens/spacing.dart';
 import '../../app/theme/tokens/typography.dart';
+import '../../core/widgets/app_snackbar.dart';
 import '../../widgets/auth_scaffold.dart';
 
 /// "Check your email" recovery confirmation (frame `319:22`).
@@ -53,11 +54,7 @@ class _CheckEmailScreenState extends State<CheckEmailScreen> {
     });
   }
 
-  void _toast(String message) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(message)));
-  }
+  void _toast(String message) => showAppSnack(context, message);
 
   void _resend() {
     _startCountdown();
@@ -70,7 +67,6 @@ class _CheckEmailScreenState extends State<CheckEmailScreen> {
     final canResend = _secondsLeft == 0;
 
     return Scaffold(
-      backgroundColor: colors.bg,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(
