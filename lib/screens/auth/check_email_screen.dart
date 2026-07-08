@@ -8,6 +8,7 @@ import '../../app/theme/tokens/spacing.dart';
 import '../../app/theme/tokens/typography.dart';
 import '../../core/widgets/app_snackbar.dart';
 import '../../widgets/auth_scaffold.dart';
+import '../../widgets/glass_panel.dart';
 
 /// "Check your email" recovery confirmation (frame `319:22`).
 ///
@@ -81,6 +82,13 @@ class _CheckEmailScreenState extends State<CheckEmailScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    // Content on the shared glass card, matching the other
+                    // auth screens. (Centered is fine here — no keyboard.)
+                    GlassPanel(
+                      padding: const EdgeInsets.all(AppSpacing.lg),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
                     Center(
                       child: Container(
                         width: _badgeSize,
@@ -119,6 +127,9 @@ class _CheckEmailScreenState extends State<CheckEmailScreen> {
                       label: canResend ? 'Resend link' : 'Resend in ${_secondsLeft}s',
                       muted: !canResend,
                       onTap: canResend ? _resend : null,
+                    ),
+                        ],
+                      ),
                     ),
                   ],
                 ),

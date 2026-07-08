@@ -6,6 +6,7 @@ import '../models/book.dart';
 import '../models/highlight.dart';
 import '../services/backend/book_service.dart';
 import '../services/backend/highlight_service.dart';
+import 'library_provider.dart';
 import 'state/home_state.dart';
 
 /// Loads the Home tab from the backend: the user's library (`/me/books`) and
@@ -19,14 +20,16 @@ class HomeController extends StateNotifier<HomeState> {
   final BookService _books;
   final HighlightService _highlights;
 
-  Future<void> load() async {
-    state = const HomeState.loading();
+  /// [silent] refreshes in place: existing content stays on screen while the
+  /// fresh data loads, and a failed refresh keeps what's already shown.
+  Future<void> load({bool silent = false}) async {
+    if (!silent) state = const HomeState.loading();
 
     final List<Book> books;
     try {
       books = await _books.list();
     } on ApiError catch (e) {
-      state = HomeState.error(e.message);
+      if (!silent) state = HomeState.error(e.message);
       return;
     }
 
@@ -84,10 +87,16 @@ class HomeController extends StateNotifier<HomeState> {
       final text = h.passageText;
       if (text == null || text.isEmpty) continue;
       final book = _bookById(books, h.bookId);
+      // textChapterRef now carries the epub.js CFI anchor — machine data,
+      // not a human chapter label. Only show refs that read like one.
       final ref = h.textChapterRef;
+      final humanRef =
+          (ref != null && ref.isNotEmpty && !ref.startsWith('epubcfi('))
+              ? ref
+              : null;
       final source = [
         if (book != null) book.title,
-        if (ref != null && ref.isNotEmpty) ref,
+        if (humanRef != null) humanRef,
       ].join(' · ');
       return HomePassage(
         text: text,
@@ -128,9 +137,15 @@ class HomeController extends StateNotifier<HomeState> {
 }
 
 final homeProvider =
-    StateNotifierProvider<HomeController, HomeState>(
-  (ref) => HomeController(
+    StateNotifierProvider<HomeController, HomeState>((ref) {
+  final controller = HomeController(
     ref.watch(bookServiceProvider),
     ref.watch(highlightServiceProvider),
-  ),
-);
+  );
+  // Whenever the library changes (add / remove / reshelf invalidate
+  // libraryBooksProvider), refresh Home in place — no spinner flash.
+  ref.listen(libraryBooksProvider, (_, next) {
+    if (next.hasValue) controller.load(silent: true);
+  });
+  return controller;
+});

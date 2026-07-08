@@ -11,6 +11,7 @@ import '../../app/theme/tokens/spacing.dart';
 import '../../app/theme/tokens/typography.dart';
 import '../../core/dio_client.dart';
 import '../../core/widgets/app_snackbar.dart';
+import '../../core/widgets/app_text_field.dart';
 import '../../models/book.dart';
 import '../../models/book_create_request.dart';
 import '../../models/book_update_request.dart';
@@ -20,7 +21,7 @@ import '../../providers/library_provider.dart';
 import '../../services/backend/book_service.dart';
 import '../../widgets/add_to_library_sheet.dart';
 import '../../widgets/book_cover.dart';
-import '../../widgets/glass_nav_bar.dart';
+import '../../widgets/glass_panel.dart';
 import '../../widgets/shelf_picker.dart';
 
 enum _Filter {
@@ -58,8 +59,19 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
   final _searchFocus = FocusNode();
   Timer? _debounce;
 
-  String _query = ''; 
+  String _query = '';
   String _catalogQuery = ''; // debounced text → catalog (Google Books) search
+
+  // Advanced search: composes Google operators (intitle:/inauthor:/subject:/
+  // isbn:) into _catalogQuery, while _query keeps a human string for the
+  // local-library filter. No backend change — Google parses the operators.
+  bool _filtersOpen = false;
+  bool _advanced = false; // true while _catalogQuery is operator-composed
+  bool _freeOnly = false; // show only readable-in-app results
+  final _fTitle = TextEditingController();
+  final _fAuthor = TextEditingController();
+  final _fSubject = TextEditingController();
+  final _fIsbn = TextEditingController();
 
   // Per-result add state, keyed by [_key] (catalog rows).
   final Set<String> _adding = {};
@@ -80,7 +92,49 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     _debounce?.cancel();
     _searchController.dispose();
     _searchFocus.dispose();
+    _fTitle.dispose();
+    _fAuthor.dispose();
+    _fSubject.dispose();
+    _fIsbn.dispose();
     super.dispose();
+  }
+
+  void _applyAdvanced() {
+    String t(TextEditingController c) => c.text.trim();
+    final parts = <String>[
+      if (t(_fTitle).isNotEmpty) 'intitle:"${t(_fTitle)}"',
+      if (t(_fAuthor).isNotEmpty) 'inauthor:"${t(_fAuthor)}"',
+      if (t(_fSubject).isNotEmpty) 'subject:"${t(_fSubject)}"',
+      if (t(_fIsbn).isNotEmpty) 'isbn:${t(_fIsbn)}',
+    ];
+    if (parts.isEmpty) {
+      showAppSnack(context, 'Fill at least one filter to search.',
+          type: SnackType.warning);
+      return;
+    }
+    final human = [t(_fTitle), t(_fAuthor), t(_fSubject), t(_fIsbn)]
+        .where((s) => s.isNotEmpty)
+        .join(' ');
+    _debounce?.cancel();
+    _searchController.text = human;
+    _searchFocus.unfocus();
+    setState(() {
+      _advanced = true;
+      _query = human;
+      _catalogQuery = parts.join(' ');
+      _filtersOpen = false;
+    });
+  }
+
+  void _resetAdvanced() {
+    _fTitle.clear();
+    _fAuthor.clear();
+    _fSubject.clear();
+    _fIsbn.clear();
+    setState(() {
+      _advanced = false;
+      _freeOnly = false;
+    });
   }
 
   // The local filter reacts to every keystroke; the catalog round-trip is
@@ -89,6 +143,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     _debounce?.cancel();
     final q = v.trim();
     setState(() {
+      _advanced = false; // manual typing overrides operator composition
       _query = v;
       if (q.isEmpty) _catalogQuery = '';
     });
@@ -120,21 +175,6 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
 
   String _key(CatalogBook c) => c.googleId ?? c.title;
 
-  void _onTab(NavTab tab) {
-    switch (tab) {
-      case NavTab.library:
-        break;
-      case NavTab.home:
-        context.go(Routes.home);
-      case NavTab.search:
-        context.go(Routes.search);
-      case NavTab.profile:
-        context.push(Routes.settings);
-      default:
-        showAppSnack(context,
-            '${tab.name[0].toUpperCase()}${tab.name.substring(1)} — coming soon');
-    }
-  }
 
   Future<void> _reshelf(Book book) async {
     final shelf = await showShelfPicker(context);
@@ -251,9 +291,8 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     final colors = context.appColors;
     final booksAsync = ref.watch(libraryBooksProvider);
 
+    // Nav bar lives in AppShell (persistent across tabs) — not here.
     return Scaffold(
-      extendBody: true,
-      bottomNavigationBar: GlassNavBar(current: NavTab.library, onSelect: _onTab),
       floatingActionButton: FloatingActionButton(
         onPressed: () => showAddToLibrarySheet(context),
         backgroundColor: colors.text,
@@ -305,13 +344,41 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
             style: AppTypography.label(colors.text2),
           ),
           const SizedBox(height: AppSpacing.lg),
-          _SearchField(
-            controller: _searchController,
-            focusNode: _searchFocus,
-            onChanged: _onQueryChanged,
-            onSubmitted: _onQuerySubmitted,
-            onClear: searching ? _clearSearch : null,
+          Row(
+            children: [
+              Expanded(
+                child: AppTextField(
+                  controller: _searchController,
+                  hint: 'Search your library or the catalog…',
+                  search: true,
+                  prefixIcon: Icons.search,
+                  focusNode: _searchFocus,
+                  textInputAction: TextInputAction.search,
+                  onChanged: _onQueryChanged,
+                  onSubmitted: _onQuerySubmitted,
+                  onClear: _clearSearch,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              _FilterToggle(
+                active: _filtersOpen || _advanced || _freeOnly,
+                onTap: () => setState(() => _filtersOpen = !_filtersOpen),
+              ),
+            ],
           ),
+          if (_filtersOpen) ...[
+            const SizedBox(height: AppSpacing.md),
+            _AdvancedPanel(
+              title: _fTitle,
+              author: _fAuthor,
+              subject: _fSubject,
+              isbn: _fIsbn,
+              freeOnly: _freeOnly,
+              onFreeOnly: (v) => setState(() => _freeOnly = v),
+              onApply: _applyAdvanced,
+              onReset: _resetAdvanced,
+            ),
+          ],
           if (searching)
             ..._searchResults(books)
           else if (books.isEmpty)
@@ -378,8 +445,10 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
 
   Widget _catalogSection() {
     final colors = context.appColors;
-    // Debounce still settling (or query just cleared) → spinner, not "no matches".
-    if (_catalogQuery.isEmpty || _catalogQuery != _query.trim()) {
+    // Debounce still settling (or query just cleared) → spinner, not "no
+    // matches". Advanced queries set both fields atomically — no debounce.
+    if (_catalogQuery.isEmpty ||
+        (!_advanced && _catalogQuery != _query.trim())) {
       return _catalogBusy();
     }
     final results = ref.watch(catalogSearchProvider(_catalogQuery));
@@ -387,8 +456,16 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
       loading: _catalogBusy,
       error: (e, _) =>
           _catalogMessage(colors, e is ApiError ? e.message : 'Search failed'),
-      data: (list) => list.isEmpty
-          ? _catalogMessage(colors, 'No matches in the catalog.')
+      data: (raw) {
+        final list =
+            _freeOnly ? raw.where((c) => c.isReadable).toList() : raw;
+        return list.isEmpty
+          ? _catalogMessage(
+              colors,
+              _freeOnly && raw.isNotEmpty
+                  ? 'No free-to-read matches — turn off the filter to see '
+                      '${raw.length} more.'
+                  : 'No matches in the catalog.')
           : _CatalogGrid(
               books: list,
               adding: _adding,
@@ -396,7 +473,8 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
               keyOf: _key,
               onAdd: _add,
               onOpen: (c) => context.push(Routes.catalogBook, extra: c),
-            ),
+            );
+      },
     );
   }
 
@@ -411,6 +489,131 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
           child: Text(text, style: AppTypography.subtitle(colors.text2)),
         ),
       );
+}
+
+/// Round "tune" button beside the search bar — accent-filled while any
+/// advanced filter is active so the narrowing is never invisible.
+class _FilterToggle extends StatelessWidget {
+  const _FilterToggle({required this.active, required this.onTap});
+
+  final bool active;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Material(
+      color: active ? colors.accent : colors.surface,
+      shape: CircleBorder(
+          side: BorderSide(color: active ? colors.accent : colors.border)),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          child: Icon(
+            Icons.tune_rounded,
+            size: 20,
+            color: active ? colors.bg : colors.text2,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Advanced search: field-scoped terms composed into Google Books operators.
+class _AdvancedPanel extends StatelessWidget {
+  const _AdvancedPanel({
+    required this.title,
+    required this.author,
+    required this.subject,
+    required this.isbn,
+    required this.freeOnly,
+    required this.onFreeOnly,
+    required this.onApply,
+    required this.onReset,
+  });
+
+  final TextEditingController title;
+  final TextEditingController author;
+  final TextEditingController subject;
+  final TextEditingController isbn;
+  final bool freeOnly;
+  final ValueChanged<bool> onFreeOnly;
+  final VoidCallback onApply;
+  final VoidCallback onReset;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+
+    Widget field(String hint, TextEditingController c,
+        {TextInputType? type}) {
+      return AppTextField(
+        controller: c,
+        hint: hint,
+        keyboardType: type,
+        textInputAction: TextInputAction.search,
+        onSubmitted: (_) => onApply(),
+      );
+    }
+
+    return GlassPanel(
+      radius: AppRadii.lg,
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text('ADVANCED SEARCH',
+              style: AppTypography.overline(colors.text3)),
+          const SizedBox(height: AppSpacing.md),
+          field('Title', title),
+          const SizedBox(height: AppSpacing.sm),
+          field('Author', author),
+          const SizedBox(height: AppSpacing.sm),
+          field('Genre or subject', subject),
+          const SizedBox(height: AppSpacing.sm),
+          field('ISBN', isbn, type: TextInputType.number),
+          const SizedBox(height: AppSpacing.md),
+          InkWell(
+            onTap: () => onFreeOnly(!freeOnly),
+            child: Row(
+              children: [
+                Checkbox(
+                  value: freeOnly,
+                  onChanged: (v) => onFreeOnly(v ?? false),
+                  visualDensity: VisualDensity.compact,
+                ),
+                Expanded(
+                  child: Text('Free to read in Marginalia only',
+                      style: AppTypography.caption(colors.text2)),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: onReset,
+                  child: const Text('Reset'),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: FilledButton(
+                  onPressed: onApply,
+                  child: const Text('Search'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _AddButton extends StatelessWidget {
@@ -457,62 +660,6 @@ class _EmptyLibrary extends StatelessWidget {
               textAlign: TextAlign.center,
               style: AppTypography.subtitle(colors.text2)),
         ],
-      ),
-    );
-  }
-}
-
-class _SearchField extends StatelessWidget {
-  const _SearchField({
-    required this.controller,
-    required this.focusNode,
-    required this.onChanged,
-    required this.onSubmitted,
-    this.onClear,
-  });
-
-  final TextEditingController controller;
-  final FocusNode focusNode;
-  final ValueChanged<String> onChanged;
-  final ValueChanged<String> onSubmitted;
-  final VoidCallback? onClear;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return TextField(
-      controller: controller,
-      focusNode: focusNode,
-      textInputAction: TextInputAction.search,
-      onChanged: onChanged,
-      onSubmitted: onSubmitted,
-      style: AppTypography.body(colors.text),
-      decoration: InputDecoration(
-        isDense: true,
-        filled: true,
-        fillColor: colors.surface,
-        hintText: 'Search your library or the catalog…',
-        hintStyle: AppTypography.body(colors.text3),
-        prefixIcon: Icon(Icons.search, size: 20, color: colors.text3),
-        suffixIcon: onClear == null
-            ? null
-            : IconButton(
-                onPressed: onClear,
-                icon: Icon(Icons.close, size: 18, color: colors.text3),
-              ),
-        contentPadding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-        border: OutlineInputBorder(
-          borderRadius: AppRadii.brFull,
-          borderSide: BorderSide(color: colors.border),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: AppRadii.brFull,
-          borderSide: BorderSide(color: colors.border),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: AppRadii.brFull,
-          borderSide: BorderSide(color: colors.accent, width: 1.5),
-        ),
       ),
     );
   }
@@ -818,12 +965,12 @@ class _GridCell extends StatelessWidget {
           height: width * 1.5,
           child: Stack(
             children: [
-              // Tap the cover to open the reader; long-press to remove. (The +
-              // badge above keeps its own taps.) Hand over the full Book so the
-              // reader renders offline.
+              // Tap the cover → book detail page (description first, then
+              // "Continue reading"); long-press to remove. The + badge above
+              // keeps its own taps.
               GestureDetector(
                 onTap: () =>
-                    context.push(Routes.readingPath(book.id), extra: book),
+                    context.push(Routes.bookDetail, extra: book),
                 onLongPress: onDelete,
                 child: BookCover(
                   title: book.title,

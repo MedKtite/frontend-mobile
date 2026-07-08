@@ -17,6 +17,7 @@ _$HighlightImpl _$$HighlightImplFromJson(Map<String, dynamic> json) =>
       audioStartSec: (json['audioStartSec'] as num?)?.toDouble(),
       audioEndSec: (json['audioEndSec'] as num?)?.toDouble(),
       colorTag: json['colorTag'] as String?,
+      isSaved: json['isSaved'] as bool? ?? false,
       createdAt: json['createdAt'] as String?,
     );
 
@@ -31,5 +32,6 @@ Map<String, dynamic> _$$HighlightImplToJson(_$HighlightImpl instance) =>
       'audioStartSec': instance.audioStartSec,
       'audioEndSec': instance.audioEndSec,
       'colorTag': instance.colorTag,
+      'isSaved': instance.isSaved,
       'createdAt': instance.createdAt,
     };

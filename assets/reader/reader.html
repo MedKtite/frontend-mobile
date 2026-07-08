@@ -48,7 +48,26 @@
     }
     var theme = { bg: '#faf8f5', fg: '#1c1c1e', font: 'serif', size: 18, line: 1.65, sel: '#2b4a6f' };
 
-    function post(o) { try { ReaderChannel.postMessage(JSON.stringify(o)); } catch (e) {} }
+    // Dual-host bridge: inside the mobile WebView, ReaderChannel exists (a
+    // webview_flutter JS channel); inside the web build's iframe it doesn't,
+    // and messages go to the parent Flutter page instead.
+    function post(o) {
+      var s = JSON.stringify(o);
+      try { ReaderChannel.postMessage(s); return; } catch (e) {}
+      try { window.parent.postMessage(s, '*'); } catch (e) {}
+    }
+
+    // Web host calls in via postMessage {cmd, args} (the WebView host calls
+    // window.* directly via runJavaScript — both paths hit the same functions).
+    window.addEventListener('message', function (ev) {
+      var d = ev.data;
+      if (typeof d === 'string') {
+        try { d = JSON.parse(d); } catch (e) { return; }
+      }
+      if (!d || typeof d.cmd !== 'string') return;
+      var fn = window[d.cmd];
+      if (typeof fn === 'function') fn.apply(null, d.args || []);
+    });
 
     // Anything epub.js throws outside our own chains still reaches Dart —
     // fatal before first render, log noise after.

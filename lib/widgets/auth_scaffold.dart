@@ -13,15 +13,17 @@ import '../app/theme/tokens/typography.dart';
 class AuthScaffold extends StatelessWidget {
   const AuthScaffold({
     super.key,
-    required this.title,
-    required this.subtitle,
+    this.title,
+    this.subtitle,
     required this.body,
     this.footer,
     this.onBack,
   });
 
-  final String title;
-  final String subtitle;
+  /// Rendered above [body] when set; leave null to place the heading inside
+  /// the body instead (e.g. within the glass form card).
+  final String? title;
+  final String? subtitle;
   final Widget body;
   final Widget? footer;
   final VoidCallback? onBack;
@@ -48,11 +50,19 @@ class AuthScaffold extends StatelessWidget {
                     children: [
                       AuthBackButton(onPressed: onBack),
                       const SizedBox(height: AppSpacing.xl),
-                      Text(title, style: AppTypography.title1(colors.text)),
-                      const SizedBox(height: AppSpacing.sm),
-                      Text(subtitle,
-                          style: AppTypography.subtitle(colors.text2)),
-                      const SizedBox(height: AppSpacing.xxxl),
+                      if (title != null) ...[
+                        Text(title!, style: AppTypography.title1(colors.text)),
+                        const SizedBox(height: AppSpacing.sm),
+                      ],
+                      if (subtitle != null)
+                        Text(subtitle!,
+                            style: AppTypography.subtitle(colors.text2)),
+                      if (title != null || subtitle != null)
+                        const SizedBox(height: AppSpacing.xxxl),
+                      // Twin spacers center the form between the back chevron
+                      // and the footer; they collapse when the keyboard
+                      // shrinks the viewport and the scroll view takes over.
+                      const Spacer(),
                       body,
                       const Spacer(),
                       if (footer != null) ...[

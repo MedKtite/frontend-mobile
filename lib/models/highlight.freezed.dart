@@ -30,6 +30,7 @@ mixin _$Highlight {
   double? get audioStartSec => throw _privateConstructorUsedError;
   double? get audioEndSec => throw _privateConstructorUsedError;
   String? get colorTag => throw _privateConstructorUsedError;
+  bool get isSaved => throw _privateConstructorUsedError;
   String? get createdAt => throw _privateConstructorUsedError;
 
   /// Serializes this Highlight to a JSON map.
@@ -57,6 +58,7 @@ abstract class $HighlightCopyWith<$Res> {
     double? audioStartSec,
     double? audioEndSec,
     String? colorTag,
+    bool isSaved,
     String? createdAt,
   });
 }
@@ -85,6 +87,7 @@ class _$HighlightCopyWithImpl<$Res, $Val extends Highlight>
     Object? audioStartSec = freezed,
     Object? audioEndSec = freezed,
     Object? colorTag = freezed,
+    Object? isSaved = null,
     Object? createdAt = freezed,
   }) {
     return _then(
@@ -125,6 +128,10 @@ class _$HighlightCopyWithImpl<$Res, $Val extends Highlight>
                 ? _value.colorTag
                 : colorTag // ignore: cast_nullable_to_non_nullable
                       as String?,
+            isSaved: null == isSaved
+                ? _value.isSaved
+                : isSaved // ignore: cast_nullable_to_non_nullable
+                      as bool,
             createdAt: freezed == createdAt
                 ? _value.createdAt
                 : createdAt // ignore: cast_nullable_to_non_nullable
@@ -154,6 +161,7 @@ abstract class _$$HighlightImplCopyWith<$Res>
     double? audioStartSec,
     double? audioEndSec,
     String? colorTag,
+    bool isSaved,
     String? createdAt,
   });
 }
@@ -181,6 +189,7 @@ class __$$HighlightImplCopyWithImpl<$Res>
     Object? audioStartSec = freezed,
     Object? audioEndSec = freezed,
     Object? colorTag = freezed,
+    Object? isSaved = null,
     Object? createdAt = freezed,
   }) {
     return _then(
@@ -221,6 +230,10 @@ class __$$HighlightImplCopyWithImpl<$Res>
             ? _value.colorTag
             : colorTag // ignore: cast_nullable_to_non_nullable
                   as String?,
+        isSaved: null == isSaved
+            ? _value.isSaved
+            : isSaved // ignore: cast_nullable_to_non_nullable
+                  as bool,
         createdAt: freezed == createdAt
             ? _value.createdAt
             : createdAt // ignore: cast_nullable_to_non_nullable
@@ -243,6 +256,7 @@ class _$HighlightImpl implements _Highlight {
     this.audioStartSec,
     this.audioEndSec,
     this.colorTag,
+    this.isSaved = false,
     this.createdAt,
   });
 
@@ -268,11 +282,14 @@ class _$HighlightImpl implements _Highlight {
   @override
   final String? colorTag;
   @override
+  @JsonKey()
+  final bool isSaved;
+  @override
   final String? createdAt;
 
   @override
   String toString() {
-    return 'Highlight(id: $id, bookId: $bookId, textChapterRef: $textChapterRef, textStartOffset: $textStartOffset, textEndOffset: $textEndOffset, passageText: $passageText, audioStartSec: $audioStartSec, audioEndSec: $audioEndSec, colorTag: $colorTag, createdAt: $createdAt)';
+    return 'Highlight(id: $id, bookId: $bookId, textChapterRef: $textChapterRef, textStartOffset: $textStartOffset, textEndOffset: $textEndOffset, passageText: $passageText, audioStartSec: $audioStartSec, audioEndSec: $audioEndSec, colorTag: $colorTag, isSaved: $isSaved, createdAt: $createdAt)';
   }
 
   @override
@@ -296,6 +313,7 @@ class _$HighlightImpl implements _Highlight {
                 other.audioEndSec == audioEndSec) &&
             (identical(other.colorTag, colorTag) ||
                 other.colorTag == colorTag) &&
+            (identical(other.isSaved, isSaved) || other.isSaved == isSaved) &&
             (identical(other.createdAt, createdAt) ||
                 other.createdAt == createdAt));
   }
@@ -313,6 +331,7 @@ class _$HighlightImpl implements _Highlight {
     audioStartSec,
     audioEndSec,
     colorTag,
+    isSaved,
     createdAt,
   );
 
@@ -341,6 +360,7 @@ abstract class _Highlight implements Highlight {
     final double? audioStartSec,
     final double? audioEndSec,
     final String? colorTag,
+    final bool isSaved,
     final String? createdAt,
   }) = _$HighlightImpl;
 
@@ -365,6 +385,8 @@ abstract class _Highlight implements Highlight {
   double? get audioEndSec;
   @override
   String? get colorTag;
+  @override
+  bool get isSaved;
   @override
   String? get createdAt;
 

@@ -9,10 +9,6 @@ import 'core/widgets/app_background.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Page-texture backgrounds parse before the first frame ("loads first") —
-  // they're heavyweight assets and must never pop in on a screen.
-  await precacheAppBackground();
-
   // Dio needs a writable directory for the persistent cookie jar (mobile /
   // desktop). If that isn't available (e.g. web), boot without it — splash and
   // onboarding don't touch the network; auth screens do and require mobile.
@@ -39,8 +35,6 @@ class MarginaliaApp extends StatelessWidget {
       darkTheme: AppTheme.dark(),
       themeMode: ThemeMode.system,
       routerConfig: appRouter,
-      // One background behind every routed screen (scaffolds are transparent
-      // by theme; the reading screen pins its own opaque surface on top).
       builder: (context, child) =>
           AppBackground(child: child ?? const SizedBox.shrink()),
     );

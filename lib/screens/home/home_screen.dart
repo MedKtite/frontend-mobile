@@ -12,6 +12,7 @@ import '../../core/widgets/app_snackbar.dart';
 import '../../models/book.dart';
 import '../../models/catalog_book.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/author_provider.dart';
 import '../../providers/home_provider.dart';
 import '../../providers/library_provider.dart';
 import '../../providers/recommendations_provider.dart';
@@ -19,31 +20,15 @@ import '../../providers/state/auth_state.dart';
 import '../../providers/state/home_state.dart';
 import '../../providers/trending_provider.dart';
 import '../../widgets/add_to_library_sheet.dart';
+import '../../widgets/author_avatar.dart';
 import '../../widgets/book_cover.dart';
-import '../../widgets/glass_nav_bar.dart';
+import '../../widgets/glass_panel.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
   void _comingSoon(BuildContext context, String what) =>
       showAppSnack(context, '$what — coming soon');
-
-  void _onTab(BuildContext context, NavTab tab) {
-    switch (tab) {
-      case NavTab.home:
-        break;
-      case NavTab.search:
-        context.go(Routes.search);
-      case NavTab.library:
-        context.go(Routes.library);
-      case NavTab.profile:
-        context.push(Routes.settings);
-      default:
-        // Insights isn't built yet.
-        _comingSoon(
-            context, '${tab.name[0].toUpperCase()}${tab.name.substring(1)}');
-    }
-  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -59,12 +44,8 @@ class HomeScreen extends ConsumerWidget {
     final initial =
         user?.avatarInitial ?? (name.isEmpty ? '?' : name[0].toUpperCase());
 
+    // Nav bar lives in AppShell (persistent across tabs) — not here.
     return Scaffold(
-      extendBody: true,
-      bottomNavigationBar: GlassNavBar(
-        current: NavTab.home,
-        onSelect: (tab) => _onTab(context, tab),
-      ),
       body: SafeArea(
         bottom: false,
         child: switch (state) {
@@ -323,6 +304,7 @@ class _PopulatedHome extends StatelessWidget {
             const SizedBox(height: AppSpacing.xxl),
           ],
           _ContinueRow(excludeId: continueReading?.id),
+          const _TopAuthorsSection(),
           const _RecommendedSection(),
           if (passage != null) ...[
             _SectionLabel('PASSAGE OF THE DAY'),
@@ -489,8 +471,9 @@ class _ContinueRowCard extends StatelessWidget {
       onTap: () => context.push(Routes.readingPath(book.id), extra: book),
       child: SizedBox(
         width: _ContinueRow._cardW,
-        child: _Card(
-          padding: AppSpacing.md,
+        child: GlassPanel(
+          radius: AppRadii.lg,
+          padding: const EdgeInsets.all(AppSpacing.md),
           child: Row(
             children: [
               BookCover(
@@ -591,6 +574,64 @@ class _TrendingSection extends ConsumerWidget {
         _SectionLabel('TRENDING NOW'),
         const SizedBox(height: AppSpacing.md),
         SizedBox(height: _rowH, child: row),
+        const SizedBox(height: AppSpacing.xxl),
+      ],
+    );
+  }
+}
+
+/// "Top authors" — the most-downloaded Gutenberg authors, with Wikipedia
+/// portraits. Tap → the author profile (bio + their books). Hidden while
+/// loading / on error — a bonus row, never a broken block.
+class _TopAuthorsSection extends ConsumerWidget {
+  const _TopAuthorsSection();
+
+  static const double _avatar = 64;
+  static const double _cellW = 76;
+  static const double _rowH = 104; // avatar + gap + one name line
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final authors = ref.watch(topAuthorsProvider).valueOrNull;
+    if (authors == null || authors.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _SectionLabel('TOP AUTHORS'),
+        const SizedBox(height: AppSpacing.md),
+        SizedBox(
+          height: _rowH,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: authors.length,
+            separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.md),
+            itemBuilder: (context, i) {
+              final a = authors[i];
+              return GestureDetector(
+                onTap: () => context.push(Routes.author, extra: a.name),
+                child: SizedBox(
+                  width: _cellW,
+                  child: Column(
+                    children: [
+                      AuthorAvatar(
+                          name: a.name, imageUrl: a.imageUrl, size: _avatar),
+                      const SizedBox(height: AppSpacing.sm),
+                      Text(
+                        a.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                        style: AppTypography.caption(
+                            context.appColors.text2),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
         const SizedBox(height: AppSpacing.xxl),
       ],
     );
@@ -703,7 +744,9 @@ class _ContinueReadingCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    return _Card(
+    return GlassPanel(
+      radius: AppRadii.lg,
+      padding: const EdgeInsets.all(AppSpacing.lg),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

@@ -7,9 +7,11 @@ import '../../app/theme/tokens/colors.dart';
 import '../../app/theme/tokens/radii.dart';
 import '../../app/theme/tokens/spacing.dart';
 import '../../app/theme/tokens/typography.dart';
+import '../../app/routes.dart';
 import '../../core/dio_client.dart';
 import '../../core/widgets/app_snackbar.dart';
 import '../../core/utils/store_links.dart';
+import '../../models/book.dart';
 import '../../models/book_create_request.dart';
 import '../../models/catalog_book.dart';
 import '../../providers/book_description_provider.dart';
@@ -19,6 +21,7 @@ import '../../services/backend/catalog_service.dart';
 import '../../widgets/add_to_library_sheet.dart';
 import '../../widgets/book_cover.dart';
 import '../../widgets/shelf_picker.dart';
+import 'detail_shared.dart';
 
 /// Full catalog-book page: cover, metadata, rating, description — and the
 /// action row that fits what we can offer. Public-domain (FULL) titles get
@@ -132,7 +135,7 @@ class _CatalogBookScreenState extends ConsumerState<CatalogBookScreen> {
             )))
             .valueOrNull
         : null;
-    final description = _clean(book.description ?? extras?.description);
+    final description = cleanHtml(book.description ?? extras?.description);
     final rating = book.averageRating ?? extras?.rating;
     final reads = book.downloadCount ??
         extras?.downloads ??
@@ -140,6 +143,11 @@ class _CatalogBookScreenState extends ConsumerState<CatalogBookScreen> {
         extras?.ratingsCount;
     final pages = book.pageCount ?? extras?.pageCount;
     final year = book.publishedYear ?? extras?.year;
+
+    // Already in the library? Then this page reads, it doesn't re-add.
+    final ownedBook =
+        _findOwned(ref.watch(libraryBooksProvider).valueOrNull);
+    final isSaved = _added || ownedBook != null;
 
     return Scaffold(
       // No top SafeArea: the tinted header owns the status-bar area (edge-to-
@@ -170,21 +178,21 @@ class _CatalogBookScreenState extends ConsumerState<CatalogBookScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      _CircleIconButton(
+                      CircleIconButton(
                         icon: Icons.chevron_left,
                         onTap: () => context.pop(),
                       ),
                       GestureDetector(
                         behavior: HitTestBehavior.opaque,
-                        onTap: (_adding || _added) ? null : _addToLibrary,
+                        onTap: (_adding || isSaved) ? null : _addToLibrary,
                         child: Padding(
                           padding: const EdgeInsets.all(AppSpacing.xs),
                           child: Icon(
-                            _added
+                            isSaved
                                 ? Icons.bookmark_rounded
                                 : Icons.bookmark_outline_rounded,
                             size: 26,
-                            color: _added ? colors.accent : colors.text2,
+                            color: isSaved ? colors.accent : colors.text2,
                           ),
                         ),
                       ),
@@ -265,10 +273,10 @@ class _CatalogBookScreenState extends ConsumerState<CatalogBookScreen> {
                 ],
               ),
             ),
-            // Pinned primary CTA (reference layout) — readable books only.
-            // Bottom SafeArea here because the page no longer has a global one
-            // (the header owns the status-bar area edge-to-edge).
-            if (book.isReadable)
+            // Pinned primary CTA (reference layout). Owned → read; readable →
+            // add. Bottom SafeArea because the page has no global one (the
+            // header owns the status-bar area edge-to-edge).
+            if (ownedBook != null || book.isReadable)
               SafeArea(
                 top: false,
                 child: Padding(
@@ -278,7 +286,9 @@ class _CatalogBookScreenState extends ConsumerState<CatalogBookScreen> {
                     AppSpacing.pageHorizontal,
                     AppSpacing.md,
                   ),
-                  child: _readableActions(colors),
+                  child: ownedBook != null
+                      ? _ownedActions(colors, ownedBook)
+                      : _readableActions(colors),
                 ),
               ),
           ],
@@ -292,28 +302,28 @@ class _CatalogBookScreenState extends ConsumerState<CatalogBookScreen> {
       {double? rating, int? reads, int? pages, int? year}) {
     final stats = <Widget>[
       if (rating != null)
-        _Stat(
+        StatChip(
           icon: Icons.star_rounded,
           tone: colors.gilt,
           value: rating.toStringAsFixed(1),
           label: 'Rating',
         ),
       if (reads != null)
-        _Stat(
+        StatChip(
           icon: Icons.auto_stories_rounded,
           tone: colors.accent,
-          value: _compact(reads),
+          value: compactCount(reads),
           label: 'Readers',
         ),
       if (pages != null)
-        _Stat(
+        StatChip(
           icon: Icons.menu_book_rounded,
           tone: colors.text3,
           value: '$pages',
           label: 'Pages',
         ),
       if (year != null)
-        _Stat(
+        StatChip(
           icon: Icons.calendar_month_rounded,
           tone: colors.text3,
           value: '$year',
@@ -328,22 +338,52 @@ class _CatalogBookScreenState extends ConsumerState<CatalogBookScreen> {
     );
   }
 
-  /// 68421 → "68.4k" — KPI-style compact count.
-  static String _compact(int n) {
-    if (n >= 1000000) return '${(n / 1000000).toStringAsFixed(1)}M';
-    if (n >= 1000) return '${(n / 1000).toStringAsFixed(1)}k';
-    return '$n';
+  /// The library copy of this catalog result, if the user already owns it —
+  /// matched by googleId, else by normalized title (Gutenberg items carry no
+  /// googleId).
+  Book? _findOwned(List<Book>? books) {
+    if (books == null) return null;
+    String norm(String s) =>
+        s.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), ' ').trim();
+    for (final b in books) {
+      if (book.googleId != null && b.googleId == book.googleId) return b;
+      if (norm(b.title) == norm(book.title)) return b;
+    }
+    return null;
   }
 
-  /// Google descriptions arrive with light HTML — strip tags, keep the text.
-  String _clean(String? raw) => (raw ?? '')
-      .replaceAll(RegExp(r'<[^>]+>'), ' ')
-      .replaceAll('&amp;', '&')
-      .replaceAll('&quot;', '"')
-      .replaceAll('&#39;', "'")
-      .replaceAll('&nbsp;', ' ')
-      .replaceAll(RegExp(r'\s+'), ' ')
-      .trim();
+  /// Pinned CTA when the book is already in the library: read it.
+  Widget _ownedActions(AppColorsExtension colors, Book owned) {
+    final progress = (owned.progressPct ?? 0).clamp(0.0, 100.0);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        FilledButton(
+          onPressed: () =>
+              context.push(Routes.readingPath(owned.id), extra: owned),
+          style: FilledButton.styleFrom(
+            backgroundColor: colors.accent,
+            foregroundColor: colors.bg,
+            padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+            shape: RoundedRectangleBorder(borderRadius: AppRadii.brMd),
+          ),
+          child: Text(
+            progress > 0
+                ? 'Continue reading — ${progress.round()}%'
+                : 'Read now',
+            style: AppTypography.label(colors.bg)
+                .copyWith(fontWeight: FontWeight.w600),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Text(
+          'Already in your library.',
+          textAlign: TextAlign.center,
+          style: AppTypography.caption(colors.text3),
+        ),
+      ],
+    );
+  }
 
   // ── FULL: readable in-app ─────────────────────────────────────────────
 
@@ -385,6 +425,44 @@ class _CatalogBookScreenState extends ConsumerState<CatalogBookScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        // The one thing we CAN sell in-app (store IAP via RevenueCat) is the
+        // Pro plan — individual copyrighted books legally stay with the
+        // stores until we hold distribution agreements.
+        InkWell(
+          onTap: () => context.push(Routes.paywall),
+          borderRadius: AppRadii.brMd,
+          child: Container(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            decoration: BoxDecoration(
+              color: colors.accentSoft,
+              borderRadius: AppRadii.brMd,
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.workspace_premium_outlined,
+                    size: 22, color: colors.accent),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Marginalia Pro',
+                          style: AppTypography.label(colors.text)
+                              .copyWith(fontWeight: FontWeight.w600)),
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        'Unlimited library and custom tags — right here in the app.',
+                        style: AppTypography.caption(colors.text2),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(Icons.chevron_right, size: 20, color: colors.text3),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.lg),
         Text('GET THIS BOOK', style: AppTypography.overline(colors.text3)),
         const SizedBox(height: AppSpacing.sm),
         _StoreTile(
@@ -466,69 +544,6 @@ class _CatalogBookScreenState extends ConsumerState<CatalogBookScreen> {
             ),
           ),
         ),
-      ],
-    );
-  }
-}
-
-/// Soft circular icon button (reference header style) — surface2 disc, ink glyph.
-class _CircleIconButton extends StatelessWidget {
-  const _CircleIconButton({required this.icon, required this.onTap});
-  final IconData icon;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Material(
-      color: colors.surface2,
-      shape: const CircleBorder(),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.sm),
-          child: Icon(icon, size: 22, color: colors.text),
-        ),
-      ),
-    );
-  }
-}
-
-/// One labeled stat: colored glyph + bold value on top, muted label beneath.
-class _Stat extends StatelessWidget {
-  const _Stat({
-    required this.icon,
-    required this.tone,
-    required this.value,
-    required this.label,
-  });
-
-  final IconData icon;
-  final Color tone;
-  final String value;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 18, color: tone),
-            const SizedBox(width: AppSpacing.xs),
-            Text(
-              value,
-              style: AppTypography.label(colors.text)
-                  .copyWith(fontWeight: FontWeight.w700),
-            ),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.xs),
-        Text(label, style: AppTypography.caption(colors.text3)),
       ],
     );
   }

@@ -30,6 +30,22 @@ class HighlightService {
         .toList();
   }
 
+  /// GET /me/highlights/saved — highlights bookmarked into Saved.
+  Future<List<Highlight>> listSaved() async {
+    final res = await _dio.get<List<dynamic>>('/me/highlights/saved');
+    return (res.data ?? const [])
+        .map((e) => Highlight.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// GET /me/highlights/by-tag/{tagId} — every highlight carrying this tag.
+  Future<List<Highlight>> listByTag(String tagId) async {
+    final res = await _dio.get<List<dynamic>>('/me/highlights/by-tag/$tagId');
+    return (res.data ?? const [])
+        .map((e) => Highlight.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
   /// POST /me/highlights — create a highlight (passage + chapter + colorTag).
   /// Null fields are stripped so optional offsets are simply omitted.
   Future<Highlight> create(HighlightCreateRequest req) async {
@@ -37,6 +53,15 @@ class HighlightService {
     final res = await _dio.post<Map<String, dynamic>>(
       '/me/highlights',
       data: body,
+    );
+    return Highlight.fromJson(res.data!);
+  }
+
+  /// PATCH /me/highlights/{id} — toggle the Saved bookmark.
+  Future<Highlight> setSaved(String id, bool saved) async {
+    final res = await _dio.patch<Map<String, dynamic>>(
+      '/me/highlights/$id',
+      data: {'isSaved': saved},
     );
     return Highlight.fromJson(res.data!);
   }

@@ -11,7 +11,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/state/auth_state.dart';
 import '../../services/frontend/auth_validators.dart';
 import '../../widgets/auth_scaffold.dart';
-import '../../widgets/auth_text_field.dart';
+import '../../core/widgets/app_text_field.dart';
 import '../../widgets/glass_panel.dart';
 
 /// Login — authenticate a returning user (frame `78:66`).
@@ -60,24 +60,27 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       }
     });
 
-    return Center(
-      
-      child: Form(
+    return Form(
       key: _formKey,
       child: AuthScaffold(
-        title: 'Welcome back',
-        subtitle: 'Sign in to continue your reading.',
+        // Heading lives INSIDE the glass card (below) — no title up here.
         onBack: () =>
             context.canPop() ? context.pop() : context.go(Routes.onboarding),
         body:
-        // Liquid-glass form surface (frost fallback off-Impeller) — the auth
-        // background art shows through with refraction at the edges.
+        // Centered vertically by AuthScaffold's twin spacers.
         GlassPanel(
           padding: const EdgeInsets.all(AppSpacing.lg),
           child:
         Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            Text('Welcome back', style: AppTypography.title1(colors.text)),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              'Sign in to continue your reading.',
+              style: AppTypography.subtitle(colors.text2),
+            ),
+            const SizedBox(height: AppSpacing.xl),
             Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -87,7 +90,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   style: AppTypography.caption( colors.text2),
                 ),
                 const SizedBox(height: AppSpacing.sm),
-            AuthTextField(
+            AppTextField(
               controller: _email,
               hint: 'Email',
               keyboardType: TextInputType.emailAddress,
@@ -104,7 +107,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   style: AppTypography.caption( colors.text2),
                 ),
                 const SizedBox(height: AppSpacing.sm),
-            AuthTextField(
+            AppTextField(
               controller: _password,
               hint: 'Password',
               obscure: true,
@@ -170,7 +173,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           action: 'Register',
           onTap: () => context.pushReplacement(Routes.register),
         ),
-      ),
       ),
     );
   }

@@ -59,8 +59,17 @@ class BookCover extends StatelessWidget {
               width: width,
               height: width * 1.5,
               fit: BoxFit.cover,
-              loadingBuilder: (_, child, progress) =>
-                  progress == null ? child : _typePanel(),
+              // While downloading: just the quiet bg panel (no text flash);
+              // the real cover fades in on arrival. The type panel is
+              // reserved for covers that genuinely don't exist (error).
+              frameBuilder: (_, child, frame, wasSync) => wasSync
+                  ? child
+                  : AnimatedOpacity(
+                      opacity: frame == null ? 0 : 1,
+                      duration: const Duration(milliseconds: 200),
+                      curve: Curves.easeOut,
+                      child: child,
+                    ),
               errorBuilder: (_, __, ___) => _typePanel(),
             )
           : _typePanel(),

@@ -16,12 +16,16 @@ import '../models/presign_upload_request.dart';
 import '../providers/library_provider.dart';
 import '../services/backend/book_service.dart';
 import '../services/backend/upload_service.dart';
+import 'glass_panel.dart';
 
 /// Presents the "Add to library" modal sheet (frames 287:2 / 287:181).
 Future<void> showAddToLibrarySheet(BuildContext context) {
   return showModalBottomSheet<void>(
     context: context,
     backgroundColor: Colors.transparent,
+    // Light scrim: the sheet is frosted GLASS — it needs bright content
+    // behind it to transmit. The default black54 turns the frost muddy.
+    barrierColor: Colors.black.withValues(alpha: 0.18),
     isScrollControlled: true, // size to content, not the default half-screen cap
     builder: (_) => const _AddToLibrarySheet(),
   );
@@ -121,11 +125,12 @@ class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    return Container(
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(AppRadii.xl)),
-      ),
+    // Same glass material as the nav pill and auth cards; top-only rounding
+    // since the sheet is flush with the screen bottom.
+    return GlassPanel(
+      radius: AppRadii.xl,
+      borderRadius:
+          const BorderRadius.vertical(top: Radius.circular(AppRadii.xl)),
       child: SafeArea(
         top: false,
         child: Padding(
@@ -178,20 +183,7 @@ class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
           style: AppTypography.subtitle(colors.text2),
         ),
         const SizedBox(height: AppSpacing.xl),
-        _AddOption(
-          icon: Icons.search,
-          title: 'Search the catalog',
-          subtitle: 'Find by title or author',
-          highlighted: true,
-          onTap: () {
-            final router = GoRouter.of(context);
-            Navigator.of(context).pop();
-            // Catalog search now lives in the Library search field —
-            // land there with it focused (extra → autofocusSearch).
-            router.go(Routes.library, extra: true);
-          },
-        ),
-        const SizedBox(height: AppSpacing.md),
+        
         _AddOption(
           icon: Icons.file_upload_outlined,
           title: 'Upload a file',
@@ -212,11 +204,7 @@ class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
           subtitle: 'Track a book you read on paper',
           onTap: () => _stub('Logging a physical book'),
         ),
-        const SizedBox(height: AppSpacing.lg),
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: Text('Cancel', style: AppTypography.label(colors.text2)),
-        ),
+
       ];
 
   // The remaining add flows aren't built yet — close the sheet and acknowledge.
@@ -235,20 +223,19 @@ class _AddOption extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.onTap,
-    this.highlighted = false,
   });
 
   final IconData icon;
   final String title;
   final String subtitle;
   final VoidCallback onTap;
-  final bool highlighted;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
+    // Transparent row — an opaque card would punch a hole in the glass sheet.
     return Material(
-      color: colors.surface,
+      color: Colors.transparent,
       borderRadius: AppRadii.brLg,
       child: InkWell(
         onTap: onTap,
@@ -257,22 +244,22 @@ class _AddOption extends StatelessWidget {
           padding: const EdgeInsets.all(AppSpacing.md),
           decoration: BoxDecoration(
             borderRadius: AppRadii.brLg,
-            border: Border.all(
-              color: highlighted ? colors.accent : colors.border,
-              width: highlighted ? 1.5 : 1,
-            ),
+          
           ),
           child: Row(
             children: [
+              // Translucent accent tint, not an opaque surface — the glass
+              // continues through the chip (same vocabulary as the nav bar's
+              // active-tab pill: soft accent wash = tappable).
               Container(
                 width: 48,
                 height: 48,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: colors.surface2,
+                  color: colors.accentSoft,
                   borderRadius: AppRadii.brMd,
                 ),
-                child: Icon(icon, size: 22, color: colors.text2),
+                child: Icon(icon, size: 22, color: colors.accent),
               ),
               const SizedBox(width: AppSpacing.md),
               Expanded(

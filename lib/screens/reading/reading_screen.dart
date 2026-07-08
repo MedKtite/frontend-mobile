@@ -6,11 +6,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:pdfx/pdfx.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
-import '../../app/routes.dart';
 import '../../app/theme/tokens/colors.dart';
 import '../../app/theme/tokens/radii.dart';
 import '../../app/theme/tokens/spacing.dart';
@@ -31,7 +29,7 @@ import '../../services/backend/highlight_service.dart';
 import '../../services/backend/note_service.dart';
 import '../../widgets/note_sheet.dart';
 import '../../widgets/tag_picker_sheet.dart';
-import '../../widgets/typography_sheet.dart';
+import 'reader_shared.dart';
 
 /// Reader. Keeps the designed chrome (back · title · Aa, and the bottom progress
 /// bar) and drops the real uploaded file into the body: a [_PdfReader] or
@@ -50,8 +48,8 @@ class ReadingScreen extends ConsumerStatefulWidget {
 class _ReadingScreenState extends ConsumerState<ReadingScreen> {
   /// The active reader pushes its position here; only the bottom bar listens, so
   /// the page/EPUB view itself never rebuilds on a progress tick.
-  late final ValueNotifier<_ReaderProgress> _progress = ValueNotifier(
-    _ReaderProgress(widget.initialBook?.progressPct ?? 0, ''),
+  late final ValueNotifier<ReaderProgress> _progress = ValueNotifier(
+    ReaderProgress(widget.initialBook?.progressPct ?? 0, ''),
   );
 
   @override
@@ -102,7 +100,7 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
             body: SafeArea(
               child: Column(
                 children: [
-                  _TopBar(title: displayBook?.title ?? 'Reading'),
+                  ReaderTopBar(title: displayBook?.title ?? 'Reading'),
                   Expanded(
                     child: readerBook != null
                         ? _body(context, readerBook)
@@ -110,10 +108,10 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
                             child: CircularProgressIndicator(
                                 color: colors.accent)),
                   ),
-                  // EPUB has its own paginated footer (_PagedNavBar); only the
+                  // EPUB has its own paginated footer (PagedNavBar); only the
                   // PDF reader uses the shared progress bar.
                   if (displayBook?.format == 'pdf')
-                    ValueListenableBuilder<_ReaderProgress>(
+                    ValueListenableBuilder<ReaderProgress>(
                       valueListenable: _progress,
                       builder: (_, pr, __) =>
                           _BottomBar(progressPct: pr.pct, label: pr.label),
@@ -142,7 +140,7 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
             loading: () => _GutenbergLoading(bookId: book.id),
             error: (e, _) => e is GutenbergNotFound
                 ? _NoReadableFile(book: book)
-                : _ReaderError(
+                : ReaderError(
                     message: 'Could not load this book.',
                     onRetry: () => ref.invalidate(gutenbergEpubProvider(gref)),
                   ),
@@ -155,7 +153,7 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
     return ref.watch(bookFileProvider(fileRef)).when(
           loading: () =>
               Center(child: CircularProgressIndicator(color: colors.accent)),
-          error: (e, _) => _ReaderError(
+          error: (e, _) => ReaderError(
             message: e is ApiError ? e.message : 'Could not load this book.',
             onRetry: () => ref.invalidate(bookFileProvider(fileRef)),
           ),
@@ -163,83 +161,6 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
               ? _PdfReader(file: file, book: book, progress: _progress)
               : _EpubReader(file: file, book: book, progress: _progress),
         );
-  }
-}
-
-/// What the bottom bar shows: a fraction (0–100) and a left-hand label.
-class _ReaderProgress {
-  const _ReaderProgress(this.pct, this.label);
-  final double pct;
-  final String label;
-}
-
-/// Back · centered book title · "Aa" type control. Title is centered with a
-/// Stack so the asymmetric side controls don't push it off-axis.
-class _TopBar extends StatelessWidget {
-  const _TopBar({required this.title});
-
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.pageHorizontal,
-        vertical: AppSpacing.sm,
-      ),
-      child: SizedBox(
-        height: 36,
-        child: Stack(
-          children: [
-            // Inset past the side controls so a long title ellipsizes between
-            // them instead of running underneath the back arrow / "Aa".
-            Align(
-              child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: AppSpacing.xxxl),
-                child: Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                  style: AppTypography.label(colors.text2),
-                ),
-              ),
-            ),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () => context.canPop()
-                    ? context.pop()
-                    : context.go(Routes.library),
-                child: Padding(
-                  padding: const EdgeInsets.all(AppSpacing.xs),
-                  child: Icon(
-                    Icons.arrow_back_ios_new,
-                    size: 18,
-                    color: colors.text,
-                  ),
-                ),
-              ),
-            ),
-            Align(
-              alignment: Alignment.centerRight,
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () => showTypographySheet(context),
-                child: Padding(
-                  padding: const EdgeInsets.all(AppSpacing.xs),
-                  child: Text('Aa', style: AppTypography.title3(colors.text)),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }
 
@@ -254,7 +175,7 @@ class _PdfReader extends ConsumerStatefulWidget {
 
   final File file;
   final Book book;
-  final ValueNotifier<_ReaderProgress> progress;
+  final ValueNotifier<ReaderProgress> progress;
 
   @override
   ConsumerState<_PdfReader> createState() => _PdfReaderState();
@@ -272,7 +193,7 @@ class _PdfReaderState extends ConsumerState<_PdfReader> {
   void initState() {
     super.initState();
     _books = ref.read(bookServiceProvider);
-    _page = _cursorPage(widget.book.cursor);
+    _page = cursorPage(widget.book.cursor);
     _controller = PdfController(
       document: PdfDocument.openFile(widget.file.path),
       initialPage: _page,
@@ -283,7 +204,7 @@ class _PdfReaderState extends ConsumerState<_PdfReader> {
     final pct =
         _total > 0 ? (_page / _total * 100).clamp(0, 100).toDouble() : 0.0;
     widget.progress.value =
-        _ReaderProgress(pct, 'Page $_page of ${_total == 0 ? '—' : _total}');
+        ReaderProgress(pct, 'Page $_page of ${_total == 0 ? '—' : _total}');
   }
 
   void _scheduleSave() {
@@ -318,7 +239,7 @@ class _PdfReaderState extends ConsumerState<_PdfReader> {
   @override
   Widget build(BuildContext context) {
     if (_error != null) {
-      return const _ReaderMessage(
+      return const ReaderMessage(
         icon: Icons.broken_image_outlined,
         text: 'Could not open this PDF.',
       );
@@ -354,7 +275,7 @@ class _EpubReader extends ConsumerStatefulWidget {
 
   final File file;
   final Book book;
-  final ValueNotifier<_ReaderProgress> progress;
+  final ValueNotifier<ReaderProgress> progress;
 
   @override
   ConsumerState<_EpubReader> createState() => _EpubReaderState();
@@ -425,7 +346,7 @@ class _EpubReaderState extends ConsumerState<_EpubReader> {
       final end = (i + chunk < b64.length) ? i + chunk : b64.length;
       await _web.runJavaScript("window.appendChunk('${b64.substring(i, end)}')");
     }
-    final cfi = _cursorCfi(widget.book.cursor);
+    final cfi = cursorCfi(widget.book.cursor);
     final cfiArg = cfi == null ? 'null' : jsonEncode(cfi);
     var locArg = 'null';
     try {
@@ -452,9 +373,9 @@ class _EpubReaderState extends ConsumerState<_EpubReader> {
     final family =
         s.font == ReaderFont.serif ? 'Georgia, serif' : 'system-ui, sans-serif';
     _web.runJavaScript(
-      'window.setTheme("${_cssHex(p.bg)}","${_cssHex(p.text)}",'
+      'window.setTheme("${cssHex(p.bg)}","${cssHex(p.text)}",'
       '"$family",${s.fontSize.round()},${s.lineHeight},'
-      '"${_cssHex(p.accent)}")',
+      '"${cssHex(p.accent)}")',
     );
   }
 
@@ -485,7 +406,7 @@ class _EpubReaderState extends ConsumerState<_EpubReader> {
             _selRect = null;
           });
         }
-        widget.progress.value = _ReaderProgress(_pct, _label);
+        widget.progress.value = ReaderProgress(_pct, _label);
         _scheduleSave();
       case 'selected':
         final selCfi = data['cfiRange'] as String?;
@@ -583,7 +504,7 @@ class _EpubReaderState extends ConsumerState<_EpubReader> {
   /// Paint one highlight into the book text, tag-colored.
   void _mark(String cfiRange, String tag) {
     _web.runJavaScript('window.applyMark(${jsonEncode(cfiRange)}, '
-        '"${_cssHex(AppColors.forTag(tag))}")');
+        '"${cssHex(AppColors.forTag(tag))}")');
   }
 
   void _clearSelection() {
@@ -706,7 +627,7 @@ class _EpubReaderState extends ConsumerState<_EpubReader> {
   /// Palette anchor: 12px above the selection, flipped below it when there's
   /// no room, and always clamped inside the reader area. No rect → bottom.
   double _paletteTop(double maxHeight) {
-    const palH = _HighlightPalette.height;
+    const palH = HighlightPalette.height;
     final r = _selRect;
     if (r == null) return maxHeight - palH - AppSpacing.md;
     var top = r.top - palH - AppSpacing.md;
@@ -726,7 +647,7 @@ class _EpubReaderState extends ConsumerState<_EpubReader> {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     if (_loadError != null) {
-      return _ReaderMessage(
+      return ReaderMessage(
         icon: Icons.menu_book_outlined,
         text: _loadError!,
       );
@@ -756,7 +677,7 @@ class _EpubReaderState extends ConsumerState<_EpubReader> {
                     right: AppSpacing.md,
                     top: _paletteTop(box.maxHeight),
                     child: Center(
-                      child: _HighlightPalette(
+                      child: HighlightPalette(
                         onQuickTag: _quickTag,
                         onNote: () => _annotate(asNote: true),
                         onTag: () => _annotate(asNote: false),
@@ -768,7 +689,7 @@ class _EpubReaderState extends ConsumerState<_EpubReader> {
             ),
           ),
         ),
-        _PagedNavBar(
+        PagedNavBar(
           pct: _pct,
           label: _label,
           onPrev: _ready ? _prev : null,
@@ -779,209 +700,6 @@ class _EpubReaderState extends ConsumerState<_EpubReader> {
   }
 }
 
-
-/// Floating highlight palette (Figma 237:17): dark inverted-ink pill with five
-/// quick-tag color dots (the first five system tags) · hairline divider ·
-/// Note / Tag / Copy. One dot tap = highlight saved with that tag, no sheet.
-class _HighlightPalette extends StatelessWidget {
-  const _HighlightPalette({
-    required this.onQuickTag,
-    required this.onNote,
-    required this.onTag,
-    required this.onCopy,
-  });
-
-  static const double height = 60; // Figma: 22px dots + 19px top/bottom
-
-  final ValueChanged<String> onQuickTag;
-  final VoidCallback onNote;
-  final VoidCallback onTag;
-  final VoidCallback onCopy;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-
-    return Container(
-      height: height,
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-      decoration: BoxDecoration(
-        color: colors.text, // inverted ink, same trick as the primary button
-        borderRadius: BorderRadius.circular(30),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.3),
-            blurRadius: 28,
-            offset: const Offset(0, 12),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          for (final tag in kTagNames.take(5)) ...[
-            GestureDetector(
-              onTap: () => onQuickTag(tag),
-              child: Container(
-                width: 22,
-                height: 22,
-                decoration: BoxDecoration(
-                  color: AppColors.forTag(tag),
-                  shape: BoxShape.circle,
-                ),
-              ),
-            ),
-            const SizedBox(width: 6), // Figma: 28px pitch on 22px dots
-          ],
-          const SizedBox(width: AppSpacing.sm),
-          Container(width: 1, height: 24, color: colors.bg),
-          const SizedBox(width: AppSpacing.xs),
-          _PaletteAction(label: 'Note', onTap: onNote),
-          _PaletteAction(label: 'Tag', onTap: onTag),
-          _PaletteAction(label: 'Copy', onTap: onCopy),
-        ],
-      ),
-    );
-  }
-}
-
-class _PaletteAction extends StatelessWidget {
-  const _PaletteAction({required this.label, required this.onTap});
-
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.sm,
-          vertical: AppSpacing.md,
-        ),
-        // Figma 237:24-26 — Inter Medium 13 in the page (bg) color.
-        child: Text(
-          label,
-          style: AppTypography.sans(TextStyle(
-            color: colors.bg,
-            fontSize: 13,
-            fontWeight: FontWeight.w500,
-          )),
-        ),
-      ),
-    );
-  }
-}
-
-/// Footer page-navigation for the paginated EPUB reader: ‹ prev · progress bar +
-/// "Page X of Y" + N% · next ›. Replaces the shared [_BottomBar] for EPUB.
-class _PagedNavBar extends StatelessWidget {
-  const _PagedNavBar({
-    required this.pct,
-    required this.label,
-    required this.onPrev,
-    required this.onNext,
-  });
-
-  final double pct;
-  final String label;
-  final VoidCallback? onPrev;
-  final VoidCallback? onNext;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.md,
-        AppSpacing.sm,
-        AppSpacing.md,
-        AppSpacing.md,
-      ),
-      child: Row(
-        children: [
-          _NavArrow(icon: Icons.chevron_left, onTap: onPrev),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-              child: Column(
-                children: [
-                  ClipRRect(
-                    borderRadius: AppRadii.brFull,
-                    child: SizedBox(
-                      height: 2,
-                      child: Stack(
-                        children: [
-                          Positioned.fill(
-                              child: ColoredBox(color: colors.border)),
-                          FractionallySizedBox(
-                            alignment: Alignment.centerLeft,
-                            widthFactor: (pct / 100).clamp(0, 1).toDouble(),
-                            child: ColoredBox(color: colors.accent),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.xs),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Flexible(
-                        child: Text(
-                          label,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppTypography.caption(colors.text3),
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.sm),
-                      Text('${pct.round()}%',
-                          style: AppTypography.caption(colors.text3)),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-          _NavArrow(icon: Icons.chevron_right, onTap: onNext),
-        ],
-      ),
-    );
-  }
-}
-
-/// A round page-turn button; dimmed + inert until the book is ready.
-class _NavArrow extends StatelessWidget {
-  const _NavArrow({required this.icon, required this.onTap});
-  final IconData icon;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final enabled = onTap != null;
-    return Material(
-      color: colors.surface2,
-      shape: const CircleBorder(),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.sm),
-          child: Icon(
-            icon,
-            size: 24,
-            color: enabled ? colors.text : colors.text3,
-          ),
-        ),
-      ),
-    );
-  }
-}
 
 /// Determinate download bar for the first fetch of a catalog book's text:
 /// indeterminate while searching Gutendex, then "Downloading… N%".
@@ -1017,7 +735,7 @@ class _GutenbergLoading extends ConsumerWidget {
             Text(
               downloading
                   ? 'Downloading the text… ${(p * 100).round()}%'
-                  : 'Finding a free copy…',
+                  : 'Finding a copy…',
               textAlign: TextAlign.center,
               style: AppTypography.subtitle(colors.text2),
             ),
@@ -1056,59 +774,6 @@ class _NoReadableFile extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _ReaderError extends StatelessWidget {
-  const _ReaderError({required this.message, required this.onRetry});
-  final String message;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.pageHorizontal),
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.cloud_off_outlined, size: 40, color: colors.text3),
-            const SizedBox(height: AppSpacing.lg),
-            Text("Couldn't open this book.",
-                textAlign: TextAlign.center,
-                style: AppTypography.title3(colors.text)),
-            const SizedBox(height: AppSpacing.sm),
-            Text(message,
-                textAlign: TextAlign.center,
-                style: AppTypography.caption(colors.text2)),
-            const SizedBox(height: AppSpacing.xl),
-            OutlinedButton(onPressed: onRetry, child: const Text('Try again')),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ReaderMessage extends StatelessWidget {
-  const _ReaderMessage({required this.icon, required this.text});
-  final IconData icon;
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 40, color: colors.text3),
-          const SizedBox(height: AppSpacing.lg),
-          Text(text, style: AppTypography.subtitle(colors.text2)),
-        ],
       ),
     );
   }
@@ -1173,35 +838,3 @@ class _BottomBar extends StatelessWidget {
   }
 }
 
-/// A [Color] as an opaque CSS `#rrggbb` for epub.js theme overrides.
-String _cssHex(Color c) =>
-    '#${(c.toARGB32() & 0xFFFFFF).toRadixString(16).padLeft(6, '0')}';
-
-// ── Cursor (reading position) helpers ───────────────────────────────────────
-// The backend stores `cursor` as opaque JSONB; we own the shape per format.
-
-Map<String, dynamic>? _decodeCursor(String? raw) {
-  if (raw == null || raw.isEmpty) return null;
-  try {
-    final v = jsonDecode(raw);
-    return v is Map<String, dynamic> ? v : null;
-  } catch (_) {
-    return null;
-  }
-}
-
-int _cursorPage(String? cursor) {
-  final p = _decodeCursor(cursor)?['page'];
-  if (p is num && p >= 1) return p.toInt();
-  return 1;
-}
-
-String? _cursorCfi(String? cursor) {
-  final m = _decodeCursor(cursor);
-  // Only resume from CFIs we minted with epub.js. Old `{"type":"epub"}`
-  // cursors came from epub_view, whose CFI generator differs — feeding one to
-  // epub.js can crash its parser mid-display.
-  if (m?['type'] != 'epubjs') return null;
-  final c = m?['cfi'];
-  return (c is String && c.isNotEmpty) ? c : null;
-}

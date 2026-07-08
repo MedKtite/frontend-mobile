@@ -18,6 +18,7 @@ class Highlight with _$Highlight {
     double? audioStartSec,
     double? audioEndSec,
     String? colorTag,
+    @Default(false) bool isSaved,
     String? createdAt,
   }) = _Highlight;
 

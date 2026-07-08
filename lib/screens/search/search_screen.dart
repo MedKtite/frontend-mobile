@@ -7,13 +7,35 @@ import '../../app/theme/tokens/colors.dart';
 import '../../app/theme/tokens/radii.dart';
 import '../../app/theme/tokens/spacing.dart';
 import '../../app/theme/tokens/typography.dart';
-import '../../core/widgets/app_snackbar.dart';
 import '../../core/dio_client.dart';
+import '../../core/widgets/app_snackbar.dart';
+import '../../core/widgets/app_text_field.dart';
+import '../../models/highlight.dart';
+import '../../models/note.dart';
 import '../../models/search_hit.dart';
 import '../../models/search_response.dart';
+import '../../models/tag.dart' as models;
+import '../../providers/annotations_provider.dart';
+import '../../providers/library_provider.dart';
 import '../../providers/search_provider.dart';
+import '../../services/backend/highlight_service.dart';
+import '../../services/backend/note_service.dart';
 import '../../widgets/book_cover.dart';
-import '../../widgets/glass_nav_bar.dart';
+
+/// The Search hub (Figma 96:230 for the Search tab). Four top-level tabs:
+///   Search — full-text search across the library (scope chips per Figma)
+///   Tags   — browse every tag and its highlights, no query needed
+///   Notes  — all notes, newest first
+///   Saved  — bookmarked highlights & notes (the ribbon icon on each card)
+enum _Tab {
+  search('Search'),
+  tags('Tags'),
+  notes('Notes'),
+  saved('Saved');
+
+  const _Tab(this.label);
+  final String label;
+}
 
 enum _Scope {
   all('All', null),
@@ -29,7 +51,6 @@ enum _Scope {
   bool matches(SearchHit h) => hitType == null || h.type == hitType;
 }
 
-
 class SearchScreen extends ConsumerStatefulWidget {
   const SearchScreen({super.key});
 
@@ -41,6 +62,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   final _controller = TextEditingController();
   Timer? _debounce;
   String _query = '';
+  _Tab _tab = _Tab.search;
   _Scope _scope = _Scope.all;
   final List<String> _recent = [];
 
@@ -58,6 +80,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   }
 
   void _onChanged(String v) {
+    // Typing is always a search — pull the user back to the Search tab.
+    if (v.isNotEmpty && _tab != _Tab.search) setState(() => _tab = _Tab.search);
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 350), () {
       if (mounted) setState(() => _query = v.trim());
@@ -68,6 +92,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     _debounce?.cancel();
     final q = v.trim();
     setState(() {
+      _tab = _Tab.search;
       _query = q;
       if (q.isNotEmpty) {
         _recent.remove(q);
@@ -87,29 +112,10 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     setState(() => _query = '');
   }
 
-  void _onTab(NavTab tab) {
-    switch (tab) {
-      case NavTab.search:
-        break;
-      case NavTab.home:
-        context.go(Routes.home);
-      case NavTab.library:
-        context.go(Routes.library);
-      case NavTab.profile:
-        context.push(Routes.settings);
-      default:
-        showAppSnack(context,
-            '${tab.name[0].toUpperCase()}${tab.name.substring(1)} — coming soon');
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
-
+    // Nav bar lives in AppShell (persistent across tabs) — not here.
     return Scaffold(
-      extendBody: true,
-      bottomNavigationBar: GlassNavBar(current: NavTab.search, onSelect: _onTab),
       body: SafeArea(
         bottom: false,
         child: Column(
@@ -120,52 +126,64 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 AppSpacing.pageHorizontal,
                 AppSpacing.md,
                 AppSpacing.pageHorizontal,
-                AppSpacing.lg,
+                AppSpacing.md,
               ),
-              child: TextField(
+              child: AppTextField(
                 controller: _controller,
+                hint: 'Search titles, highlights, notes…',
+                search: true,
+                prefixIcon: Icons.search,
                 textInputAction: TextInputAction.search,
                 onChanged: _onChanged,
                 onSubmitted: _commit,
-                style: AppTypography.body(colors.text),
-                decoration: InputDecoration(
-                  isDense: true,
-                  filled: true,
-                  fillColor: colors.surface,
-                  hintText: 'Search titles, highlights, notes…',
-                  hintStyle: AppTypography.body(colors.text3),
-                  prefixIcon: Icon(Icons.search, size: 20, color: colors.text3),
-                  suffixIcon: _query.isEmpty
-                      ? null
-                      : IconButton(
-                          icon: Icon(Icons.close, size: 18, color: colors.text2),
-                          onPressed: _clear,
-                        ),
-                  contentPadding:
-                      const EdgeInsets.symmetric(vertical: AppSpacing.md),
-                  border: OutlineInputBorder(
-                    borderRadius: AppRadii.brFull,
-                    borderSide: BorderSide(color: colors.border),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: AppRadii.brFull,
-                    borderSide: BorderSide(color: colors.border),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: AppRadii.brFull,
-                    borderSide: BorderSide(color: colors.accent, width: 1.5),
-                  ),
+                onClear: _clear,
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.pageHorizontal),
+              child: SizedBox(
+                height: 34,
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  children: [
+                    for (final t in _Tab.values) ...[
+                      _Chip(
+                        label: t.label,
+                        count: null,
+                        active: t == _tab,
+                        onTap: () => setState(() => _tab = t),
+                      ),
+                      if (t != _Tab.values.last)
+                        const SizedBox(width: AppSpacing.sm),
+                    ],
+                  ],
                 ),
               ),
             ),
+            const SizedBox(height: AppSpacing.md),
             Expanded(
-              child: _query.isEmpty ? _empty() : _resultsView(),
+              // IndexedStack keeps each tab's scroll position and selection
+              // alive across switches.
+              child: IndexedStack(
+                index: _tab.index,
+                children: [
+                  _searchTab(),
+                  const _TagsTab(),
+                  const _NotesTab(),
+                  const _SavedTab(),
+                ],
+              ),
             ),
           ],
         ),
       ),
     );
   }
+
+  // ── Search tab (Figma 96:230) ───────────────────────────────────────────
+
+  Widget _searchTab() => _query.isEmpty ? _empty() : _resultsView();
 
   Widget _empty() {
     final colors = context.appColors;
@@ -251,6 +269,519 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
   void _selectScope(_Scope s) => setState(() => _scope = s);
 }
+
+// ─────────────────────────────────────────────── shared annotation helpers ──
+
+/// Book id → title map from the library (empty while it loads).
+Map<String, String> _bookTitles(WidgetRef ref) => {
+      for (final b in ref.watch(libraryBooksProvider).valueOrNull ?? const [])
+        b.id: b.title,
+    };
+
+/// Opens the book a highlight/note belongs to, or explains why it can't.
+void _openBook(BuildContext context, WidgetRef ref, String bookId) {
+  final book = (ref.read(libraryBooksProvider).valueOrNull ?? const [])
+      .where((b) => b.id == bookId)
+      .firstOrNull;
+  if (book == null) {
+    showAppSnack(context, 'That book is no longer in your library.',
+        type: SnackType.warning);
+    return;
+  }
+  context.push(Routes.readingPath(bookId), extra: book);
+}
+
+/// Server tags carry their own hex; fall back to the token for system names.
+Color _tagColor(models.Tag t) {
+  final hex = t.colorHex;
+  if (hex != null && hex.length >= 6) {
+    final v = int.tryParse(hex.replaceFirst('#', ''), radix: 16);
+    if (v != null) return Color(0xFF000000 | v);
+  }
+  return AppColors.forTag(t.name);
+}
+
+/// One empty-state block shared by the browse tabs.
+class _EmptyTab extends StatelessWidget {
+  const _EmptyTab({required this.icon, required this.title, required this.hint});
+
+  final IconData icon;
+  final String title;
+  final String hint;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Center(
+      child: Padding(
+        padding:
+            const EdgeInsets.symmetric(horizontal: AppSpacing.pageHorizontal),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 36, color: colors.text3),
+            const SizedBox(height: AppSpacing.lg),
+            Text(title,
+                textAlign: TextAlign.center,
+                style: AppTypography.title3(colors.text)),
+            const SizedBox(height: AppSpacing.sm),
+            Text(hint,
+                textAlign: TextAlign.center,
+                style: AppTypography.subtitle(colors.text2)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ───────────────────────────────────────────────────────────── Tags tab ──
+
+class _TagsTab extends ConsumerStatefulWidget {
+  const _TagsTab();
+
+  @override
+  ConsumerState<_TagsTab> createState() => _TagsTabState();
+}
+
+class _TagsTabState extends ConsumerState<_TagsTab> {
+  String? _selectedTagId;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final tags = ref.watch(tagsProvider).valueOrNull;
+    final counts = ref.watch(tagCountsProvider).valueOrNull ?? const {};
+    final titles = _bookTitles(ref);
+
+    if (tags == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.pageHorizontal,
+        0,
+        AppSpacing.pageHorizontal,
+        96,
+      ),
+      children: [
+        Text('YOUR TAGS', style: AppTypography.overline(colors.text3)),
+        const SizedBox(height: AppSpacing.md),
+        Wrap(
+          spacing: AppSpacing.sm,
+          runSpacing: AppSpacing.sm,
+          children: [
+            for (final t in tags)
+              _TagChip(
+                name: t.name,
+                color: _tagColor(t),
+                count: counts[t.id] ?? 0,
+                active: t.id == _selectedTagId,
+                onTap: () => setState(() =>
+                    _selectedTagId = t.id == _selectedTagId ? null : t.id),
+              ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.xl),
+        if (_selectedTagId == null)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: AppSpacing.xxl),
+            child: Text(
+              'Pick a tag to revisit its passages.',
+              textAlign: TextAlign.center,
+              style: AppTypography.subtitle(colors.text2),
+            ),
+          )
+        else
+          ..._tagResults(_selectedTagId!, titles, colors),
+      ],
+    );
+  }
+
+  List<Widget> _tagResults(
+      String tagId, Map<String, String> titles, AppColorsExtension colors) {
+    final async = ref.watch(tagHighlightsProvider(tagId));
+    final highlights = async.valueOrNull;
+    if (highlights == null) {
+      return const [
+        Padding(
+          padding: EdgeInsets.symmetric(vertical: AppSpacing.xxl),
+          child: Center(child: CircularProgressIndicator()),
+        ),
+      ];
+    }
+    if (highlights.isEmpty) {
+      return [
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.xxl),
+          child: Text(
+            'No passages carry this tag yet.',
+            textAlign: TextAlign.center,
+            style: AppTypography.subtitle(colors.text2),
+          ),
+        ),
+      ];
+    }
+    return [
+      Text(
+        '${highlights.length} ${highlights.length == 1 ? 'PASSAGE' : 'PASSAGES'}',
+        style: AppTypography.overline(colors.text3),
+      ),
+      const SizedBox(height: AppSpacing.md),
+      for (final h in highlights)
+        Padding(
+          padding: const EdgeInsets.only(bottom: AppSpacing.md),
+          child: _AnnotationHighlightCard(
+            highlight: h,
+            bookTitle: titles[h.bookId] ?? '',
+          ),
+        ),
+    ];
+  }
+}
+
+/// Tag pill: colored dot · name · count. Active = filled with the tag color's
+/// soft form (accentSoft keeps it token-bound; the dot carries the hue).
+class _TagChip extends StatelessWidget {
+  const _TagChip({
+    required this.name,
+    required this.color,
+    required this.count,
+    required this.active,
+    required this.onTap,
+  });
+
+  final String name;
+  final Color color;
+  final int count;
+  final bool active;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.xs + 2,
+        ),
+        decoration: BoxDecoration(
+          color: active ? colors.accentSoft : Colors.transparent,
+          borderRadius: AppRadii.brFull,
+          border: Border.all(color: active ? colors.accent : colors.border),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Text(
+              count > 0 ? '$name $count' : name,
+              style: AppTypography.label(active ? colors.text : colors.text2)
+                  .copyWith(fontWeight: FontWeight.w500),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ──────────────────────────────────────────────────────────── Notes tab ──
+
+class _NotesTab extends ConsumerWidget {
+  const _NotesTab();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colors = context.appColors;
+    final notes = ref.watch(allNotesProvider).valueOrNull;
+    final titles = _bookTitles(ref);
+
+    if (notes == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (notes.isEmpty) {
+      return const _EmptyTab(
+        icon: Icons.sticky_note_2_outlined,
+        title: 'No notes yet.',
+        hint: 'Long-press a passage while reading\nand choose Note.',
+      );
+    }
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.pageHorizontal,
+        0,
+        AppSpacing.pageHorizontal,
+        96,
+      ),
+      children: [
+        Text(
+          '${notes.length} ${notes.length == 1 ? 'NOTE' : 'NOTES'}',
+          style: AppTypography.overline(colors.text3),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        for (final n in notes)
+          Padding(
+            padding: const EdgeInsets.only(bottom: AppSpacing.md),
+            child: _AnnotationNoteCard(
+              note: n,
+              bookTitle: titles[n.bookId] ?? '',
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+// ──────────────────────────────────────────────────────────── Saved tab ──
+
+class _SavedTab extends ConsumerWidget {
+  const _SavedTab();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colors = context.appColors;
+    final highlights = ref.watch(savedHighlightsProvider).valueOrNull;
+    final notes = ref.watch(savedNotesProvider).valueOrNull;
+    final titles = _bookTitles(ref);
+
+    if (highlights == null || notes == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    // Merge both kinds, newest activity first.
+    final entries = <(String, Widget)>[
+      for (final h in highlights)
+        (
+          h.createdAt ?? '',
+          _AnnotationHighlightCard(
+              highlight: h, bookTitle: titles[h.bookId] ?? ''),
+        ),
+      for (final n in notes)
+        (
+          n.updatedAt ?? n.createdAt ?? '',
+          _AnnotationNoteCard(note: n, bookTitle: titles[n.bookId] ?? ''),
+        ),
+    ]..sort((a, b) => b.$1.compareTo(a.$1));
+
+    if (entries.isEmpty) {
+      return const _EmptyTab(
+        icon: Icons.bookmark_outline,
+        title: 'Nothing saved yet.',
+        hint: 'Tap the bookmark on any highlight or note\nto keep it here.',
+      );
+    }
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.pageHorizontal,
+        0,
+        AppSpacing.pageHorizontal,
+        96,
+      ),
+      children: [
+        Text(
+          '${entries.length} SAVED',
+          style: AppTypography.overline(colors.text3),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        for (final e in entries)
+          Padding(
+            padding: const EdgeInsets.only(bottom: AppSpacing.md),
+            child: e.$2,
+          ),
+      ],
+    );
+  }
+}
+
+// ─────────────────────────────────────────── annotation cards (live data) ──
+
+/// A real highlight (from /me/highlights) — accent bar in its tag color,
+/// passage in serif italic, bookmark toggle for the Saved collection.
+class _AnnotationHighlightCard extends ConsumerWidget {
+  const _AnnotationHighlightCard({
+    required this.highlight,
+    required this.bookTitle,
+  });
+
+  final Highlight highlight;
+  final String bookTitle;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colors = context.appColors;
+    final tagTone = AppColors.forTag(highlight.colorTag ?? '');
+
+    return GestureDetector(
+      onTap: () => _openBook(context, ref, highlight.bookId),
+      child: _Card(
+        padding: 0,
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Container(width: 3, color: tagTone),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.lg,
+                    AppSpacing.lg,
+                    AppSpacing.sm,
+                    AppSpacing.lg,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        bookTitle.isEmpty
+                            ? 'HIGHLIGHT'
+                            : 'HIGHLIGHT · ${bookTitle.toUpperCase()}',
+                        style: AppTypography.overline(colors.text3),
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      Text(
+                        '“${highlight.passageText ?? ''}”',
+                        maxLines: 4,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTypography.serif(TextStyle(
+                          color: colors.text,
+                          fontSize: 14,
+                          height: 1.35,
+                          fontStyle: FontStyle.italic,
+                        )),
+                      ),
+                      if (highlight.colorTag != null) ...[
+                        const SizedBox(height: AppSpacing.sm),
+                        Text('#${highlight.colorTag}',
+                            style: AppTypography.caption(colors.text3)),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+              _SaveToggle(
+                saved: highlight.isSaved,
+                onChanged: (v) async {
+                  try {
+                    await ref
+                        .read(highlightServiceProvider)
+                        .setSaved(highlight.id, v);
+                    refreshAnnotations(ref);
+                  } on ApiError catch (e) {
+                    if (context.mounted) {
+                      showAppSnack(context, e.message, type: SnackType.error);
+                    }
+                  }
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A real note (from /me/notes) — note glyph, body, bookmark toggle.
+class _AnnotationNoteCard extends ConsumerWidget {
+  const _AnnotationNoteCard({required this.note, required this.bookTitle});
+
+  final Note note;
+  final String bookTitle;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colors = context.appColors;
+    return GestureDetector(
+      onTap: () => _openBook(context, ref, note.bookId),
+      child: _Card(
+        padding: 0,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.lg,
+            AppSpacing.lg,
+            AppSpacing.sm,
+            AppSpacing.lg,
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.sticky_note_2_outlined,
+                  size: 18, color: colors.text2),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      bookTitle.isEmpty
+                          ? 'NOTE'
+                          : 'NOTE · ${bookTitle.toUpperCase()}',
+                      style: AppTypography.overline(colors.text3),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Text(
+                      note.bodyMd,
+                      maxLines: 4,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.label(colors.text),
+                    ),
+                  ],
+                ),
+              ),
+              _SaveToggle(
+                saved: note.isSaved,
+                onChanged: (v) async {
+                  try {
+                    await ref.read(noteServiceProvider).setSaved(note.id, v);
+                    refreshAnnotations(ref);
+                  } on ApiError catch (e) {
+                    if (context.mounted) {
+                      showAppSnack(context, e.message, type: SnackType.error);
+                    }
+                  }
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The Saved bookmark ribbon — filled when saved, outline otherwise.
+class _SaveToggle extends StatelessWidget {
+  const _SaveToggle({required this.saved, required this.onChanged});
+
+  final bool saved;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return IconButton(
+      onPressed: () => onChanged(!saved),
+      icon: Icon(
+        saved ? Icons.bookmark : Icons.bookmark_outline,
+        size: 20,
+        color: saved ? colors.accent : colors.text3,
+      ),
+    );
+  }
+}
+
+// ───────────────────────────────────────────── search-tab chrome & hits ──
 
 class _ScopeChips extends StatelessWidget {
   const _ScopeChips({

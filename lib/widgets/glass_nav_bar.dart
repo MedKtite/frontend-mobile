@@ -18,8 +18,8 @@ class GlassNavBar extends StatelessWidget {
   final NavTab current;
   final ValueChanged<NavTab> onSelect;
 
-  static const double _radius = 28;
-  static const double _barHeight = 72; // Figma: 72px + safe-area inset below
+  static const double _radius = 32; // floating pill — rounded on ALL corners
+  static const double _barHeight = 72;
   static const double _blur = 20; // Figma: BACKGROUND_BLUR 20
   static const double _glassThickness = 12; // refraction depth (liquid only)
 
@@ -37,61 +37,72 @@ class GlassNavBar extends StatelessWidget {
     final colors = context.appColors;
     final isLight = Theme.of(context).brightness == Brightness.light;
 
-    final bar = SafeArea(
-      top: false,
-      child: SizedBox(
-        height: _barHeight,
-        child: Row(
-          children: [
-            for (final (tab, icon, activeIcon, label) in _items)
-              Expanded(
-                child: _NavItem(
-                  icon: tab == current ? activeIcon : icon,
-                  label: label,
-                  active: tab == current,
-                  onTap: () => onSelect(tab),
-                ),
+    // Fixed-height content — the pill floats, so the system inset lives in
+    // the OUTER margin below rather than stretching the bar to the edge.
+    final bar = SizedBox(
+      height: _barHeight,
+      child: Row(
+        children: [
+          for (final (tab, icon, activeIcon, label) in _items)
+            Expanded(
+              child: _NavItem(
+                icon: tab == current ? activeIcon : icon,
+                label: label,
+                active: tab == current,
+                onTap: () => onSelect(tab),
               ),
-          ],
-        ),
+            ),
+        ],
       ),
     );
 
-    Border hairline() =>
-        Border(top: BorderSide(color: colors.border, width: 0.5));
+    final hairline = Border.all(color: colors.border, width: 0.5);
 
+    final Widget pill;
     if (!ImageFilter.isShaderFilterSupported) {
       // ── Skia fallback (tests, older devices): plain frost per Figma. ──
       final tint = colors.surface.withValues(alpha: isLight ? 0.82 : 0.86);
-      return ClipRRect(
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(_radius)),
+      pill = ClipRRect(
+        borderRadius: BorderRadius.circular(_radius),
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: _blur, sigmaY: _blur),
           child: DecoratedBox(
-            decoration: BoxDecoration(color: tint, border: hairline()),
+            decoration: BoxDecoration(color: tint, border: hairline),
             child: bar,
+          ),
+        ),
+      );
+    } else {
+      final tint = colors.surface.withValues(alpha: isLight ? 0.55 : 0.65);
+      pill = ClipRRect(
+        borderRadius: BorderRadius.circular(_radius),
+        child: LiquidGlassLayer(
+          settings: LiquidGlassSettings(
+            glassColor: tint,
+            blur: _blur,
+            thickness: _glassThickness,
+          ),
+          child: LiquidGlass(
+            shape: LiquidRoundedSuperellipse(borderRadius: _radius),
+            child: DecoratedBox(
+              decoration: BoxDecoration(border: hairline),
+              child: bar,
+            ),
           ),
         ),
       );
     }
 
-    final tint = colors.surface.withValues(alpha: isLight ? 0.55 : 0.65);
-    return ClipRRect(
-      borderRadius: const BorderRadius.vertical(top: Radius.circular(_radius)),
-      child: LiquidGlassLayer(
-        settings: LiquidGlassSettings(
-          glassColor: tint,
-          blur: _blur,
-          thickness: _glassThickness,
-        ),
-        child: LiquidGlass(
-          shape: LiquidRoundedSuperellipse(borderRadius: _radius),
-          child: DecoratedBox(
-            decoration: BoxDecoration(border: hairline()),
-            child: bar,
-          ),
-        ),
+    // Floating: side margins + a gap above the home indicator; content
+    // scrolls beneath and around it (AppShell sets extendBody: true).
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        0,
+        AppSpacing.lg,
+        MediaQuery.paddingOf(context).bottom + AppSpacing.md,
       ),
+      child: pill,
     );
   }
 }

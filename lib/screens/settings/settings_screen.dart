@@ -10,6 +10,7 @@ import '../../app/theme/tokens/typography.dart';
 import '../../core/widgets/app_snackbar.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/state/auth_state.dart';
+import '../../providers/subscription_provider.dart';
 import '../../widgets/auth_scaffold.dart';
 
 /// Settings (frames `318:2` / `318:46`). Profile header reads the authenticated
@@ -30,6 +31,8 @@ class SettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final auth = ref.watch(authProvider);
     final user = auth is AuthAuthenticated ? auth.user : null;
+    final isPro =
+        ref.watch(subscriptionProvider).valueOrNull?.isPro ?? false;
 
     final name = user?.displayName ?? 'Your account';
     final email = user?.email ?? '';
@@ -55,7 +58,11 @@ class SettingsScreen extends ConsumerWidget {
                 ),
                 child: Column(
                   children: [
-                    _ProfileCard(name: name, email: email, initial: initial),
+                    _ProfileCard(
+                        name: name,
+                        email: email,
+                        initial: initial,
+                        isPro: isPro),
                     const SizedBox(height: AppSpacing.xl),
                     _Section(label: 'APPEARANCE', rows: [
                       _SettingsRow(
@@ -87,9 +94,9 @@ class SettingsScreen extends ConsumerWidget {
                     const SizedBox(height: AppSpacing.xl),
                     _Section(label: 'SUBSCRIPTION', rows: [
                       _SettingsRow(
-                        label: 'Marginalia Pro',
-                        value: 'Annual',
-                        onTap: () => _comingSoon(context, 'Subscription'),
+                        label: isPro ? 'Marginalia Pro' : 'Upgrade to Pro',
+                        value: isPro ? 'Active' : 'Free plan',
+                        onTap: () => context.push(Routes.paywall),
                       ),
                     ]),
                     const SizedBox(height: AppSpacing.xl),
@@ -168,11 +175,13 @@ class _ProfileCard extends StatelessWidget {
     required this.name,
     required this.email,
     required this.initial,
+    required this.isPro,
   });
 
   final String name;
   final String email;
   final String initial;
+  final bool isPro;
 
   @override
   Widget build(BuildContext context) {
@@ -213,8 +222,10 @@ class _ProfileCard extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(width: AppSpacing.md),
-            const _ProBadge(),
+            if (isPro) ...[
+              const SizedBox(width: AppSpacing.md),
+              const _ProBadge(),
+            ],
           ],
         ),
       ),

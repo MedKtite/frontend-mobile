@@ -1,11 +1,10 @@
-import 'dart:io';
-
-import 'package:cookie_jar/cookie_jar.dart';
 import 'package:dio/dio.dart';
-import 'package:dio/io.dart';
-import 'package:dio_cookie_manager/dio_cookie_manager.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:path_provider/path_provider.dart';
+
+// Platform-specific pieces (adapter, cookies, default base URL): the web
+// build compiles the browser variant, everything else the dart:io variant.
+import 'dio_support/dio_support_web.dart'
+    if (dart.library.io) 'dio_support/dio_support_io.dart' as platform;
 
 /// The whole client networking layer in one file: the [dioProvider], the
 /// [DioFactory] that builds the configured Dio, the request interceptors
@@ -37,17 +36,9 @@ class DioFactory {
   static const _envBaseUrl = String.fromEnvironment('API_BASE_URL');
   static String get defaultBaseUrl => _envBaseUrl.isNotEmpty
       ? _envBaseUrl
-      : Platform.isAndroid
-          ? 'http://10.0.2.2:8080'
-          : 'http://localhost:8080';
+      : platform.platformDefaultBaseUrl();
 
   static Future<Dio> create({String? baseUrl}) async {
-    final docs = await getApplicationDocumentsDirectory();
-    final cookieJar = PersistCookieJar(
-      ignoreExpires: false,
-      storage: FileStorage('${docs.path}/.marginalia/cookies/'),
-    );
-
     final dio = _ApiErrorDio(BaseOptions(
       baseUrl: baseUrl ?? defaultBaseUrl,
       connectTimeout: const Duration(seconds: 10),
@@ -58,8 +49,10 @@ class DioFactory {
       validateStatus: (_) => true,
     ));
 
+    // Cookie handling is platform-specific: persistent jar on mobile,
+    // browser-managed (no-op) on web.
+    await platform.attachCookieManager(dio);
     dio.interceptors
-      ..add(CookieManager(cookieJar))
       ..add(AuthInterceptor(dio))
       ..add(_ErrorMappingInterceptor());
 
@@ -78,8 +71,7 @@ class DioFactory {
 class _ApiErrorDio with DioMixin implements Dio {
   _ApiErrorDio(BaseOptions options) {
     this.options = options;
-    // Native (Android/iOS) adapter — this app doesn't target web.
-    httpClientAdapter = IOHttpClientAdapter();
+    httpClientAdapter = platform.createHttpClientAdapter();
   }
 
   @override
