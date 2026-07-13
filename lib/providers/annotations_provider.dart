@@ -23,6 +23,10 @@ final tagCountsProvider = FutureProvider<Map<String, int>>(
 final tagHighlightsProvider = FutureProvider.family<List<Highlight>, String>(
     (ref, tagId) => ref.watch(highlightServiceProvider).listByTag(tagId));
 
+/// The user's most-recent highlights across all books (server caps at 100).
+final allHighlightsProvider = FutureProvider<List<Highlight>>(
+    (ref) => ref.watch(highlightServiceProvider).listRecent(limit: 100));
+
 /// The user's most-recent notes across all books.
 final allNotesProvider = FutureProvider<List<Note>>(
     (ref) => ref.watch(noteServiceProvider).listRecent(limit: 200));
@@ -40,6 +44,7 @@ void refreshAnnotations(WidgetRef ref) {
   ref.invalidate(tagsProvider);
   ref.invalidate(tagCountsProvider);
   ref.invalidate(tagHighlightsProvider);
+  ref.invalidate(allHighlightsProvider);
   ref.invalidate(allNotesProvider);
   ref.invalidate(savedHighlightsProvider);
   ref.invalidate(savedNotesProvider);

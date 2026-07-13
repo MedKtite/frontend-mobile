@@ -15,6 +15,8 @@ class HighlightCreateRequest with _$HighlightCreateRequest {
     int? textStartOffset,
     int? textEndOffset,
     String? passageText,
+    double? audioStartSec, // audio bookmark timestamp — null for text highlights
+    double? audioEndSec,
   }) = _HighlightCreateRequest;
 
   factory HighlightCreateRequest.fromJson(Map<String, dynamic> json) =>

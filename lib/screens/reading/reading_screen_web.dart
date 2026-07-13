@@ -15,6 +15,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/theme/tokens/colors.dart';
 import '../../app/theme/tokens/spacing.dart';
+import '../../app/theme/tokens/typography.dart';
 import '../../core/dio_client.dart';
 import '../../core/widgets/app_snackbar.dart';
 import '../../models/book.dart';
@@ -36,10 +37,18 @@ import 'reader_shared.dart';
 /// book bytes fetched through the backend (same origin — no CORS) instead of
 /// cached on disk. EPUB only; PDFs stay mobile.
 class ReadingScreen extends ConsumerStatefulWidget {
-  const ReadingScreen({super.key, required this.bookId, this.initialBook});
+  const ReadingScreen({
+    super.key,
+    required this.bookId,
+    this.initialBook,
+    this.sampleIdentifier,
+    this.sampleTitle,
+  });
 
   final String bookId;
   final Book? initialBook;
+  final String? sampleIdentifier;
+  final String? sampleTitle;
 
   @override
   ConsumerState<ReadingScreen> createState() => _ReadingScreenState();
@@ -57,16 +66,20 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
 
   bool _ready = false;
   bool _bootStarted = false;
+  bool _takingLong = false;
+  Brightness? _lastAppBrightness;
   int _page = 0;
   int _total = 0;
+  int _chapter = 0;
+  int _chapters = 0;
   double _pct = 0;
+  double _chapterPct = 0;
   String? _cfi;
   String? _loadError;
   Book? _bookForSave; // the book the reader booted with (cursor saves)
 
   String? _selCfi;
   String? _selText;
-  Rect? _selRect;
 
   @override
   void initState() {
@@ -75,7 +88,9 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
     _viewType = 'marginalia-reader-$hashCode';
     _iframe = html.IFrameElement()
       // Flutter web serves bundled assets under assets/ — hence the double.
-      ..src = 'assets/assets/reader/reader.html'
+      ..src = widget.sampleIdentifier != null
+          ? 'assets/assets/reader/google_sample.html'
+          : 'assets/assets/reader/reader.html'
       ..style.border = 'none'
       ..style.width = '100%'
       ..style.height = '100%';
@@ -85,6 +100,20 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
     // ignore: undefined_prefixed_name
     ui_web.platformViewRegistry.registerViewFactory(_viewType, (int _) => _iframe);
     _msgSub = html.window.onMessage.listen(_onWindowMessage);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final brightness = Theme.of(context).brightness;
+    if (_lastAppBrightness != null &&
+        _lastAppBrightness != brightness &&
+        _ready) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _applyTheme();
+      });
+    }
+    _lastAppBrightness = brightness;
   }
 
   // ── Bridge ────────────────────────────────────────────────────────────
@@ -109,7 +138,13 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
     switch (data['type']) {
       case 'ready':
         _watchdog?.cancel();
-        if (mounted) setState(() => _ready = true);
+        if (mounted) {
+          setState(() {
+            _ready = true;
+            _takingLong = false;
+            _loadError = null;
+          });
+        }
         unawaited(_applySavedMarks());
       case 'total':
         final t = (data['total'] as num?)?.toInt() ?? 0;
@@ -119,14 +154,20 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
         final pct = (data['percent'] as num?)?.toDouble() ?? (_pct / 100);
         final page = (data['page'] as num?)?.toInt() ?? 0;
         final total = (data['total'] as num?)?.toInt() ?? 0;
+        final chapter = (data['chapter'] as num?)?.toInt() ?? 0;
+        final chapters = (data['chapters'] as num?)?.toInt() ?? 0;
+        final chapterPct =
+            (data['chapterPercent'] as num?)?.toDouble() ?? 0;
         if (mounted) {
           setState(() {
             _pct = (pct * 100).clamp(0, 100).toDouble();
+            _chapterPct = (chapterPct * 100).clamp(0, 100).toDouble();
             if (page > 0) _page = page;
             if (total > 0) _total = total;
+            if (chapter > 0) _chapter = chapter;
+            if (chapters > 0) _chapters = chapters;
             _selCfi = null;
             _selText = null;
-            _selRect = null;
           });
         }
         _scheduleSave();
@@ -134,18 +175,9 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
         final selCfi = data['cfiRange'] as String?;
         final selText = (data['text'] as String?)?.trim();
         if (selCfi != null && selText != null && selText.isNotEmpty && mounted) {
-          final rm = data['rect'];
           setState(() {
             _selCfi = selCfi;
             _selText = selText;
-            _selRect = rm is Map
-                ? Rect.fromLTWH(
-                    (rm['x'] as num?)?.toDouble() ?? 0,
-                    (rm['y'] as num?)?.toDouble() ?? 0,
-                    (rm['w'] as num?)?.toDouble() ?? 0,
-                    (rm['h'] as num?)?.toDouble() ?? 0,
-                  )
-                : null;
           });
         }
       case 'selcleared':
@@ -153,8 +185,19 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
           setState(() {
             _selCfi = null;
             _selText = null;
-            _selRect = null;
           });
+        }
+      case 'paletteAction':
+        switch (data['action']) {
+          case 'quickTag':
+            final tag = data['tag'] as String?;
+            if (tag != null) unawaited(_quickTag(tag));
+          case 'note':
+            unawaited(_annotate(asNote: true));
+          case 'tag':
+            unawaited(_annotate(asNote: false));
+          case 'copy':
+            _copySelection();
         }
       case 'locations':
         final json = data['json'] as String?;
@@ -167,8 +210,11 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
       case 'error':
         _watchdog?.cancel();
         if (mounted) {
-          setState(() => _loadError =
-              (data['message'] as String?) ?? 'Could not open this book.');
+          setState(() {
+            _takingLong = false;
+            _loadError =
+                (data['message'] as String?) ?? 'Could not open this book.';
+          });
         }
       case 'jserror':
         if (!_ready) {
@@ -181,28 +227,25 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
     }
   }
 
-  // ── Boot: fetch EPUB bytes → hand to epub.js ──────────────────────────
+  // ── Boot: resolve a same-origin EPUB URL → hand it to epub.js ─────────
 
   Future<void> _boot(Book book) async {
     _bookForSave = book;
     try {
-      final bytes = await _fetchEpub(book);
+      final epubUrl = await _resolveEpubUrl(book);
       await _iframeLoaded.future;
 
-      final b64 = base64Encode(bytes);
-      const chunk = 1024 * 1024;
-      for (var i = 0; i < b64.length; i += chunk) {
-        final end = (i + chunk < b64.length) ? i + chunk : b64.length;
-        _send('appendChunk', [b64.substring(i, end)]);
-      }
       final cfi = cursorCfi(book.cursor);
       final loc = html.window.localStorage['marg_locations_${book.id}'];
       _applyTheme();
-      _send('loadBook', [cfi, loc]);
+      _send('loadBookUrl', [epubUrl, cfi, loc]);
 
-      _watchdog = Timer(const Duration(seconds: 30), () {
+      // A slow browser/device may need well over 30 seconds to parse a large
+      // EPUB. This is a soft timeout: keep the iframe alive and let a late
+      // `ready` recover instead of replacing it with a permanent error page.
+      _watchdog = Timer(const Duration(seconds: 20), () {
         if (mounted && !_ready && _loadError == null) {
-          setState(() => _loadError = 'This book took too long to open.');
+          setState(() => _takingLong = true);
         }
       });
     } on ApiError catch (e) {
@@ -215,21 +258,38 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
     }
   }
 
-  /// Uploaded EPUBs stream through the backend; catalog/physical books are
-  /// matched on Gutendex, then their EPUB streams through the backend proxy
-  /// (gutenberg.org sends no CORS headers, so the browser can't go direct).
-  Future<Uint8List> _fetchEpub(Book book) async {
-    final dio = ref.read(dioProvider);
-    if (book.format == 'epub') {
-      final res = await dio.get<List<int>>(
-        '/me/books/${book.id}/file',
-        options: Options(responseType: ResponseType.bytes),
-      );
-      final bytes = res.data ?? const [];
-      if (bytes.length > 2 && bytes[0] == 0x50 && bytes[1] == 0x4B) {
-        return Uint8List.fromList(bytes);
+  Future<void> _bootSample() async {
+    final identifier = widget.sampleIdentifier;
+    if (identifier == null) return;
+    try {
+      await _iframeLoaded.future;
+      if (!mounted) return;
+      final settings = ref.read(readingSettingsProvider);
+      final palette = settings.paletteFor(Theme.of(context).brightness);
+      _send('loadSample', [
+        identifier,
+        cssHex(palette.bg),
+        cssHex(palette.text),
+        cssHex(palette.accent),
+      ]);
+      _watchdog = Timer(const Duration(seconds: 20), () {
+        if (mounted && !_ready && _loadError == null) {
+          setState(() => _takingLong = true);
+        }
+      });
+    } catch (_) {
+      if (mounted) {
+        setState(() => _loadError = 'Could not open this sample.');
       }
-      throw Exception('not an EPUB');
+    }
+  }
+
+  /// epub.js fetches these same-origin URLs itself. This avoids downloading the
+  /// whole archive into Dart, Base64-expanding it, and copying it into the
+  /// iframe before parsing can even begin (especially expensive in iOS Safari).
+  Future<String> _resolveEpubUrl(Book book) async {
+    if (book.format == 'epub') {
+      return '/me/books/${book.id}/file';
     }
 
     // Catalog/physical → find the Gutenberg id by title + author.
@@ -252,18 +312,7 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
       }
       if (id == null) throw Exception('no Gutenberg match');
 
-      final res = await dio.get<List<int>>(
-        '/me/catalog/gutenberg-epub/$id',
-        options: Options(
-          responseType: ResponseType.bytes,
-          receiveTimeout: const Duration(seconds: 120),
-        ),
-      );
-      final bytes = res.data ?? const [];
-      if (bytes.length > 2 && bytes[0] == 0x50 && bytes[1] == 0x4B) {
-        return Uint8List.fromList(bytes);
-      }
-      throw Exception('bad EPUB payload');
+      return '/me/catalog/gutenberg-epub/$id';
     } finally {
       gutendex.close();
     }
@@ -273,7 +322,7 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
 
   void _applyTheme() {
     final s = ref.read(readingSettingsProvider);
-    final p = s.palette;
+    final p = s.paletteFor(Theme.of(context).brightness);
     final family =
         s.font == ReaderFont.serif ? 'Georgia, serif' : 'system-ui, sans-serif';
     _send('setTheme', [
@@ -286,7 +335,11 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
     ]);
   }
 
-  String get _label => _total > 0 ? 'Page $_page of $_total' : 'Reading';
+  String get _label => _chapters > 0
+      ? 'Chapter $_chapter/$_chapters'
+      : _total > 0
+          ? 'Page $_page of $_total'
+          : 'Reading';
 
   void _next() {
     if (_ready) _send('nextPage');
@@ -330,7 +383,6 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
       setState(() {
         _selCfi = null;
         _selText = null;
-        _selRect = null;
       });
     }
   }
@@ -443,15 +495,6 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
     }
   }
 
-  double _paletteTop(double maxHeight) {
-    const palH = HighlightPalette.height;
-    final r = _selRect;
-    if (r == null) return maxHeight - palH - AppSpacing.md;
-    var top = r.top - palH - AppSpacing.md;
-    if (top < AppSpacing.sm) top = r.bottom + AppSpacing.md;
-    return top.clamp(AppSpacing.sm, maxHeight - palH - AppSpacing.sm);
-  }
-
   @override
   void dispose() {
     _msgSub?.cancel();
@@ -465,7 +508,7 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
   Widget build(BuildContext context) {
     // Reader-theme override, same as mobile: recolor the reading surface.
     final settings = ref.watch(readingSettingsProvider);
-    final p = settings.palette;
+    final p = settings.paletteFor(Theme.of(context).brightness);
     final base = context.appColors;
     final readerColors = base.copyWith(
       bg: p.bg,
@@ -491,13 +534,21 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
       child: Builder(
         builder: (context) {
           final colors = context.appColors;
-          final bookAsync = ref.watch(bookByIdProvider(widget.bookId));
-          final displayBook = bookAsync.valueOrNull ?? widget.initialBook;
-          final readerBook = bookAsync.valueOrNull ??
-              (bookAsync.hasError ? widget.initialBook : null);
+          final isSample = widget.sampleIdentifier != null;
+          Book? displayBook;
+          Book? readerBook;
+          if (!isSample) {
+            final bookAsync = ref.watch(bookByIdProvider(widget.bookId));
+            displayBook = bookAsync.valueOrNull ?? widget.initialBook;
+            readerBook = bookAsync.valueOrNull ??
+                (bookAsync.hasError ? widget.initialBook : null);
+          }
 
           // Boot ONCE with the fresh book (latest saved cursor — resume).
-          if (readerBook != null && !_bootStarted) {
+          if (isSample && !_bootStarted) {
+            _bootStarted = true;
+            unawaited(_bootSample());
+          } else if (readerBook != null && !_bootStarted) {
             final fmt = readerBook.format;
             if (fmt == 'epub' || fmt != 'pdf' && fmt != 'm4b' && fmt != 'mp3') {
               _bootStarted = true;
@@ -515,7 +566,11 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
             body: SafeArea(
               child: Column(
                 children: [
-                  ReaderTopBar(title: displayBook?.title ?? 'Reading'),
+                  ReaderTopBar(
+                    title: isSample
+                        ? widget.sampleTitle ?? 'Free sample'
+                        : displayBook?.title ?? 'Reading',
+                  ),
                   Expanded(
                     child: unsupported
                         ? const ReaderMessage(
@@ -537,32 +592,30 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
                                     HtmlElementView(viewType: _viewType),
                                     if (!_ready)
                                       Center(
-                                        child: CircularProgressIndicator(
-                                            color: colors.accent),
-                                      ),
-                                    if (_selText != null)
-                                      Positioned(
-                                        left: AppSpacing.md,
-                                        right: AppSpacing.md,
-                                        top: _paletteTop(box.maxHeight),
-                                        child: Center(
-                                          child: HighlightPalette(
-                                            onQuickTag: _quickTag,
-                                            onNote: () =>
-                                                _annotate(asNote: true),
-                                            onTag: () =>
-                                                _annotate(asNote: false),
-                                            onCopy: _copySelection,
-                                          ),
+                                        child: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            CircularProgressIndicator(
+                                                color: colors.accent),
+                                            if (_takingLong) ...[
+                                              const SizedBox(
+                                                  height: AppSpacing.md),
+                                              Text(
+                                                'Still opening this book…',
+                                                style: AppTypography.subtitle(
+                                                    colors.text2),
+                                              ),
+                                            ],
+                                          ],
                                         ),
                                       ),
                                   ],
                                 ),
                               ),
                   ),
-                  if (!unsupported)
+                  if (!unsupported && !isSample)
                     PagedNavBar(
-                      pct: _pct,
+                      pct: _chapters > 0 ? _chapterPct : _pct,
                       label: _label,
                       onPrev: _ready ? _prev : null,
                       onNext: _ready ? _next : null,

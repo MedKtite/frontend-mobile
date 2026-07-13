@@ -53,6 +53,7 @@ class HomePassage with _$HomePassage {
 @freezed
 class ListeningItem with _$ListeningItem {
   const factory ListeningItem({
+    required String id, // book id — opens the audio player on play
     required String title,
     required String author,
     required Color coverBg,

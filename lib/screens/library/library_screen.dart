@@ -329,15 +329,15 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('MARGINALIA', style: AppTypography.overline(colors.text3)),
-              _AddButton(onTap: () => showAddToLibrarySheet(context)),
-            ],
-          ),
+          // Row(
+          //   mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          //   children: [
+          //     Text('MARGINALIA', style: AppTypography.overline(colors.text3)),
+          //     _AddButton(onTap: () => showAddToLibrarySheet(context)),
+          //   ],
+          // ),
           const SizedBox(height: AppSpacing.sm),
-          Text('Discovery', style: AppTypography.display(colors.text)),
+          Text('Library', style: AppTypography.display(colors.text)),
           const SizedBox(height: AppSpacing.xs),
           Text(
             '${books.length} ${books.length == 1 ? 'volume' : 'volumes'}',
@@ -377,6 +377,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
               onFreeOnly: (v) => setState(() => _freeOnly = v),
               onApply: _applyAdvanced,
               onReset: _resetAdvanced,
+              onClose: () => setState(() => _filtersOpen = false),
             ),
           ],
           if (searching)
@@ -533,6 +534,7 @@ class _AdvancedPanel extends StatelessWidget {
     required this.onFreeOnly,
     required this.onApply,
     required this.onReset,
+    required this.onClose,
   });
 
   final TextEditingController title;
@@ -543,6 +545,7 @@ class _AdvancedPanel extends StatelessWidget {
   final ValueChanged<bool> onFreeOnly;
   final VoidCallback onApply;
   final VoidCallback onReset;
+  final VoidCallback onClose;
 
   @override
   Widget build(BuildContext context) {
@@ -554,6 +557,8 @@ class _AdvancedPanel extends StatelessWidget {
         controller: c,
         hint: hint,
         keyboardType: type,
+        // Plain white on the glass — the default bg fill reads muddy here.
+        fillColor: colors.surface,
         textInputAction: TextInputAction.search,
         onSubmitted: (_) => onApply(),
       );
@@ -565,8 +570,20 @@ class _AdvancedPanel extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('ADVANCED SEARCH',
-              style: AppTypography.overline(colors.text3)),
+          Row(
+            children: [
+              Text('ADVANCED SEARCH',
+                  style: AppTypography.overline(colors.text3)),
+              const Spacer(),
+              GestureDetector(
+                onTap: onClose,
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.xs),
+                  child: Icon(Icons.close, size: 18, color: colors.text3),
+                ),
+              ),
+            ],
+          ),
           const SizedBox(height: AppSpacing.md),
           field('Title', title),
           const SizedBox(height: AppSpacing.sm),
@@ -598,14 +615,38 @@ class _AdvancedPanel extends StatelessWidget {
               Expanded(
                 child: OutlinedButton(
                   onPressed: onReset,
-                  child: const Text('Reset'),
+                  style: OutlinedButton.styleFrom(
+                    side: BorderSide(color: colors.border),
+                    padding: const EdgeInsets.symmetric(
+                        vertical: AppSpacing.sm + 2),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    shape:
+                        RoundedRectangleBorder(borderRadius: AppRadii.brMd),
+                  ),
+                  child:
+                      Text('Reset', style: AppTypography.label(colors.text2)),
                 ),
               ),
               const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: FilledButton(
                   onPressed: onApply,
-                  child: const Text('Search'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: colors.accent,
+                    foregroundColor: colors.bg,
+                    padding: const EdgeInsets.symmetric(
+                        vertical: AppSpacing.sm + 2),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    shape:
+                        RoundedRectangleBorder(borderRadius: AppRadii.brMd),
+                  ),
+                  child: Text(
+                    'Search',
+                    style: AppTypography.label(colors.bg)
+                        .copyWith(fontWeight: FontWeight.w600),
+                  ),
                 ),
               ),
             ],
@@ -616,29 +657,30 @@ class _AdvancedPanel extends StatelessWidget {
   }
 }
 
-class _AddButton extends StatelessWidget {
-  const _AddButton({required this.onTap});
-  final VoidCallback onTap;
+// ignore: unused_element
+// class _AddButton extends StatelessWidget {
+//   const _AddButton({required this.onTap});
+//   final VoidCallback onTap;
 
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: AppRadii.brMd,
-      child: Container(
-        width: 36,
-        height: 36,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          borderRadius: AppRadii.brMd,
-          border: Border.all(color: colors.border),
-        ),
-        child: Icon(Icons.add, size: 20, color: colors.text),
-      ),
-    );
-  }
-}
+//   @override
+//   Widget build(BuildContext context) {
+//     final colors = context.appColors;
+//     return InkWell(
+//       onTap: onTap,
+//       borderRadius: AppRadii.brMd,
+//       child: Container(
+//         width: 36,
+//         height: 36,
+//         alignment: Alignment.center,
+//         decoration: BoxDecoration(
+//           borderRadius: AppRadii.brMd,
+//           border: Border.all(color: colors.border),
+//         ),
+//         child: Icon(Icons.add, size: 20, color: colors.text),
+//       ),
+//     );
+//   }
+// }
 
 class _EmptyLibrary extends StatelessWidget {
   const _EmptyLibrary();

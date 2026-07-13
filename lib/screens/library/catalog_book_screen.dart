@@ -17,7 +17,6 @@ import '../../models/catalog_book.dart';
 import '../../providers/book_description_provider.dart';
 import '../../providers/library_provider.dart';
 import '../../services/backend/book_service.dart';
-import '../../services/backend/catalog_service.dart';
 import '../../widgets/add_to_library_sheet.dart';
 import '../../widgets/book_cover.dart';
 import '../../widgets/shelf_picker.dart';
@@ -40,8 +39,6 @@ class CatalogBookScreen extends ConsumerStatefulWidget {
 class _CatalogBookScreenState extends ConsumerState<CatalogBookScreen> {
   bool _adding = false;
   bool _added = false;
-  bool _requesting = false;
-  bool _requested = false;
 
   CatalogBook get book => widget.book;
 
@@ -92,24 +89,79 @@ class _CatalogBookScreenState extends ConsumerState<CatalogBookScreen> {
     }
   }
 
-  Future<void> _request() async {
-    setState(() => _requesting = true);
-    String? error;
-    try {
-      await ref.read(catalogServiceProvider).requestBook(book);
-    } on ApiError catch (e) {
-      error = e.message;
+  Future<void> _buyNow() async {
+    await _showStores();
+  }
+
+  void _readSample() {
+    final identifier = book.googleId ?? book.previewUrl;
+    if (identifier == null || identifier.isEmpty) {
+      showAppSnack(context, 'This sample is not available right now.',
+          type: SnackType.error);
+      return;
     }
-    if (!mounted) return;
-    setState(() {
-      _requesting = false;
-      _requested = error == null;
-    });
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(appSnackBar(
-          error ?? 'Request logged — requests guide which books we bring in next.',
-          error == null ? SnackType.success : SnackType.error));
+    context.push(
+      Routes.readingSamplePath(identifier: identifier, title: book.title),
+    );
+  }
+
+  Future<void> _showStores() async {
+    final colors = context.appColors;
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: colors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadii.xl)),
+      ),
+      builder: (sheetContext) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.pageHorizontal),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text('Choose a retailer',
+                  style: AppTypography.title2(colors.text)),
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                'Purchases open securely on the retailer’s website.',
+                style: AppTypography.subtitle(colors.text2),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              _StoreTile(
+                icon: Icons.storefront_outlined,
+                title: 'Bookshop.org',
+                subtitle: 'Support independent bookstores',
+                onTap: () {
+                  Navigator.of(sheetContext).pop();
+                  _openStore(bookshopStorefrontUrl);
+                },
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              _StoreTile(
+                icon: Icons.shopping_bag_outlined,
+                title: 'Amazon',
+                subtitle: 'Search by ISBN, title, or author',
+                onTap: () {
+                  Navigator.of(sheetContext).pop();
+                  _openStore(amazonUrl(book));
+                },
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              _StoreTile(
+                icon: Icons.menu_book_outlined,
+                title: 'Kobo',
+                subtitle: 'Look for an ebook edition',
+                onTap: () {
+                  Navigator.of(sheetContext).pop();
+                  _openStore(koboUrl(book));
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -419,69 +471,16 @@ class _CatalogBookScreenState extends ConsumerState<CatalogBookScreen> {
     );
   }
 
-  // ── METADATA_ONLY: buy · sample · request · upload ────────────────────
+  // ── METADATA_ONLY: buy · sample · upload ──────────────────────────────
 
   Widget _storeActions(AppColorsExtension colors) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // The one thing we CAN sell in-app (store IAP via RevenueCat) is the
-        // Pro plan — individual copyrighted books legally stay with the
-        // stores until we hold distribution agreements.
-        InkWell(
-          onTap: () => context.push(Routes.paywall),
-          borderRadius: AppRadii.brMd,
-          child: Container(
-            padding: const EdgeInsets.all(AppSpacing.md),
-            decoration: BoxDecoration(
-              color: colors.accentSoft,
-              borderRadius: AppRadii.brMd,
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.workspace_premium_outlined,
-                    size: 22, color: colors.accent),
-                const SizedBox(width: AppSpacing.md),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Marginalia Pro',
-                          style: AppTypography.label(colors.text)
-                              .copyWith(fontWeight: FontWeight.w600)),
-                      const SizedBox(height: AppSpacing.xs),
-                      Text(
-                        'Unlimited library and custom tags — right here in the app.',
-                        style: AppTypography.caption(colors.text2),
-                      ),
-                    ],
-                  ),
-                ),
-                Icon(Icons.chevron_right, size: 20, color: colors.text3),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: AppSpacing.lg),
-        Text('GET THIS BOOK', style: AppTypography.overline(colors.text3)),
-        const SizedBox(height: AppSpacing.sm),
-        _StoreTile(
-          icon: Icons.shopping_bag_outlined,
-          title: 'Buy on Amazon',
-          subtitle: 'Paperback, hardcover or Kindle',
-          onTap: () => _openStore(amazonUrl(book)),
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        _StoreTile(
-          icon: Icons.book_outlined,
-          title: 'Buy on Kobo',
-          subtitle: 'EPUB — often uploadable to Marginalia',
-          onTap: () => _openStore(koboUrl(book)),
-        ),
         if (book.previewUrl != null) ...[
           const SizedBox(height: AppSpacing.xs),
           TextButton.icon(
-            onPressed: () => _openStore(Uri.parse(book.previewUrl!)),
+            onPressed: _readSample,
             icon: Icon(Icons.auto_stories_outlined,
                 size: 18, color: colors.accent),
             label: Text('Read a free sample',
@@ -489,22 +488,23 @@ class _CatalogBookScreenState extends ConsumerState<CatalogBookScreen> {
           ),
         ],
         const SizedBox(height: AppSpacing.lg),
-        OutlinedButton(
-          onPressed: (_requesting || _requested) ? null : _request,
-          style: OutlinedButton.styleFrom(
-            side: BorderSide(color: colors.border),
+        FilledButton(
+          onPressed: _buyNow,
+          style: FilledButton.styleFrom(
+            backgroundColor: colors.accent,
+            foregroundColor: colors.bg,
             padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
             shape: RoundedRectangleBorder(borderRadius: AppRadii.brMd),
           ),
           child: Text(
-            _requested ? 'Requested ✓' : 'Request this book',
-            style: AppTypography.label(colors.text)
+            'Buy now',
+            style: AppTypography.label(colors.bg)
                 .copyWith(fontWeight: FontWeight.w600),
           ),
         ),
         const SizedBox(height: AppSpacing.xs),
         Text(
-          'Every request guides which books we bring to Marginalia next.',
+          'Choose a retailer · Marginalia may earn a commission.',
           textAlign: TextAlign.center,
           style: AppTypography.caption(colors.text3),
         ),

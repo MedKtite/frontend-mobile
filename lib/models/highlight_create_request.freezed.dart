@@ -30,6 +30,9 @@ mixin _$HighlightCreateRequest {
   int? get textStartOffset => throw _privateConstructorUsedError;
   int? get textEndOffset => throw _privateConstructorUsedError;
   String? get passageText => throw _privateConstructorUsedError;
+  double? get audioStartSec =>
+      throw _privateConstructorUsedError; // audio bookmark timestamp — null for text highlights
+  double? get audioEndSec => throw _privateConstructorUsedError;
 
   /// Serializes this HighlightCreateRequest to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -55,6 +58,8 @@ abstract class $HighlightCreateRequestCopyWith<$Res> {
     int? textStartOffset,
     int? textEndOffset,
     String? passageText,
+    double? audioStartSec,
+    double? audioEndSec,
   });
 }
 
@@ -82,6 +87,8 @@ class _$HighlightCreateRequestCopyWithImpl<
     Object? textStartOffset = freezed,
     Object? textEndOffset = freezed,
     Object? passageText = freezed,
+    Object? audioStartSec = freezed,
+    Object? audioEndSec = freezed,
   }) {
     return _then(
       _value.copyWith(
@@ -109,6 +116,14 @@ class _$HighlightCreateRequestCopyWithImpl<
                 ? _value.passageText
                 : passageText // ignore: cast_nullable_to_non_nullable
                       as String?,
+            audioStartSec: freezed == audioStartSec
+                ? _value.audioStartSec
+                : audioStartSec // ignore: cast_nullable_to_non_nullable
+                      as double?,
+            audioEndSec: freezed == audioEndSec
+                ? _value.audioEndSec
+                : audioEndSec // ignore: cast_nullable_to_non_nullable
+                      as double?,
           )
           as $Val,
     );
@@ -131,6 +146,8 @@ abstract class _$$HighlightCreateRequestImplCopyWith<$Res>
     int? textStartOffset,
     int? textEndOffset,
     String? passageText,
+    double? audioStartSec,
+    double? audioEndSec,
   });
 }
 
@@ -155,6 +172,8 @@ class __$$HighlightCreateRequestImplCopyWithImpl<$Res>
     Object? textStartOffset = freezed,
     Object? textEndOffset = freezed,
     Object? passageText = freezed,
+    Object? audioStartSec = freezed,
+    Object? audioEndSec = freezed,
   }) {
     return _then(
       _$HighlightCreateRequestImpl(
@@ -182,6 +201,14 @@ class __$$HighlightCreateRequestImplCopyWithImpl<$Res>
             ? _value.passageText
             : passageText // ignore: cast_nullable_to_non_nullable
                   as String?,
+        audioStartSec: freezed == audioStartSec
+            ? _value.audioStartSec
+            : audioStartSec // ignore: cast_nullable_to_non_nullable
+                  as double?,
+        audioEndSec: freezed == audioEndSec
+            ? _value.audioEndSec
+            : audioEndSec // ignore: cast_nullable_to_non_nullable
+                  as double?,
       ),
     );
   }
@@ -197,6 +224,8 @@ class _$HighlightCreateRequestImpl implements _HighlightCreateRequest {
     this.textStartOffset,
     this.textEndOffset,
     this.passageText,
+    this.audioStartSec,
+    this.audioEndSec,
   });
 
   factory _$HighlightCreateRequestImpl.fromJson(Map<String, dynamic> json) =>
@@ -215,10 +244,15 @@ class _$HighlightCreateRequestImpl implements _HighlightCreateRequest {
   final int? textEndOffset;
   @override
   final String? passageText;
+  @override
+  final double? audioStartSec;
+  // audio bookmark timestamp — null for text highlights
+  @override
+  final double? audioEndSec;
 
   @override
   String toString() {
-    return 'HighlightCreateRequest(bookId: $bookId, colorTag: $colorTag, textChapterRef: $textChapterRef, textStartOffset: $textStartOffset, textEndOffset: $textEndOffset, passageText: $passageText)';
+    return 'HighlightCreateRequest(bookId: $bookId, colorTag: $colorTag, textChapterRef: $textChapterRef, textStartOffset: $textStartOffset, textEndOffset: $textEndOffset, passageText: $passageText, audioStartSec: $audioStartSec, audioEndSec: $audioEndSec)';
   }
 
   @override
@@ -236,7 +270,11 @@ class _$HighlightCreateRequestImpl implements _HighlightCreateRequest {
             (identical(other.textEndOffset, textEndOffset) ||
                 other.textEndOffset == textEndOffset) &&
             (identical(other.passageText, passageText) ||
-                other.passageText == passageText));
+                other.passageText == passageText) &&
+            (identical(other.audioStartSec, audioStartSec) ||
+                other.audioStartSec == audioStartSec) &&
+            (identical(other.audioEndSec, audioEndSec) ||
+                other.audioEndSec == audioEndSec));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -249,6 +287,8 @@ class _$HighlightCreateRequestImpl implements _HighlightCreateRequest {
     textStartOffset,
     textEndOffset,
     passageText,
+    audioStartSec,
+    audioEndSec,
   );
 
   /// Create a copy of HighlightCreateRequest
@@ -277,6 +317,8 @@ abstract class _HighlightCreateRequest implements HighlightCreateRequest {
     final int? textStartOffset,
     final int? textEndOffset,
     final String? passageText,
+    final double? audioStartSec,
+    final double? audioEndSec,
   }) = _$HighlightCreateRequestImpl;
 
   factory _HighlightCreateRequest.fromJson(Map<String, dynamic> json) =
@@ -294,6 +336,10 @@ abstract class _HighlightCreateRequest implements HighlightCreateRequest {
   int? get textEndOffset;
   @override
   String? get passageText;
+  @override
+  double? get audioStartSec; // audio bookmark timestamp — null for text highlights
+  @override
+  double? get audioEndSec;
 
   /// Create a copy of HighlightCreateRequest
   /// with the given fields replaced by the non-null parameter values.

@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../models/catalog_book.dart';
 import '../services/backend/catalog_service.dart';
 
 /// On-demand enrichment for catalog books whose search result arrived without
@@ -24,16 +25,53 @@ typedef BookExtras = ({
 typedef ExtrasRef = ({int? gutenbergId, String? googleId, String? title, String? author});
 
 final bookExtrasProvider =
-    FutureProvider.autoDispose.family<BookExtras, ExtrasRef>((ref, key) async {
+    FutureProvider.family<BookExtras, ExtrasRef>((ref, key) async {
+  // The two sources are independent. Start both immediately and merge their
+  // results when ready instead of making the backend wait for Gutendex.
+  final gutenbergFuture = _loadGutenbergExtras(key.gutenbergId);
+  final catalogFuture =
+      _loadCatalogExtras(ref.read(catalogServiceProvider), key);
+
+  final gutenberg = await gutenbergFuture;
+  final match = await catalogFuture;
+
+  return (
+    description: gutenberg.description ?? match?.description,
+    rating: match?.averageRating,
+    ratingsCount: match?.ratingsCount,
+    downloads: gutenberg.downloads,
+    pageCount: match?.pageCount,
+    year: match?.publishedYear,
+  );
+});
+
+Future<CatalogBook?> _loadCatalogExtras(
+  CatalogService catalog,
+  ExtrasRef key,
+) async {
+  if ((key.title ?? '').isEmpty) return null;
+  try {
+    return await catalog.lookup(
+          title: _searchTitle(key.title!),
+          author: _primaryAuthor(key.author),
+        );
+  } catch (_) {
+    return null;
+  }
+}
+
+Future<({String? description, int? downloads})> _loadGutenbergExtras(
+  int? gutenbergId,
+) async {
   String? description;
   int? downloads;
 
   // ── Gutendex: summary + download count ────────────────────────────────
-  if (key.gutenbergId != null) {
+  if (gutenbergId != null) {
     final dio = Dio();
     try {
       final res = await dio.get<Map<String, dynamic>>(
-        'https://gutendex.com/books/${key.gutenbergId}',
+        'https://gutendex.com/books/$gutenbergId',
         options: Options(receiveTimeout: const Duration(seconds: 10)),
       );
       final s = res.data?['summaries'];
@@ -53,38 +91,8 @@ final bookExtrasProvider =
     }
   }
 
-  // ── Backend edition lookup: pages/year/rating (+ description fallback) ─
-  double? rating;
-  int? ratingsCount;
-  int? pageCount;
-  int? year;
-  if ((key.title ?? '').isNotEmpty) {
-    try {
-      final match = await ref.read(catalogServiceProvider).lookup(
-            title: _searchTitle(key.title!),
-            author: _primaryAuthor(key.author),
-          );
-      if (match != null) {
-        description ??= match.description;
-        rating = match.averageRating;
-        ratingsCount = match.ratingsCount;
-        pageCount = match.pageCount;
-        year = match.publishedYear;
-      }
-    } catch (_) {
-      // best-effort — whatever Gutendex gave stands
-    }
-  }
-
-  return (
-    description: description,
-    rating: rating,
-    ratingsCount: ratingsCount,
-    downloads: downloads,
-    pageCount: pageCount,
-    year: year,
-  );
-});
+  return (description: description, downloads: downloads);
+}
 
 /// "The City of God, Volume I" → "The City of God"; also drops "; Or, …"
 /// subtitle tails ("Moby Dick; Or, The Whale" → "Moby Dick").

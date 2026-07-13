@@ -9,7 +9,7 @@ import '../../app/theme/tokens/radii.dart';
 import '../../app/theme/tokens/spacing.dart';
 import '../../app/theme/tokens/typography.dart';
 import '../../widgets/tag_picker_sheet.dart';
-import '../../widgets/typography_sheet.dart';
+import '../../widgets/setting/typography_sheet.dart';
 
 /// Platform-neutral reader pieces shared by the mobile reader
 /// (reading_screen.dart, WebView host) and the web reader
@@ -92,8 +92,8 @@ class ReaderTopBar extends StatelessWidget {
   }
 }
 
-/// Footer page-navigation for the paginated EPUB reader: ‹ prev · progress bar
-/// + "Page X of Y" + N% · next ›.
+/// Footer navigation for the paginated EPUB reader: ‹ prev · chapter progress
+/// bar + "Chapter X/Y" + N% · next ›.
 class PagedNavBar extends StatelessWidget {
   const PagedNavBar({
     super.key,
@@ -116,7 +116,7 @@ class PagedNavBar extends StatelessWidget {
         AppSpacing.md,
         AppSpacing.sm,
         AppSpacing.md,
-        AppSpacing.md,
+        AppSpacing.lg,
       ),
       child: Row(
         children: [

@@ -11,7 +11,11 @@ import '../../core/widgets/app_snackbar.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/state/auth_state.dart';
 import '../../providers/subscription_provider.dart';
+import '../../providers/theme_provider.dart';
+import '../../providers/reading_settings_provider.dart';
 import '../../widgets/auth_scaffold.dart';
+import '../../widgets/setting/theme_picker_sheet.dart';
+import '../../widgets/setting/typography_sheet.dart';
 
 /// Settings (frames `318:2` / `318:46`). Profile header reads the authenticated
 /// user; the rows are stubs until their sub-screens / preferences land. Sign
@@ -33,6 +37,8 @@ class SettingsScreen extends ConsumerWidget {
     final user = auth is AuthAuthenticated ? auth.user : null;
     final isPro =
         ref.watch(subscriptionProvider).valueOrNull?.isPro ?? false;
+    final themeMode = ref.watch(themeProvider);
+    final readingSettings = ref.watch(readingSettingsProvider);
 
     final name = user?.displayName ?? 'Your account';
     final email = user?.email ?? '';
@@ -67,13 +73,13 @@ class SettingsScreen extends ConsumerWidget {
                     _Section(label: 'APPEARANCE', rows: [
                       _SettingsRow(
                         label: 'Theme',
-                        value: 'System',
-                        onTap: () => _comingSoon(context, 'Theme'),
+                        value: themeModeLabel(themeMode),
+                        onTap: () => _pickTheme(context, ref, themeMode),
                       ),
                       _SettingsRow(
                         label: 'Typography',
-                        value: 'Serif · 17',
-                        onTap: () => _comingSoon(context, 'Typography'),
+                        value: _typographyLabel(readingSettings),
+                        onTap: () => showTypographySheet(context),
                       ),
                     ]),
                     const SizedBox(height: AppSpacing.xl),
@@ -116,6 +122,27 @@ class SettingsScreen extends ConsumerWidget {
       ),
     );
   }
+
+  Future<void> _pickTheme(
+    BuildContext context,
+    WidgetRef ref,
+    ThemeMode selected,
+  ) async {
+    final choice =
+        await showThemePickerSheet(context, selected: selected);
+    if (choice != null) await ref.read(themeProvider.notifier).setTheme(choice);
+  }
+}
+
+String _typographyLabel(ReadingSettings settings) {
+  final font = settings.font == ReaderFont.serif ? 'Serif' : 'Sans';
+  final size = switch (settings.size) {
+    ReaderSize.small => 14,
+    ReaderSize.medium => 17,
+    ReaderSize.large => 20,
+    ReaderSize.xlarge => 24,
+  };
+  return '$font · $size';
 }
 
 class _TopBar extends StatelessWidget {

@@ -114,6 +114,13 @@ class ReadingSettings {
 
   ReaderPalette get palette => ReaderPalette.of(theme);
 
+  /// The default light reader follows the app into dark mode. Explicit reader
+  /// choices (sepia, dark, or black) remain independent and are preserved.
+  ReaderPalette paletteFor(Brightness appBrightness) =>
+      appBrightness == Brightness.dark && theme == ReaderThemeMode.light
+          ? ReaderPalette.dark
+          : palette;
+
   /// The reflowable EPUB body style: family + size + line-height + ink color.
   TextStyle bodyTextStyle() {
     final base = TextStyle(

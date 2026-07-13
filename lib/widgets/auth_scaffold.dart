@@ -33,8 +33,8 @@ class AuthScaffold extends StatelessWidget {
     final colors = context.appColors;
 
     return Scaffold(
-      // Transparent (theme default) — the shared AppBackground texture is
-      // the page surface behind the glass form.
+      // Transparent (theme default) — the shared token background is the page
+      // surface behind the glass form.
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(

@@ -9,6 +9,10 @@ library;
 
 import '../../models/catalog_book.dart';
 
+/// Marginalia's public affiliate storefront.
+final Uri bookshopStorefrontUrl =
+    Uri.https('bookshop.org', '/shop/Marginalia');
+
 /// Set to your Amazon Associates tag once the account exists.
 const String amazonAssociatesTag = '';
 

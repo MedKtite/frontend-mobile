@@ -1211,6 +1211,8 @@ abstract class _HomePassage implements HomePassage {
 
 /// @nodoc
 mixin _$ListeningItem {
+  String get id =>
+      throw _privateConstructorUsedError; // book id — opens the audio player on play
   String get title => throw _privateConstructorUsedError;
   String get author => throw _privateConstructorUsedError;
   Color get coverBg => throw _privateConstructorUsedError;
@@ -1230,7 +1232,13 @@ abstract class $ListeningItemCopyWith<$Res> {
     $Res Function(ListeningItem) then,
   ) = _$ListeningItemCopyWithImpl<$Res, ListeningItem>;
   @useResult
-  $Res call({String title, String author, Color coverBg, Color coverFg});
+  $Res call({
+    String id,
+    String title,
+    String author,
+    Color coverBg,
+    Color coverFg,
+  });
 }
 
 /// @nodoc
@@ -1248,6 +1256,7 @@ class _$ListeningItemCopyWithImpl<$Res, $Val extends ListeningItem>
   @pragma('vm:prefer-inline')
   @override
   $Res call({
+    Object? id = null,
     Object? title = null,
     Object? author = null,
     Object? coverBg = null,
@@ -1255,6 +1264,10 @@ class _$ListeningItemCopyWithImpl<$Res, $Val extends ListeningItem>
   }) {
     return _then(
       _value.copyWith(
+            id: null == id
+                ? _value.id
+                : id // ignore: cast_nullable_to_non_nullable
+                      as String,
             title: null == title
                 ? _value.title
                 : title // ignore: cast_nullable_to_non_nullable
@@ -1286,7 +1299,13 @@ abstract class _$$ListeningItemImplCopyWith<$Res>
   ) = __$$ListeningItemImplCopyWithImpl<$Res>;
   @override
   @useResult
-  $Res call({String title, String author, Color coverBg, Color coverFg});
+  $Res call({
+    String id,
+    String title,
+    String author,
+    Color coverBg,
+    Color coverFg,
+  });
 }
 
 /// @nodoc
@@ -1303,6 +1322,7 @@ class __$$ListeningItemImplCopyWithImpl<$Res>
   @pragma('vm:prefer-inline')
   @override
   $Res call({
+    Object? id = null,
     Object? title = null,
     Object? author = null,
     Object? coverBg = null,
@@ -1310,6 +1330,10 @@ class __$$ListeningItemImplCopyWithImpl<$Res>
   }) {
     return _then(
       _$ListeningItemImpl(
+        id: null == id
+            ? _value.id
+            : id // ignore: cast_nullable_to_non_nullable
+                  as String,
         title: null == title
             ? _value.title
             : title // ignore: cast_nullable_to_non_nullable
@@ -1335,12 +1359,16 @@ class __$$ListeningItemImplCopyWithImpl<$Res>
 
 class _$ListeningItemImpl implements _ListeningItem {
   const _$ListeningItemImpl({
+    required this.id,
     required this.title,
     required this.author,
     required this.coverBg,
     required this.coverFg,
   });
 
+  @override
+  final String id;
+  // book id — opens the audio player on play
   @override
   final String title;
   @override
@@ -1352,7 +1380,7 @@ class _$ListeningItemImpl implements _ListeningItem {
 
   @override
   String toString() {
-    return 'ListeningItem(title: $title, author: $author, coverBg: $coverBg, coverFg: $coverFg)';
+    return 'ListeningItem(id: $id, title: $title, author: $author, coverBg: $coverBg, coverFg: $coverFg)';
   }
 
   @override
@@ -1360,6 +1388,7 @@ class _$ListeningItemImpl implements _ListeningItem {
     return identical(this, other) ||
         (other.runtimeType == runtimeType &&
             other is _$ListeningItemImpl &&
+            (identical(other.id, id) || other.id == id) &&
             (identical(other.title, title) || other.title == title) &&
             (identical(other.author, author) || other.author == author) &&
             (identical(other.coverBg, coverBg) || other.coverBg == coverBg) &&
@@ -1367,7 +1396,8 @@ class _$ListeningItemImpl implements _ListeningItem {
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, title, author, coverBg, coverFg);
+  int get hashCode =>
+      Object.hash(runtimeType, id, title, author, coverBg, coverFg);
 
   /// Create a copy of ListeningItem
   /// with the given fields replaced by the non-null parameter values.
@@ -1380,12 +1410,15 @@ class _$ListeningItemImpl implements _ListeningItem {
 
 abstract class _ListeningItem implements ListeningItem {
   const factory _ListeningItem({
+    required final String id,
     required final String title,
     required final String author,
     required final Color coverBg,
     required final Color coverFg,
   }) = _$ListeningItemImpl;
 
+  @override
+  String get id; // book id — opens the audio player on play
   @override
   String get title;
   @override

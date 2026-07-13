@@ -55,7 +55,11 @@ class GlassPanel extends StatelessWidget {
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: _blur, sigmaY: _blur),
           child: DecoratedBox(
-            decoration: BoxDecoration(color: tint, border: hairline),
+            decoration: BoxDecoration(
+              color: tint,
+              border: hairline,
+              borderRadius: br,
+            ),
             child: content,
           ),
         ),
@@ -75,7 +79,10 @@ class GlassPanel extends StatelessWidget {
         child: LiquidGlass(
           shape: LiquidRoundedSuperellipse(borderRadius: radius),
           child: DecoratedBox(
-            decoration: BoxDecoration(border: hairline),
+            decoration: BoxDecoration(
+              border: hairline,
+              borderRadius: br,
+            ),
             child: content,
           ),
         ),

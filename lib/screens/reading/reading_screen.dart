@@ -23,7 +23,11 @@ import '../../providers/book_file_provider.dart';
 import '../../providers/book_highlights_provider.dart';
 import '../../providers/book_provider.dart';
 import '../../providers/gutenberg_provider.dart';
+import '../../providers/home_provider.dart';
+import '../../providers/library_provider.dart';
+import '../../providers/reading_mini_provider.dart';
 import '../../providers/reading_settings_provider.dart';
+import '../../providers/state/reading_mini_state.dart';
 import '../../services/backend/book_service.dart';
 import '../../services/backend/highlight_service.dart';
 import '../../services/backend/note_service.dart';
@@ -36,10 +40,18 @@ import 'reader_shared.dart';
 /// [_EpubReader] depending on `book.format`. Catalog/physical books have no file
 /// to read, so they get a [_NoReadableFile] state instead of fake passage text.
 class ReadingScreen extends ConsumerStatefulWidget {
-  const ReadingScreen({super.key, required this.bookId, this.initialBook});
+  const ReadingScreen({
+    super.key,
+    required this.bookId,
+    this.initialBook,
+    this.sampleIdentifier,
+    this.sampleTitle,
+  });
 
   final String bookId;
   final Book? initialBook;
+  final String? sampleIdentifier;
+  final String? sampleTitle;
 
   @override
   ConsumerState<ReadingScreen> createState() => _ReadingScreenState();
@@ -51,9 +63,37 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
   late final ValueNotifier<ReaderProgress> _progress = ValueNotifier(
     ReaderProgress(widget.initialBook?.progressPct ?? 0, ''),
   );
+  late final HomeController _homeController;
+  late final StateController<ReadingMiniSession?> _miniController;
+
+  /// Last book we showed — the "continue reading" mini bar needs it at dispose.
+  Book? _lastBook;
+
+  @override
+  void initState() {
+    super.initState();
+    _homeController = ref.read(homeProvider.notifier);
+    _miniController = ref.read(readingMiniProvider.notifier);
+    // Entering the reader retires its own mini bar (deferred: provider state
+    // can't change while the first frame is building).
+    Future.microtask(() => _miniController.state = null);
+  }
 
   @override
   void dispose() {
+    // Leaving mid-book docks the "continue reading" bar above the nav. Only
+    // when a reader actually reported a position — an unreadable catalog
+    // entry (empty label) gets no bar.
+    final book = _lastBook;
+    final pr = _progress.value;
+    if (book != null && pr.label.isNotEmpty) {
+      _homeController.updateReadingProgress(book.id, pr.pct);
+      Future.microtask(() => _miniController.state = ReadingMiniSession(
+            book: book.copyWith(progressPct: pr.pct),
+            pct: pr.pct,
+            label: pr.label,
+          ));
+    }
     _progress.dispose();
     super.dispose();
   }
@@ -61,7 +101,7 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
   @override
   Widget build(BuildContext context) {
     final settings = ref.watch(readingSettingsProvider);
-    final p = settings.palette;
+    final p = settings.paletteFor(Theme.of(context).brightness);
     final base = context.appColors;
     // Recolor the whole reading surface to the chosen reader theme by overriding
     // AppColorsExtension — the chrome + states already read `context.appColors`.
@@ -85,6 +125,24 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
       child: Builder(
         builder: (context) {
           final colors = context.appColors;
+          final sampleIdentifier = widget.sampleIdentifier;
+          if (sampleIdentifier != null) {
+            return Scaffold(
+              backgroundColor: colors.bg,
+              body: SafeArea(
+                child: Column(
+                  children: [
+                    ReaderTopBar(title: widget.sampleTitle ?? 'Free sample'),
+                    Expanded(
+                      child: _GoogleBooksSampleReader(
+                        identifier: sampleIdentifier,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
           // Chrome shows instantly from initialBook; the reader body waits for
           // the fresh fetch so it's built ONCE with the latest saved cursor
           // (resume). initialBook from the library can carry a stale position,
@@ -94,6 +152,7 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
           final displayBook = bookAsync.valueOrNull ?? widget.initialBook;
           final readerBook = bookAsync.valueOrNull ??
               (bookAsync.hasError ? widget.initialBook : null);
+          _lastBook = displayBook ?? _lastBook;
 
           return Scaffold(
             backgroundColor: colors.bg,
@@ -104,9 +163,7 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
                   Expanded(
                     child: readerBook != null
                         ? _body(context, readerBook)
-                        : Center(
-                            child: CircularProgressIndicator(
-                                color: colors.accent)),
+                        : const _TextLoading(),
                   ),
                   // EPUB has its own paginated footer (PagedNavBar); only the
                   // PDF reader uses the shared progress bar.
@@ -126,9 +183,8 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
   }
 
   Widget _body(BuildContext context, Book? book) {
-    final colors = context.appColors;
     if (book == null) {
-      return Center(child: CircularProgressIndicator(color: colors.accent));
+      return const _TextLoading();
     }
 
     final fmt = book.format;
@@ -137,7 +193,7 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
       // (public-domain) and render it exactly like an uploaded EPUB.
       final gref = (id: book.id, title: book.title, author: book.author);
       return ref.watch(gutenbergEpubProvider(gref)).when(
-            loading: () => _GutenbergLoading(bookId: book.id),
+            loading: () => const _TextLoading(),
             error: (e, _) => e is GutenbergNotFound
                 ? _NoReadableFile(book: book)
                 : ReaderError(
@@ -151,8 +207,7 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
 
     final fileRef = (id: book.id, format: fmt!);
     return ref.watch(bookFileProvider(fileRef)).when(
-          loading: () =>
-              Center(child: CircularProgressIndicator(color: colors.accent)),
+          loading: () => const _TextLoading(),
           error: (e, _) => ReaderError(
             message: e is ApiError ? e.message : 'Could not load this book.',
             onRetry: () => ref.invalidate(bookFileProvider(fileRef)),
@@ -224,7 +279,10 @@ class _PdfReaderState extends ConsumerState<_PdfReader> {
               cursor: jsonEncode({'type': 'pdf', 'page': _page}),
             ),
           )
-          .catchError((Object _) => widget.book), // best-effort
+          .then((_) {
+            if (mounted) ref.invalidate(libraryBooksProvider);
+          })
+          .catchError((Object _) {}), // best-effort
     );
   }
 
@@ -285,13 +343,16 @@ class _EpubReaderState extends ConsumerState<_EpubReader> {
   late final WebViewController _web;
   late final BookService _books;
   Timer? _saveTimer;
-  Timer? _watchdog; // caps how long the spinner may run before failing loudly
 
   bool _ready = false; // epub.js finished its first paginated render
   bool _booted = false; // loadBook() was injected once
+  Brightness? _lastAppBrightness;
   int _page = 0;
   int _total = 0;
+  int _chapter = 0;
+  int _chapters = 0;
   double _pct = 0;
+  double _chapterPct = 0;
   String? _cfi;
   String? _loadError; // set if epub.js can't load/parse the book
 
@@ -305,6 +366,7 @@ class _EpubReaderState extends ConsumerState<_EpubReader> {
   void initState() {
     super.initState();
     _books = ref.read(bookServiceProvider);
+    _pct = (widget.book.progressPct ?? 0).clamp(0.0, 100.0);
     _web = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setBackgroundColor(const Color(0x00000000))
@@ -324,6 +386,20 @@ class _EpubReaderState extends ConsumerState<_EpubReader> {
         }
       }),
     );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final brightness = Theme.of(context).brightness;
+    if (_lastAppBrightness != null &&
+        _lastAppBrightness != brightness &&
+        _ready) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _applyTheme();
+      });
+    }
+    _lastAppBrightness = brightness;
   }
 
   /// epub.js "locations" (page-count index) cached beside the EPUB — generating
@@ -356,12 +432,6 @@ class _EpubReaderState extends ConsumerState<_EpubReader> {
     } catch (_) {/* no cache — epub.js regenerates */}
     _applyTheme();
     await _web.runJavaScript('window.loadBook($cfiArg, $locArg)');
-    // If neither 'ready' nor an error ever arrives, don't spin forever.
-    _watchdog = Timer(const Duration(seconds: 30), () {
-      if (mounted && !_ready && _loadError == null) {
-        setState(() => _loadError = 'This book took too long to open.');
-      }
-    });
   }
 
   /// Push current typography + palette into epub.js (bg, ink, family, size,
@@ -369,7 +439,7 @@ class _EpubReaderState extends ConsumerState<_EpubReader> {
   /// font files aren't in the WebView, so the family maps to a CSS generic.
   void _applyTheme() {
     final s = ref.read(readingSettingsProvider);
-    final p = s.palette;
+    final p = s.paletteFor(Theme.of(context).brightness);
     final family =
         s.font == ReaderFont.serif ? 'Georgia, serif' : 'system-ui, sans-serif';
     _web.runJavaScript(
@@ -384,8 +454,12 @@ class _EpubReaderState extends ConsumerState<_EpubReader> {
     if (data is! Map) return;
     switch (data['type']) {
       case 'ready':
-        _watchdog?.cancel();
-        if (mounted) setState(() => _ready = true);
+        if (mounted) {
+          setState(() {
+            _ready = true;
+            _loadError = null;
+          });
+        }
         unawaited(_applySavedMarks());
       case 'total':
         final t = (data['total'] as num?)?.toInt() ?? 0;
@@ -395,11 +469,18 @@ class _EpubReaderState extends ConsumerState<_EpubReader> {
         final pct = (data['percent'] as num?)?.toDouble() ?? (_pct / 100);
         final page = (data['page'] as num?)?.toInt() ?? 0;
         final total = (data['total'] as num?)?.toInt() ?? 0;
+        final chapter = (data['chapter'] as num?)?.toInt() ?? 0;
+        final chapters = (data['chapters'] as num?)?.toInt() ?? 0;
+        final chapterPct =
+            (data['chapterPercent'] as num?)?.toDouble() ?? 0;
         if (mounted) {
           setState(() {
             _pct = (pct * 100).clamp(0, 100).toDouble();
+            _chapterPct = (chapterPct * 100).clamp(0, 100).toDouble();
             if (page > 0) _page = page;
             if (total > 0) _total = total;
+            if (chapter > 0) _chapter = chapter;
+            if (chapters > 0) _chapters = chapters;
             // A page turn destroys any in-book selection.
             _selCfi = null;
             _selText = null;
@@ -450,16 +531,16 @@ class _EpubReaderState extends ConsumerState<_EpubReader> {
         }
       case 'error':
         // Surface a load/parse failure instead of spinning forever.
-        _watchdog?.cancel();
         if (mounted) {
-          setState(() => _loadError =
-              (data['message'] as String?) ?? 'Could not open this book.');
+          setState(() {
+            _loadError =
+                (data['message'] as String?) ?? 'Could not open this book.';
+          });
         }
       case 'jserror':
         // Uncaught JS inside epub.js: fatal if the book never rendered,
         // harmless noise once it has.
         if (!_ready) {
-          _watchdog?.cancel();
           if (mounted) {
             setState(() =>
                 _loadError = 'Could not open this book. (${data['message']})');
@@ -468,7 +549,11 @@ class _EpubReaderState extends ConsumerState<_EpubReader> {
     }
   }
 
-  String get _label => _total > 0 ? 'Page $_page of $_total' : 'Reading';
+  String get _label => _chapters > 0
+      ? 'Chapter $_chapter/$_chapters'
+      : _total > 0
+          ? 'Page $_page of $_total'
+          : 'Reading';
 
   void _next() {
     if (_ready) _web.runJavaScript('window.nextPage()');
@@ -495,7 +580,10 @@ class _EpubReaderState extends ConsumerState<_EpubReader> {
               cursor: jsonEncode({'type': 'epubjs', 'cfi': cfi}),
             ),
           )
-          .catchError((Object _) => widget.book), // best-effort
+          .then((_) {
+            if (mounted) ref.invalidate(libraryBooksProvider);
+          })
+          .catchError((Object _) {}), // best-effort
     );
   }
 
@@ -637,7 +725,6 @@ class _EpubReaderState extends ConsumerState<_EpubReader> {
 
   @override
   void dispose() {
-    _watchdog?.cancel();
     _saveTimer?.cancel();
     _saveNow();
     super.dispose();
@@ -666,9 +753,7 @@ class _EpubReaderState extends ConsumerState<_EpubReader> {
                 Positioned.fill(child: ColoredBox(color: colors.bg)),
                 WebViewWidget(controller: _web),
                 if (!_ready)
-                  Center(
-                    child: CircularProgressIndicator(color: colors.accent),
-                  ),
+                  const Positioned.fill(child: _TextLoading()),
                 // Floating highlight palette (Figma 237:17), anchored just
                 // above the selection; flips below it near the screen top.
                 if (_selText != null)
@@ -690,7 +775,7 @@ class _EpubReaderState extends ConsumerState<_EpubReader> {
           ),
         ),
         PagedNavBar(
-          pct: _pct,
+          pct: _chapters > 0 ? _chapterPct : _pct,
           label: _label,
           onPrev: _ready ? _prev : null,
           onNext: _ready ? _next : null,
@@ -700,46 +785,149 @@ class _EpubReaderState extends ConsumerState<_EpubReader> {
   }
 }
 
+class _GoogleBooksSampleReader extends StatefulWidget {
+  const _GoogleBooksSampleReader({required this.identifier});
 
-/// Determinate download bar for the first fetch of a catalog book's text:
-/// indeterminate while searching Gutendex, then "Downloading… N%".
-class _GutenbergLoading extends ConsumerWidget {
-  const _GutenbergLoading({required this.bookId});
-  final String bookId;
+  final String identifier;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  State<_GoogleBooksSampleReader> createState() =>
+      _GoogleBooksSampleReaderState();
+}
+
+class _GoogleBooksSampleReaderState extends State<_GoogleBooksSampleReader> {
+  late final WebViewController _web;
+  bool _booted = false;
+  bool _ready = false;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _web = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setBackgroundColor(const Color(0x00000000))
+      ..addJavaScriptChannel(
+        'SampleChannel',
+        onMessageReceived: (message) {
+          Object? decoded;
+          try {
+            decoded = jsonDecode(message.message);
+          } catch (_) {
+            return;
+          }
+          if (decoded is! Map || !mounted) return;
+          switch (decoded['type']) {
+            case 'ready':
+              setState(() {
+                _ready = true;
+                _error = null;
+              });
+            case 'error':
+              final message = decoded['message'] as String?;
+              setState(() {
+                _ready = false;
+                _error = message ??
+                    'This sample cannot be displayed in the app.';
+              });
+          }
+        },
+      )
+      ..setNavigationDelegate(
+        NavigationDelegate(
+          onPageFinished: (_) => _boot(),
+          onNavigationRequest: (request) {
+            if (!request.isMainFrame ||
+                request.url.startsWith('file:') ||
+                request.url.startsWith('about:')) {
+              return NavigationDecision.navigate;
+            }
+            return NavigationDecision.prevent;
+          },
+        ),
+      );
+    unawaited(
+      _web
+          .loadFlutterAsset('assets/reader/google_sample.html')
+          .catchError((Object _) {
+        if (mounted) {
+          setState(() => _error =
+              'Sample reader assets aren’t in this build. Stop the app fully '
+              'and rebuild it.');
+        }
+      }),
+    );
+  }
+
+  Future<void> _boot() async {
+    if (_booted || !mounted) return;
+    _booted = true;
+    final settings = ProviderScope.containerOf(context)
+        .read(readingSettingsProvider);
+    final palette = settings.paletteFor(Theme.of(context).brightness);
+    await _web.runJavaScript(
+      'window.loadSample(${jsonEncode(widget.identifier)},'
+      '${jsonEncode(cssHex(palette.bg))},'
+      '${jsonEncode(cssHex(palette.text))},'
+      '${jsonEncode(cssHex(palette.accent))})',
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final colors = context.appColors;
-    final p = ref.watch(gutenbergProgressProvider(bookId));
-    final downloading = p > 0;
-    return Center(
-      child: Padding(
-        padding:
-            const EdgeInsets.symmetric(horizontal: AppSpacing.pageHorizontal),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SizedBox(
-              width: 220,
-              child: ClipRRect(
-                borderRadius: AppRadii.brFull,
-                child: LinearProgressIndicator(
-                  value: downloading ? p : null,
-                  minHeight: 4,
-                  color: colors.accent,
-                  backgroundColor: colors.border,
+    if (_error != null) {
+      return ReaderMessage(
+        icon: Icons.menu_book_outlined,
+        text: _error!,
+      );
+    }
+    return Stack(
+      children: [
+        Positioned.fill(child: ColoredBox(color: colors.bg)),
+        WebViewWidget(controller: _web),
+        if (!_ready) const Positioned.fill(child: _TextLoading()),
+      ],
+    );
+  }
+}
+
+/// One stable loading surface for every text-reader preparation step.
+class _TextLoading extends StatelessWidget {
+  const _TextLoading();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return ColoredBox(
+      color: colors.bg,
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.pageHorizontal,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                width: 220,
+                child: ClipRRect(
+                  borderRadius: AppRadii.brFull,
+                  child: LinearProgressIndicator(
+                    minHeight: 4,
+                    color: colors.accent,
+                    backgroundColor: colors.border,
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            Text(
-              downloading
-                  ? 'Downloading the text… ${(p * 100).round()}%'
-                  : 'Finding a copy…',
-              textAlign: TextAlign.center,
-              style: AppTypography.subtitle(colors.text2),
-            ),
-          ],
+              const SizedBox(height: AppSpacing.lg),
+              Text(
+                'Loading text…',
+                textAlign: TextAlign.center,
+                style: AppTypography.subtitle(colors.text2),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -837,4 +1025,3 @@ class _BottomBar extends StatelessWidget {
     );
   }
 }
-

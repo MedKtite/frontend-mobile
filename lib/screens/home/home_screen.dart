@@ -8,7 +8,6 @@ import '../../app/theme/tokens/colors.dart';
 import '../../app/theme/tokens/radii.dart';
 import '../../app/theme/tokens/spacing.dart';
 import '../../app/theme/tokens/typography.dart';
-import '../../core/widgets/app_snackbar.dart';
 import '../../models/book.dart';
 import '../../models/catalog_book.dart';
 import '../../providers/auth_provider.dart';
@@ -27,13 +26,17 @@ import '../../widgets/glass_panel.dart';
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
-  void _comingSoon(BuildContext context, String what) =>
-      showAppSnack(context, '$what — coming soon');
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.appColors;
     final state = ref.watch(homeProvider);
+
+    // Warm independent sections while the primary Home request is in flight.
+    // Their widgets can then render cached/completed values as soon as the
+    // populated layout appears instead of starting each request afterward.
+    ref.watch(trendingBooksProvider);
+    ref.watch(topAuthorsProvider);
+    ref.watch(recommendedBooksProvider);
 
     // Identity comes from the authenticated user (fetched from the backend by
     // the auth flow); fall back gracefully when not signed in.
@@ -69,7 +72,10 @@ class HomeScreen extends ConsumerWidget {
                 final cr = continueReading;
                 if (cr != null) context.push(Routes.readingPath(cr.id));
               },
-              onPlay: () => _comingSoon(context, 'Audio player'),
+              onPlay: () {
+                final l = listening;
+                if (l != null) context.push(Routes.listeningPath(l.id));
+              },
             ),
           HomeError(:final message) => _ErrorState(
               message: message,
@@ -537,8 +543,8 @@ class _ContinueRowCard extends StatelessWidget {
 
 /// "Trending now" — Gutenberg's most-downloaded titles, every one readable
 /// free in-app. Tap → the catalog book page (Add to library — read free).
-/// Loading shows cover-shaped placeholders; an error hides the section
-/// entirely (trending is a bonus, never a blocker).
+/// Loading shows cover-shaped placeholders. Empty and error states stay visible
+/// so a transient request never makes the section jump out of the page.
 class _TrendingSection extends ConsumerWidget {
   const _TrendingSection();
 
@@ -549,31 +555,45 @@ class _TrendingSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final trending = ref.watch(trendingBooksProvider);
 
-    final row = trending.when(
-      error: (_, __) => null,
-      loading: () => ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: 4,
-        separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.md),
-        itemBuilder: (context, _) => _CoverPlaceholder(width: _coverW),
-      ),
-      data: (books) => books.isEmpty
-          ? null
-          : ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: books.length,
-              separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.md),
-              itemBuilder: (context, i) => _TrendingCell(book: books[i]),
-            ),
-    );
-    if (row == null) return const SizedBox.shrink();
+    final books = trending.valueOrNull;
+    final Widget content;
+    if (books != null && books.isNotEmpty) {
+      content = SizedBox(
+        height: _rowH,
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          itemCount: books.length,
+          separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.md),
+          itemBuilder: (context, i) => _TrendingCell(book: books[i]),
+        ),
+      );
+    } else if (trending.isLoading) {
+      content = SizedBox(
+        height: _rowH,
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          itemCount: 4,
+          separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.md),
+          itemBuilder: (context, _) => _CoverPlaceholder(width: _coverW),
+        ),
+      );
+    } else if (trending.hasError) {
+      content = _DiscoveryStatus(
+        message: "Trending books couldn't load.",
+        onRetry: () => ref.invalidate(trendingBooksProvider),
+      );
+    } else {
+      content = const _DiscoveryStatus(
+        message: 'No trending books are available right now.',
+      );
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _SectionLabel('TRENDING NOW'),
         const SizedBox(height: AppSpacing.md),
-        SizedBox(height: _rowH, child: row),
+        content,
         const SizedBox(height: AppSpacing.xxl),
       ],
     );
@@ -581,8 +601,7 @@ class _TrendingSection extends ConsumerWidget {
 }
 
 /// "Top authors" — the most-downloaded Gutenberg authors, with Wikipedia
-/// portraits. Tap → the author profile (bio + their books). Hidden while
-/// loading / on error — a bonus row, never a broken block.
+/// portraits. Tap → the author profile (bio + their books).
 class _TopAuthorsSection extends ConsumerWidget {
   const _TopAuthorsSection();
 
@@ -592,46 +611,68 @@ class _TopAuthorsSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final authors = ref.watch(topAuthorsProvider).valueOrNull;
-    if (authors == null || authors.isEmpty) return const SizedBox.shrink();
+    final authorsAsync = ref.watch(topAuthorsProvider);
+    final authors = authorsAsync.valueOrNull;
+    final Widget content;
+    if (authors != null && authors.isNotEmpty) {
+      content = SizedBox(
+        height: _rowH,
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          itemCount: authors.length,
+          separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.md),
+          itemBuilder: (context, i) {
+            final a = authors[i];
+            return GestureDetector(
+              onTap: () => context.push(Routes.author, extra: a.name),
+              child: SizedBox(
+                width: _cellW,
+                child: Column(
+                  children: [
+                    AuthorAvatar(
+                        name: a.name, imageUrl: a.imageUrl, size: _avatar),
+                    const SizedBox(height: AppSpacing.sm),
+                    Text(
+                      a.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                      style: AppTypography.caption(context.appColors.text2),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      );
+    } else if (authorsAsync.isLoading) {
+      content = SizedBox(
+        height: _rowH,
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          itemCount: 5,
+          separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.md),
+          itemBuilder: (_, __) => _AuthorPlaceholder(size: _avatar),
+        ),
+      );
+    } else if (authorsAsync.hasError) {
+      content = _DiscoveryStatus(
+        message: "Top authors couldn't load.",
+        onRetry: () => ref.invalidate(topAuthorsProvider),
+      );
+    } else {
+      content = const _DiscoveryStatus(
+        message: 'No authors are available right now.',
+      );
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _SectionLabel('TOP AUTHORS'),
         const SizedBox(height: AppSpacing.md),
-        SizedBox(
-          height: _rowH,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            itemCount: authors.length,
-            separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.md),
-            itemBuilder: (context, i) {
-              final a = authors[i];
-              return GestureDetector(
-                onTap: () => context.push(Routes.author, extra: a.name),
-                child: SizedBox(
-                  width: _cellW,
-                  child: Column(
-                    children: [
-                      AuthorAvatar(
-                          name: a.name, imageUrl: a.imageUrl, size: _avatar),
-                      const SizedBox(height: AppSpacing.sm),
-                      Text(
-                        a.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.center,
-                        style: AppTypography.caption(
-                            context.appColors.text2),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
+        content,
         const SizedBox(height: AppSpacing.xxl),
       ],
     );
@@ -640,31 +681,111 @@ class _TopAuthorsSection extends ConsumerWidget {
 
 /// "Recommended for you" — driven by the user's own catalog searches (the
 /// backend re-runs recent keywords against Google Books). Same cells as
-/// Trending; hidden until there's history to recommend from.
+/// Trending. An empty state explains how to create recommendation history.
 class _RecommendedSection extends ConsumerWidget {
   const _RecommendedSection();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final books = ref.watch(recommendedBooksProvider).valueOrNull;
-    if (books == null || books.isEmpty) return const SizedBox.shrink();
+    final recommended = ref.watch(recommendedBooksProvider);
+    final books = recommended.valueOrNull;
+    final Widget content;
+    if (books != null && books.isNotEmpty) {
+      content = SizedBox(
+        height: _TrendingSection._rowH,
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          itemCount: books.length,
+          separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.md),
+          itemBuilder: (context, i) => _TrendingCell(book: books[i]),
+        ),
+      );
+    } else if (recommended.isLoading) {
+      content = SizedBox(
+        height: _TrendingSection._rowH,
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          itemCount: 4,
+          separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.md),
+          itemBuilder: (_, __) =>
+              const _CoverPlaceholder(width: _TrendingSection._coverW),
+        ),
+      );
+    } else if (recommended.hasError) {
+      content = _DiscoveryStatus(
+        message: "Recommendations couldn't load.",
+        onRetry: () => ref.invalidate(recommendedBooksProvider),
+      );
+    } else {
+      content = const _DiscoveryStatus(
+        message: 'Search for books to shape your recommendations.',
+      );
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _SectionLabel('RECOMMENDED FOR YOU'),
         const SizedBox(height: AppSpacing.md),
-        SizedBox(
-          height: _TrendingSection._rowH,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            itemCount: books.length,
-            separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.md),
-            itemBuilder: (context, i) => _TrendingCell(book: books[i]),
-          ),
-        ),
+        content,
         const SizedBox(height: AppSpacing.xxl),
       ],
+    );
+  }
+}
+
+class _DiscoveryStatus extends StatelessWidget {
+  const _DiscoveryStatus({required this.message, this.onRetry});
+
+  final String message;
+  final VoidCallback? onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: colors.surface2,
+        borderRadius: AppRadii.brMd,
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.auto_stories_outlined,
+              size: AppSpacing.xl, color: colors.text3),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Text(message, style: AppTypography.label(colors.text2)),
+          ),
+          if (onRetry != null)
+            TextButton(onPressed: onRetry, child: const Text('Retry')),
+        ],
+      ),
+    );
+  }
+}
+
+class _AuthorPlaceholder extends StatelessWidget {
+  const _AuthorPlaceholder({required this.size});
+
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return SizedBox(
+      width: _TopAuthorsSection._cellW,
+      child: Align(
+        alignment: Alignment.topCenter,
+        child: Container(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(
+            color: colors.surface2,
+            shape: BoxShape.circle,
+          ),
+        ),
+      ),
     );
   }
 }
@@ -744,9 +865,7 @@ class _ContinueReadingCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    return GlassPanel(
-      radius: AppRadii.lg,
-      padding: const EdgeInsets.all(AppSpacing.lg),
+    return _Card(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

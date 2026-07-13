@@ -13,9 +13,36 @@ class BookService {
   final Dio _dio;
   BookService(this._dio);
 
+  final Map<String?, Future<List<Book>>> _listRequests = {};
+  final Map<String?, ({DateTime storedAt, List<Book> books})> _listCache = {};
+  static const _listCacheLifetime = Duration(seconds: 20);
+
   /// GET /me/books — the user's library, optionally filtered by [status]
   /// (reading | listening | finished | archived).
   Future<List<Book>> list({String? status}) async {
+    final cached = _listCache[status];
+    if (cached != null &&
+        DateTime.now().difference(cached.storedAt) < _listCacheLifetime) {
+      return cached.books;
+    }
+
+    // Home and Library often mount together. Share their in-flight request
+    // instead of sending the same GET twice.
+    final inFlight = _listRequests[status];
+    if (inFlight != null) return inFlight;
+
+    final request = _fetchList(status);
+    _listRequests[status] = request;
+    try {
+      final books = await request;
+      _listCache[status] = (storedAt: DateTime.now(), books: books);
+      return books;
+    } finally {
+      _listRequests.remove(status);
+    }
+  }
+
+  Future<List<Book>> _fetchList(String? status) async {
     final res = await _dio.get<List<dynamic>>(
       '/me/books',
       queryParameters: status != null ? {'status': status} : null,
@@ -37,6 +64,7 @@ class BookService {
       '/me/books',
       data: req.toJson(),
     );
+    _listCache.clear();
     return Book.fromJson(res.data!);
   }
 
@@ -48,12 +76,14 @@ class BookService {
       '/me/books/$id',
       data: body,
     );
+    _listCache.clear();
     return Book.fromJson(res.data!);
   }
 
   /// DELETE /me/books/{id} — remove a book from the library (204 No Content).
   Future<void> delete(String id) async {
     await _dio.delete<void>('/me/books/$id');
+    _listCache.clear();
   }
 
   /// GET /me/books/{id}/download-url — a short-lived presigned S3/MinIO URL for

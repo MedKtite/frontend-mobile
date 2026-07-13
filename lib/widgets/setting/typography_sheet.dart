@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../app/theme/tokens/colors.dart';
-import '../app/theme/tokens/radii.dart';
-import '../app/theme/tokens/spacing.dart';
-import '../app/theme/tokens/typography.dart';
-import '../providers/reading_settings_provider.dart';
+import '../../app/theme/tokens/colors.dart';
+import '../../app/theme/tokens/radii.dart';
+import '../../app/theme/tokens/spacing.dart';
+import '../../app/theme/tokens/typography.dart';
+import '../../providers/reading_settings_provider.dart';
+import '../glass_panel.dart';
 
 /// The "Aa" typography sheet (Figma 297:2). Each control writes
 /// [readingSettingsProvider] immediately, so the reader behind it live-previews.
@@ -13,8 +14,9 @@ import '../providers/reading_settings_provider.dart';
 Future<void> showTypographySheet(BuildContext context) {
   return showModalBottomSheet<void>(
     context: context,
+    useRootNavigator: true,
     backgroundColor: Colors.transparent,
-    barrierColor: Colors.black.withValues(alpha: 0.35),
+    barrierColor: Colors.black.withValues(alpha: 0.18),
     builder: (_) => const _TypographySheet(),
   );
 }
@@ -28,11 +30,10 @@ class _TypographySheet extends ConsumerWidget {
     final s = ref.watch(readingSettingsProvider);
     final ctrl = ref.read(readingSettingsProvider.notifier);
 
-    return Container(
-      decoration: BoxDecoration(
-        color: colors.bg,
-        borderRadius:
-            const BorderRadius.vertical(top: Radius.circular(AppRadii.xl)),
+    return GlassPanel(
+      radius: AppRadii.xl,
+      borderRadius: const BorderRadius.vertical(
+        top: Radius.circular(AppRadii.xl),
       ),
       child: SafeArea(
         top: false,

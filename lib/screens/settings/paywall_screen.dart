@@ -11,7 +11,7 @@ import '../../core/widgets/app_snackbar.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/state/auth_state.dart';
 import '../../providers/subscription_provider.dart';
-import '../../screens/discovery/detail_shared.dart';
+import '../library/detail_shared.dart';
 import '../../widgets/glass_panel.dart';
 
 /// Marginalia Pro paywall. The purchase runs through the platform store via

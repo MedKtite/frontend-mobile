@@ -22,6 +22,7 @@ import 'glass_panel.dart';
 Future<void> showAddToLibrarySheet(BuildContext context) {
   return showModalBottomSheet<void>(
     context: context,
+    useRootNavigator: true,
     backgroundColor: Colors.transparent,
     // Light scrim: the sheet is frosted GLASS — it needs bright content
     // behind it to transmit. The default black54 turns the frost muddy.
@@ -45,6 +46,8 @@ class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
   static String? _contentTypeFor(String ext) => switch (ext) {
         'epub' => 'application/epub+zip',
         'pdf' => 'application/pdf',
+        'm4b' => 'audio/mp4',
+        'mp3' => 'audio/mpeg',
         _ => null,
       };
 
@@ -58,7 +61,7 @@ class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
   Future<void> _pickAndUpload() async {
     final result = await FilePicker.pickFiles(
       type: FileType.custom,
-      allowedExtensions: const ['epub', 'pdf'],
+      allowedExtensions: const ['epub', 'pdf', 'm4b', 'mp3'],
       withData: true, // we PUT the bytes straight to S3
     );
     if (result == null || result.files.isEmpty) return; // cancelled
@@ -68,7 +71,7 @@ class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
     final ext = (picked.extension ?? '').toLowerCase();
     final contentType = _contentTypeFor(ext);
     if (bytes == null || contentType == null) {
-      _toast('Unsupported file — pick an EPUB or PDF.');
+      _toast('Unsupported file — pick an EPUB, PDF, M4B or MP3.');
       return;
     }
     if (!mounted) return; // the OS picker is an async gap
@@ -94,6 +97,8 @@ class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
       await ref.read(bookServiceProvider).create(BookCreateRequest(
             title: title,
             format: ext,
+            // Audio files land straight on the Listening shelf.
+            status: (ext == 'm4b' || ext == 'mp3') ? 'listening' : null,
             fileKey: presigned.fileKey,
           ));
       ref.invalidate(libraryBooksProvider);
@@ -187,7 +192,7 @@ class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
         _AddOption(
           icon: Icons.file_upload_outlined,
           title: 'Upload a file',
-          subtitle: 'EPUB · PDF',
+          subtitle: 'EPUB · PDF · M4B · MP3',
           onTap: _pickAndUpload,
         ),
         const SizedBox(height: AppSpacing.md),

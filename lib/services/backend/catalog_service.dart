@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/dio_client.dart';
 import '../../models/catalog_book.dart';
+import '../../models/librivox_audiobook.dart';
 
 /// Raw HTTP for /me/catalog (Gutenberg index + Google Books proxy).
 class CatalogService {
@@ -34,6 +35,21 @@ class CatalogService {
     });
     final data = res.data;
     return data is Map<String, dynamic> ? CatalogBook.fromJson(data) : null;
+  }
+
+  /// Free LibriVox audiobook for a title/author — chapter MP3s from the
+  /// Internet Archive. Null when no recording exists (backend answers 204).
+  Future<LibrivoxAudiobook?> librivox(
+      {required String title, String? author}) async {
+    final res =
+        await _dio.get<dynamic>('/me/catalog/librivox', queryParameters: {
+      'title': title,
+      if (author != null && author.isNotEmpty) 'author': author,
+    });
+    final data = res.data;
+    return data is Map<String, dynamic>
+        ? LibrivoxAudiobook.fromJson(data)
+        : null;
   }
 
   /// "Recommended for you" — books derived from this user's recent catalog

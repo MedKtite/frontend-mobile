@@ -25,6 +25,10 @@ class HomeController extends StateNotifier<HomeState> {
   Future<void> load({bool silent = false}) async {
     if (!silent) state = const HomeState.loading();
 
+    // Highlights do not depend on the library response, so start both network
+    // calls together. The highlight failure remains best-effort.
+    final highlightsFuture = _loadHighlights();
+
     final List<Book> books;
     try {
       books = await _books.list();
@@ -39,17 +43,33 @@ class HomeController extends StateNotifier<HomeState> {
     }
 
     // Highlights are best-effort — a missing passage shouldn't blank Home.
-    List<Highlight> highlights;
-    try {
-      highlights = await _highlights.listRecent();
-    } on ApiError {
-      highlights = const <Highlight>[];
-    }
+    final highlights = await highlightsFuture;
 
     state = HomeState.loaded(
       continueReading: _pickContinueReading(books),
       listening: _pickListening(books),
       passage: _pickPassage(highlights, books),
+    );
+  }
+
+  Future<List<Highlight>> _loadHighlights() async {
+    try {
+      return await _highlights.listRecent();
+    } on ApiError {
+      return const <Highlight>[];
+    }
+  }
+
+  /// Reflect reader movement immediately when returning to Home. The backend
+  /// save still owns persistence; this keeps the Continue Reading percentage
+  /// from waiting for another network reload.
+  void updateReadingProgress(String bookId, double progress) {
+    final current = state;
+    if (current is! HomeLoaded || current.continueReading?.id != bookId) return;
+    state = current.copyWith(
+      continueReading: current.continueReading!.copyWith(
+        progress: progress.clamp(0.0, 100.0).toDouble(),
+      ),
     );
   }
 
@@ -75,6 +95,7 @@ class HomeController extends StateNotifier<HomeState> {
     );
     if (b == null) return null;
     return ListeningItem(
+      id: b.id,
       title: b.title,
       author: b.author ?? '',
       coverBg: coverColorFromHex(b.coverDominantColor),

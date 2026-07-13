@@ -15,6 +15,8 @@ _$HighlightCreateRequestImpl _$$HighlightCreateRequestImplFromJson(
   textStartOffset: (json['textStartOffset'] as num?)?.toInt(),
   textEndOffset: (json['textEndOffset'] as num?)?.toInt(),
   passageText: json['passageText'] as String?,
+  audioStartSec: (json['audioStartSec'] as num?)?.toDouble(),
+  audioEndSec: (json['audioEndSec'] as num?)?.toDouble(),
 );
 
 Map<String, dynamic> _$$HighlightCreateRequestImplToJson(
@@ -26,4 +28,6 @@ Map<String, dynamic> _$$HighlightCreateRequestImplToJson(
   'textStartOffset': instance.textStartOffset,
   'textEndOffset': instance.textEndOffset,
   'passageText': instance.passageText,
+  'audioStartSec': instance.audioStartSec,
+  'audioEndSec': instance.audioEndSec,
 };

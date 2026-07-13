@@ -18,9 +18,8 @@ class AppTheme {
 
     final base = ThemeData(brightness: brightness, useMaterial3: true);
     return base.copyWith(
-      // Transparent: the AppBackground texture (MaterialApp.builder) is the
-      // real page surface. Screens needing an opaque surface (reading view)
-      // set their Scaffold color explicitly.
+      // Transparent: the token-colored AppBackground in MaterialApp.builder
+      // is the shared page surface. Readers set their own palette explicitly.
       scaffoldBackgroundColor: Colors.transparent,
       colorScheme: base.colorScheme.copyWith(
         brightness: brightness,
