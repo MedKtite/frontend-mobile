@@ -4,6 +4,7 @@ import '../app/theme/tokens/colors.dart';
 import '../app/theme/tokens/radii.dart';
 import '../app/theme/tokens/spacing.dart';
 import '../app/theme/tokens/typography.dart';
+import '../core/widgets/adaptive_modal.dart';
 
 /// The seven seeded tags, in the Figma's order. Each is also the highlight color.
 const kTagNames = <String>[
@@ -20,9 +21,8 @@ const kTagNames = <String>[
 /// highlight's `colorTag`), or null if dismissed without choosing.
 Future<String?> showTagPickerSheet(BuildContext context,
     {required String passage}) {
-  return showModalBottomSheet<String>(
+  return showAdaptiveModal<String>(
     context: context,
-    useRootNavigator: true,
     backgroundColor: Colors.transparent,
     barrierColor: Colors.black.withValues(alpha: 0.35),
     isScrollControlled: true,
@@ -47,8 +47,7 @@ class _TagPickerSheetState extends State<_TagPickerSheet> {
     return Container(
       decoration: BoxDecoration(
         color: colors.bg,
-        borderRadius:
-            const BorderRadius.vertical(top: Radius.circular(AppRadii.xl)),
+        borderRadius: adaptiveModalBorderRadius(context),
       ),
       child: SafeArea(
         top: false,
@@ -208,14 +207,8 @@ class _Grabber extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: Container(
-        width: 36,
-        height: 4,
-        margin: const EdgeInsets.only(top: AppSpacing.xs, bottom: AppSpacing.lg),
-        decoration: BoxDecoration(
-          color: context.appColors.text3,
-          borderRadius: AppRadii.brFull,
-        ),
+      child: AdaptiveModalHandle(
+        color: context.appColors.text3,
       ),
     );
   }

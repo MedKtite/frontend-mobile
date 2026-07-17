@@ -88,11 +88,13 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
     final pr = _progress.value;
     if (book != null && pr.label.isNotEmpty) {
       _homeController.updateReadingProgress(book.id, pr.pct);
-      Future.microtask(() => _miniController.state = ReadingMiniSession(
-            book: book.copyWith(progressPct: pr.pct),
-            pct: pr.pct,
-            label: pr.label,
-          ));
+      Future.microtask(
+        () => _miniController.state = ReadingMiniSession(
+          book: book.copyWith(progressPct: pr.pct),
+          pct: pr.pct,
+          label: pr.label,
+        ),
+      );
     }
     _progress.dispose();
     super.dispose();
@@ -115,10 +117,9 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
       accent: p.accent,
     );
     final theme = Theme.of(context);
-    final extensions = theme.extensions.values
-        .where((e) => e is! AppColorsExtension)
-        .toList()
-      ..add(readerColors);
+    final extensions =
+        theme.extensions.values.where((e) => e is! AppColorsExtension).toList()
+          ..add(readerColors);
 
     return Theme(
       data: theme.copyWith(extensions: extensions),
@@ -150,7 +151,8 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
           // dispose clobber the good cursor.
           final bookAsync = ref.watch(bookByIdProvider(widget.bookId));
           final displayBook = bookAsync.valueOrNull ?? widget.initialBook;
-          final readerBook = bookAsync.valueOrNull ??
+          final readerBook =
+              bookAsync.valueOrNull ??
               (bookAsync.hasError ? widget.initialBook : null);
           _lastBook = displayBook ?? _lastBook;
 
@@ -192,7 +194,9 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
       // Catalog/physical book → fetch the clean full text from Project Gutenberg
       // (public-domain) and render it exactly like an uploaded EPUB.
       final gref = (id: book.id, title: book.title, author: book.author);
-      return ref.watch(gutenbergEpubProvider(gref)).when(
+      return ref
+          .watch(gutenbergEpubProvider(gref))
+          .when(
             loading: () => const _TextLoading(),
             error: (e, _) => e is GutenbergNotFound
                 ? _NoReadableFile(book: book)
@@ -206,7 +210,9 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
     }
 
     final fileRef = (id: book.id, format: fmt!);
-    return ref.watch(bookFileProvider(fileRef)).when(
+    return ref
+        .watch(bookFileProvider(fileRef))
+        .when(
           loading: () => const _TextLoading(),
           error: (e, _) => ReaderError(
             message: e is ApiError ? e.message : 'Could not load this book.',
@@ -256,10 +262,13 @@ class _PdfReaderState extends ConsumerState<_PdfReader> {
   }
 
   void _report() {
-    final pct =
-        _total > 0 ? (_page / _total * 100).clamp(0, 100).toDouble() : 0.0;
-    widget.progress.value =
-        ReaderProgress(pct, 'Page $_page of ${_total == 0 ? '—' : _total}');
+    final pct = _total > 0
+        ? (_page / _total * 100).clamp(0, 100).toDouble()
+        : 0.0;
+    widget.progress.value = ReaderProgress(
+      pct,
+      'Page $_page of ${_total == 0 ? '—' : _total}',
+    );
   }
 
   void _scheduleSave() {
@@ -380,9 +389,11 @@ class _EpubReaderState extends ConsumerState<_EpubReader> {
     unawaited(
       _web.loadFlutterAsset('assets/reader/reader.html').catchError((Object _) {
         if (mounted) {
-          setState(() => _loadError =
-              'Reader assets aren’t in this build. Stop the app fully and '
-              'run flutter run again — hot restart can’t bundle new assets.');
+          setState(
+            () => _loadError =
+                'Reader assets aren’t in this build. Stop the app fully and '
+                'run flutter run again — hot restart can’t bundle new assets.',
+          );
         }
       }),
     );
@@ -420,7 +431,9 @@ class _EpubReaderState extends ConsumerState<_EpubReader> {
     const chunk = 512 * 1024;
     for (var i = 0; i < b64.length; i += chunk) {
       final end = (i + chunk < b64.length) ? i + chunk : b64.length;
-      await _web.runJavaScript("window.appendChunk('${b64.substring(i, end)}')");
+      await _web.runJavaScript(
+        "window.appendChunk('${b64.substring(i, end)}')",
+      );
     }
     final cfi = cursorCfi(widget.book.cursor);
     final cfiArg = cfi == null ? 'null' : jsonEncode(cfi);
@@ -429,7 +442,9 @@ class _EpubReaderState extends ConsumerState<_EpubReader> {
       if (await _locationsCache.exists()) {
         locArg = jsonEncode(await _locationsCache.readAsString());
       }
-    } catch (_) {/* no cache — epub.js regenerates */}
+    } catch (_) {
+      /* no cache — epub.js regenerates */
+    }
     _applyTheme();
     await _web.runJavaScript('window.loadBook($cfiArg, $locArg)');
   }
@@ -440,8 +455,9 @@ class _EpubReaderState extends ConsumerState<_EpubReader> {
   void _applyTheme() {
     final s = ref.read(readingSettingsProvider);
     final p = s.paletteFor(Theme.of(context).brightness);
-    final family =
-        s.font == ReaderFont.serif ? 'Georgia, serif' : 'system-ui, sans-serif';
+    final family = s.font == ReaderFont.serif
+        ? 'Georgia, serif'
+        : 'system-ui, sans-serif';
     _web.runJavaScript(
       'window.setTheme("${cssHex(p.bg)}","${cssHex(p.text)}",'
       '"$family",${s.fontSize.round()},${s.lineHeight},'
@@ -471,8 +487,7 @@ class _EpubReaderState extends ConsumerState<_EpubReader> {
         final total = (data['total'] as num?)?.toInt() ?? 0;
         final chapter = (data['chapter'] as num?)?.toInt() ?? 0;
         final chapters = (data['chapters'] as num?)?.toInt() ?? 0;
-        final chapterPct =
-            (data['chapterPercent'] as num?)?.toDouble() ?? 0;
+        final chapterPct = (data['chapterPercent'] as num?)?.toDouble() ?? 0;
         if (mounted) {
           setState(() {
             _pct = (pct * 100).clamp(0, 100).toDouble();
@@ -542,8 +557,10 @@ class _EpubReaderState extends ConsumerState<_EpubReader> {
         // harmless noise once it has.
         if (!_ready) {
           if (mounted) {
-            setState(() =>
-                _loadError = 'Could not open this book. (${data['message']})');
+            setState(
+              () =>
+                  _loadError = 'Could not open this book. (${data['message']})',
+            );
           }
         }
     }
@@ -552,8 +569,8 @@ class _EpubReaderState extends ConsumerState<_EpubReader> {
   String get _label => _chapters > 0
       ? 'Chapter $_chapter/$_chapters'
       : _total > 0
-          ? 'Page $_page of $_total'
-          : 'Reading';
+      ? 'Page $_page of $_total'
+      : 'Reading';
 
   void _next() {
     if (_ready) _web.runJavaScript('window.nextPage()');
@@ -591,8 +608,10 @@ class _EpubReaderState extends ConsumerState<_EpubReader> {
 
   /// Paint one highlight into the book text, tag-colored.
   void _mark(String cfiRange, String tag) {
-    _web.runJavaScript('window.applyMark(${jsonEncode(cfiRange)}, '
-        '"${cssHex(AppColors.forTag(tag))}")');
+    _web.runJavaScript(
+      'window.applyMark(${jsonEncode(cfiRange)}, '
+      '"${cssHex(AppColors.forTag(tag))}")',
+    );
   }
 
   void _clearSelection() {
@@ -613,12 +632,16 @@ class _EpubReaderState extends ConsumerState<_EpubReader> {
     if (cfiRange == null || passage == null || passage.isEmpty) return;
     final messenger = ScaffoldMessenger.of(context);
     try {
-      await ref.read(highlightServiceProvider).create(HighlightCreateRequest(
-            bookId: widget.book.id,
-            colorTag: tag,
-            passageText: passage,
-            textChapterRef: cfiRange,
-          ));
+      await ref
+          .read(highlightServiceProvider)
+          .create(
+            HighlightCreateRequest(
+              bookId: widget.book.id,
+              colorTag: tag,
+              passageText: passage,
+              textChapterRef: cfiRange,
+            ),
+          );
       if (!mounted) return;
       _mark(cfiRange, tag);
       ref.invalidate(bookHighlightsProvider(widget.book.id));
@@ -652,7 +675,9 @@ class _EpubReaderState extends ConsumerState<_EpubReader> {
           _mark(cfi, h.colorTag ?? 'revisit');
         }
       }
-    } catch (_) {/* marks are decoration — never block reading */}
+    } catch (_) {
+      /* marks are decoration — never block reading */
+    }
   }
 
   /// Selection → highlight (Tag) or highlight + note (Note). The CFI range is
@@ -667,12 +692,16 @@ class _EpubReaderState extends ConsumerState<_EpubReader> {
       if (!asNote) {
         final tag = await showTagPickerSheet(context, passage: passage);
         if (tag == null || !mounted) return;
-        await ref.read(highlightServiceProvider).create(HighlightCreateRequest(
-              bookId: widget.book.id,
-              colorTag: tag,
-              passageText: passage,
-              textChapterRef: cfiRange,
-            ));
+        await ref
+            .read(highlightServiceProvider)
+            .create(
+              HighlightCreateRequest(
+                bookId: widget.book.id,
+                colorTag: tag,
+                passageText: passage,
+                textChapterRef: cfiRange,
+              ),
+            );
         if (!mounted) return;
         _mark(cfiRange, tag);
         messenger
@@ -680,23 +709,32 @@ class _EpubReaderState extends ConsumerState<_EpubReader> {
           ..showSnackBar(appSnackBar('Tagged “$tag”', SnackType.success));
       } else {
         final reference = 'FROM ${widget.book.title.toUpperCase()}';
-        final body =
-            await showNoteSheet(context, passage: passage, reference: reference);
+        final body = await showNoteSheet(
+          context,
+          passage: passage,
+          reference: reference,
+        );
         if (body == null || !mounted) return;
         // A note anchors to a highlight; mint a neutral 'revisit' one for it.
         final highlight = await ref
             .read(highlightServiceProvider)
-            .create(HighlightCreateRequest(
-              bookId: widget.book.id,
-              colorTag: 'revisit',
-              passageText: passage,
-              textChapterRef: cfiRange,
-            ));
-        await ref.read(noteServiceProvider).create(NoteCreateRequest(
-              bookId: widget.book.id,
-              highlightId: highlight.id,
-              bodyMd: body,
-            ));
+            .create(
+              HighlightCreateRequest(
+                bookId: widget.book.id,
+                colorTag: 'revisit',
+                passageText: passage,
+                textChapterRef: cfiRange,
+              ),
+            );
+        await ref
+            .read(noteServiceProvider)
+            .create(
+              NoteCreateRequest(
+                bookId: widget.book.id,
+                highlightId: highlight.id,
+                bodyMd: body,
+              ),
+            );
         if (!mounted) return;
         _mark(cfiRange, 'revisit');
         messenger
@@ -734,10 +772,7 @@ class _EpubReaderState extends ConsumerState<_EpubReader> {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     if (_loadError != null) {
-      return ReaderMessage(
-        icon: Icons.menu_book_outlined,
-        text: _loadError!,
-      );
+      return ReaderMessage(icon: Icons.menu_book_outlined, text: _loadError!);
     }
     // Re-theme epub.js live when the "Aa" sheet changes font/size/theme.
     ref.listen(readingSettingsProvider, (_, __) {
@@ -752,8 +787,7 @@ class _EpubReaderState extends ConsumerState<_EpubReader> {
               children: [
                 Positioned.fill(child: ColoredBox(color: colors.bg)),
                 WebViewWidget(controller: _web),
-                if (!_ready)
-                  const Positioned.fill(child: _TextLoading()),
+                if (!_ready) const Positioned.fill(child: _TextLoading()),
                 // Floating highlight palette (Figma 237:17), anchored just
                 // above the selection; flips below it near the screen top.
                 if (_selText != null)
@@ -827,8 +861,8 @@ class _GoogleBooksSampleReaderState extends State<_GoogleBooksSampleReader> {
               final message = decoded['message'] as String?;
               setState(() {
                 _ready = false;
-                _error = message ??
-                    'This sample cannot be displayed in the app.';
+                _error =
+                    message ?? 'This sample cannot be displayed in the app.';
               });
           }
         },
@@ -847,13 +881,15 @@ class _GoogleBooksSampleReaderState extends State<_GoogleBooksSampleReader> {
         ),
       );
     unawaited(
-      _web
-          .loadFlutterAsset('assets/reader/google_sample.html')
-          .catchError((Object _) {
+      _web.loadFlutterAsset('assets/reader/google_sample.html').catchError((
+        Object _,
+      ) {
         if (mounted) {
-          setState(() => _error =
-              'Sample reader assets aren’t in this build. Stop the app fully '
-              'and rebuild it.');
+          setState(
+            () => _error =
+                'Sample reader assets aren’t in this build. Stop the app fully '
+                'and rebuild it.',
+          );
         }
       }),
     );
@@ -862,8 +898,9 @@ class _GoogleBooksSampleReaderState extends State<_GoogleBooksSampleReader> {
   Future<void> _boot() async {
     if (_booted || !mounted) return;
     _booted = true;
-    final settings = ProviderScope.containerOf(context)
-        .read(readingSettingsProvider);
+    final settings = ProviderScope.containerOf(
+      context,
+    ).read(readingSettingsProvider);
     final palette = settings.paletteFor(Theme.of(context).brightness);
     await _web.runJavaScript(
       'window.loadSample(${jsonEncode(widget.identifier)},'
@@ -877,10 +914,7 @@ class _GoogleBooksSampleReaderState extends State<_GoogleBooksSampleReader> {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     if (_error != null) {
-      return ReaderMessage(
-        icon: Icons.menu_book_outlined,
-        text: _error!,
-      );
+      return ReaderMessage(icon: Icons.menu_book_outlined, text: _error!);
     }
     return Stack(
       children: [
@@ -943,16 +977,20 @@ class _NoReadableFile extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.pageHorizontal),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.pageHorizontal,
+      ),
       child: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(Icons.menu_book_outlined, size: 40, color: colors.text3),
             const SizedBox(height: AppSpacing.lg),
-            Text('Nothing to read yet',
-                textAlign: TextAlign.center,
-                style: AppTypography.title3(colors.text)),
+            Text(
+              'Nothing to read yet',
+              textAlign: TextAlign.center,
+              style: AppTypography.title3(colors.text),
+            ),
             const SizedBox(height: AppSpacing.sm),
             Text(
               'This is a catalog entry. Upload an EPUB or PDF of '
@@ -1016,8 +1054,10 @@ class _BottomBar extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: AppSpacing.md),
-              Text('${progressPct.round()}%',
-                  style: AppTypography.caption(colors.text3)),
+              Text(
+                '${progressPct.round()}%',
+                style: AppTypography.caption(colors.text3),
+              ),
             ],
           ),
         ],

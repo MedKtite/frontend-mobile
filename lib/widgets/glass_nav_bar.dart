@@ -6,7 +6,7 @@ import '../app/theme/tokens/radii.dart';
 import '../app/theme/tokens/spacing.dart';
 import '../app/theme/tokens/typography.dart';
 
-enum NavTab { home, margins, library, insights, profile }
+enum NavTab { home, discovery, library, margins, insights, profile }
 
 class GlassNavBar extends StatelessWidget {
   const GlassNavBar({
@@ -27,10 +27,10 @@ class GlassNavBar extends StatelessWidget {
   // glyph (null icon → _TagDotsIcon) per the reference design.
   static const _items = <(NavTab, IconData?, IconData?, String)>[
     (NavTab.home, Icons.home_outlined, Icons.home_rounded, 'Home'),
-    (NavTab.margins, null, null, 'Margins'),
+    (NavTab.discovery, Icons.explore_outlined, Icons.explore_rounded, 'Discovery'),
     (NavTab.library, Icons.auto_stories_outlined, Icons.auto_stories_rounded, 'Library'),
+    (NavTab.margins, null, null, 'Margins'),
     (NavTab.insights, Icons.bar_chart_outlined, Icons.bar_chart_rounded, 'Insights'),
-    (NavTab.profile, Icons.person_outline, Icons.person_rounded, 'Profile'),
   ];
 
   @override

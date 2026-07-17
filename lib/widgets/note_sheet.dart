@@ -4,6 +4,7 @@ import '../app/theme/tokens/colors.dart';
 import '../app/theme/tokens/radii.dart';
 import '../app/theme/tokens/spacing.dart';
 import '../app/theme/tokens/typography.dart';
+import '../core/widgets/adaptive_modal.dart';
 
 /// "Add a note" sheet (Figma 290:2). Returns the note text on save, or null on
 Future<String?> showNoteSheet(
@@ -11,9 +12,8 @@ Future<String?> showNoteSheet(
   required String passage,
   required String reference,
 }) {
-  return showModalBottomSheet<String>(
+  return showAdaptiveModal<String>(
     context: context,
-    useRootNavigator: true,
     backgroundColor: Colors.transparent,
     barrierColor: Colors.black.withValues(alpha: 0.35),
     isScrollControlled: true,
@@ -48,14 +48,16 @@ class _NoteSheetState extends State<_NoteSheet> {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
+    final isPopup = AdaptiveModalScope.isPopupOf(context);
     return Padding(
       // Lift above the keyboard.
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      padding: EdgeInsets.only(
+        bottom: isPopup ? 0 : MediaQuery.of(context).viewInsets.bottom,
+      ),
       child: Container(
         decoration: BoxDecoration(
           color: colors.bg,
-          borderRadius:
-              const BorderRadius.vertical(top: Radius.circular(AppRadii.xl)),
+          borderRadius: adaptiveModalBorderRadius(context),
         ),
         child: SafeArea(
           top: false,
@@ -70,18 +72,7 @@ class _NoteSheetState extends State<_NoteSheet> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Center(
-                  child: Container(
-                    width: 36,
-                    height: 4,
-                    margin: const EdgeInsets.only(
-                        top: AppSpacing.xs, bottom: AppSpacing.lg),
-                    decoration: BoxDecoration(
-                      color: colors.text3,
-                      borderRadius: AppRadii.brFull,
-                    ),
-                  ),
-                ),
+                Center(child: AdaptiveModalHandle(color: colors.text3)),
                 Center(
                   child: Text('Add a note',
                       style: AppTypography.title2(colors.text)),

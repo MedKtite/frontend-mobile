@@ -52,6 +52,23 @@ class AuthService {
   Future<void> logout() async {
     await _dio.post<void>('/auth/logout');
   }
+
+  Future<void> requestPasswordReset(String email) async {
+    await _dio.post<void>(
+      '/auth/password/forgot',
+      data: {'email': email},
+    );
+  }
+
+  Future<void> resetPassword({
+    required String token,
+    required String password,
+  }) async {
+    await _dio.post<void>(
+      '/auth/password/reset',
+      data: {'token': token, 'password': password},
+    );
+  }
 }
 
 final authServiceProvider =

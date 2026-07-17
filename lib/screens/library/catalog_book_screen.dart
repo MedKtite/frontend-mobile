@@ -9,6 +9,7 @@ import '../../app/theme/tokens/spacing.dart';
 import '../../app/theme/tokens/typography.dart';
 import '../../app/routes.dart';
 import '../../core/dio_client.dart';
+import '../../core/widgets/adaptive_modal.dart';
 import '../../core/widgets/app_snackbar.dart';
 import '../../core/utils/store_links.dart';
 import '../../models/book.dart';
@@ -45,23 +46,45 @@ class _CatalogBookScreenState extends ConsumerState<CatalogBookScreen> {
   Future<void> _openStore(Uri uri) async {
     final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
     if (!ok && mounted) {
-      showAppSnack(context, 'Could not open the store.',
-          type: SnackType.error);
+      showAppSnack(context, 'Could not open the store.', type: SnackType.error);
     }
   }
 
-  /// FULL titles only — same flow as the library grid's + badge.
+  /// Adds a readable title to a shelf chosen by the user.
   Future<void> _addToLibrary() async {
     final shelf = await showShelfPicker(context);
     if (shelf == null || !mounted) return;
+    await _createLibraryBook(
+      status: shelf,
+      successMessage: shelf == 'archived'
+          ? 'Saved “${book.title}” for later'
+          : 'Added “${book.title}” to $shelf',
+    );
+  }
+
+  /// Bookmark action: save immediately without opening the shelf picker.
+  Future<void> _saveForLater() async {
+    await _createLibraryBook(
+      status: 'archived',
+      successMessage: 'Saved “${book.title}” for later',
+    );
+  }
+
+  Future<void> _createLibraryBook({
+    required String status,
+    required String successMessage,
+  }) async {
+    if (_adding) return;
     setState(() => _adding = true);
     String? error;
     try {
-      await ref.read(bookServiceProvider).create(
+      await ref
+          .read(bookServiceProvider)
+          .create(
             BookCreateRequest(
               title: book.title,
               format: 'physical',
-              status: shelf,
+              status: status,
               author: book.author,
               googleId: book.googleId,
               isbn13: book.isbn13,
@@ -83,7 +106,8 @@ class _CatalogBookScreenState extends ConsumerState<CatalogBookScreen> {
     if (error == null) {
       ref.invalidate(libraryBooksProvider);
       messenger.showSnackBar(
-          appSnackBar('Added “${book.title}” to $shelf', SnackType.success));
+        appSnackBar(successMessage, SnackType.success),
+      );
     } else {
       messenger.showSnackBar(appSnackBar(error, SnackType.error));
     }
@@ -96,8 +120,11 @@ class _CatalogBookScreenState extends ConsumerState<CatalogBookScreen> {
   void _readSample() {
     final identifier = book.googleId ?? book.previewUrl;
     if (identifier == null || identifier.isEmpty) {
-      showAppSnack(context, 'This sample is not available right now.',
-          type: SnackType.error);
+      showAppSnack(
+        context,
+        'This sample is not available right now.',
+        type: SnackType.error,
+      );
       return;
     }
     context.push(
@@ -107,12 +134,9 @@ class _CatalogBookScreenState extends ConsumerState<CatalogBookScreen> {
 
   Future<void> _showStores() async {
     final colors = context.appColors;
-    await showModalBottomSheet<void>(
+    await showAdaptiveModal<void>(
       context: context,
       backgroundColor: colors.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadii.xl)),
-      ),
       builder: (sheetContext) => SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(AppSpacing.pageHorizontal),
@@ -120,8 +144,10 @@ class _CatalogBookScreenState extends ConsumerState<CatalogBookScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text('Choose a retailer',
-                  style: AppTypography.title2(colors.text)),
+              Text(
+                'Choose a retailer',
+                style: AppTypography.title2(colors.text),
+              ),
               const SizedBox(height: AppSpacing.sm),
               Text(
                 'Purchases open securely on the retailer’s website.',
@@ -172,24 +198,28 @@ class _CatalogBookScreenState extends ConsumerState<CatalogBookScreen> {
     // readers KPI (Gutendex downloads / Google ratings n), and pages/year
     // (Gutenberg has neither — a matching Google edition supplies them).
     final hasReads = book.downloadCount != null || book.ratingsCount != null;
-    final needExtras = (book.description ?? '').isEmpty ||
+    final needExtras =
+        (book.description ?? '').isEmpty ||
         book.averageRating == null ||
         !hasReads ||
         book.pageCount == null ||
         book.publishedYear == null;
     final extras = needExtras
         ? ref
-            .watch(bookExtrasProvider((
-              gutenbergId: book.gutenbergId,
-              googleId: book.googleId,
-              title: book.title,
-              author: book.author,
-            )))
-            .valueOrNull
+              .watch(
+                bookExtrasProvider((
+                  gutenbergId: book.gutenbergId,
+                  googleId: book.googleId,
+                  title: book.title,
+                  author: book.author,
+                )),
+              )
+              .valueOrNull
         : null;
     final description = cleanHtml(book.description ?? extras?.description);
     final rating = book.averageRating ?? extras?.rating;
-    final reads = book.downloadCount ??
+    final reads =
+        book.downloadCount ??
         extras?.downloads ??
         book.ratingsCount ??
         extras?.ratingsCount;
@@ -197,9 +227,8 @@ class _CatalogBookScreenState extends ConsumerState<CatalogBookScreen> {
     final year = book.publishedYear ?? extras?.year;
 
     // Already in the library? Then this page reads, it doesn't re-add.
-    final ownedBook =
-        _findOwned(ref.watch(libraryBooksProvider).valueOrNull);
-    final isSaved = _added || ownedBook != null;
+    final ownedBook = _findOwned(ref.watch(libraryBooksProvider).valueOrNull);
+    final isSaved = _adding || _added || ownedBook != null;
 
     return Scaffold(
       // No top SafeArea: the tinted header owns the status-bar area (edge-to-
@@ -207,151 +236,163 @@ class _CatalogBookScreenState extends ConsumerState<CatalogBookScreen> {
       // The header lives INSIDE the scroll view — it scrolls away with the
       // page rather than staying pinned.
       body: Column(
-          children: [
-            Expanded(
-              child: ListView(
-                padding: EdgeInsets.zero,
-                children: [
-            Container(
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: colors.accentSoft,
-                borderRadius: const BorderRadius.vertical(
-                    bottom: Radius.circular(AppRadii.xl)),
-              ),
-              padding: EdgeInsets.fromLTRB(
-                AppSpacing.pageHorizontal,
-                MediaQuery.paddingOf(context).top + AppSpacing.sm,
-                AppSpacing.pageHorizontal,
-                AppSpacing.xl,
-              ),
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(
+            child: ListView(
+              padding: EdgeInsets.zero,
+              children: [
+                Container(
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: colors.accentSoft,
+                    borderRadius: const BorderRadius.vertical(
+                      bottom: Radius.circular(AppRadii.xl),
+                    ),
+                  ),
+                  padding: EdgeInsets.fromLTRB(
+                    AppSpacing.pageHorizontal,
+                    MediaQuery.paddingOf(context).top + AppSpacing.sm,
+                    AppSpacing.pageHorizontal,
+                    AppSpacing.xl,
+                  ),
+                  child: Column(
                     children: [
-                      CircleIconButton(
-                        icon: Icons.chevron_left,
-                        onTap: () => context.pop(),
-                      ),
-                      GestureDetector(
-                        behavior: HitTestBehavior.opaque,
-                        onTap: (_adding || isSaved) ? null : _addToLibrary,
-                        child: Padding(
-                          padding: const EdgeInsets.all(AppSpacing.xs),
-                          child: Icon(
-                            isSaved
-                                ? Icons.bookmark_rounded
-                                : Icons.bookmark_outline_rounded,
-                            size: 26,
-                            color: isSaved ? colors.accent : colors.text2,
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          CircleIconButton(
+                            icon: Icons.chevron_left,
+                            onTap: () => context.pop(),
                           ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: AppSpacing.xl),
-                  // Title + author on the left, cover on the right.
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              book.title,
-                              maxLines: 4,
-                              overflow: TextOverflow.ellipsis,
-                              style: AppTypography.title1(colors.text),
-                            ),
-                            if (book.author != null &&
-                                book.author!.isNotEmpty) ...[
-                              const SizedBox(height: AppSpacing.md),
-                              Text(
-                                book.author!,
-                                style: AppTypography.subtitle(colors.text2),
+                          GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onTap: isSaved ? null : _saveForLater,
+                            child: Padding(
+                              padding: const EdgeInsets.all(AppSpacing.xs),
+                              child: Icon(
+                                isSaved
+                                    ? Icons.bookmark_rounded
+                                    : Icons.bookmark_outline_rounded,
+                                size: 26,
+                                color: isSaved ? colors.accent : colors.text2,
                               ),
-                            ],
-                          ],
-                        ),
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: AppSpacing.lg),
-                      BookCover(
-                        title: book.title,
-                        author: book.author ?? '',
-                        bg: colors.surface2,
-                        fg: colors.text2,
-                        coverUrl: proxiedCoverUrl(book.thumbnailUrl),
-                        width: 110,
+                      const SizedBox(height: AppSpacing.xl),
+                      // Title + author on the left, cover on the right.
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  book.title,
+                                  maxLines: 4,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: AppTypography.title1(colors.text),
+                                ),
+                                if (book.author != null &&
+                                    book.author!.isNotEmpty) ...[
+                                  const SizedBox(height: AppSpacing.md),
+                                  Text(
+                                    book.author!,
+                                    style: AppTypography.subtitle(colors.text2),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.lg),
+                          BookCover(
+                            title: book.title,
+                            author: book.author ?? '',
+                            bg: colors.surface2,
+                            fg: colors.text2,
+                            coverUrl: proxiedCoverUrl(book.thumbnailUrl),
+                            width: 110,
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
-              ),
-            ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(
-                      AppSpacing.pageHorizontal,
-                      AppSpacing.xl,
-                      AppSpacing.pageHorizontal,
-                      AppSpacing.xxl,
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        _statsRow(colors,
-                            rating: rating,
-                            reads: reads,
-                            pages: pages,
-                            year: year),
-                        if (description.isNotEmpty) ...[
-                          const SizedBox(height: AppSpacing.xl),
-                          Text('Description',
-                              style: AppTypography.title3(colors.text)),
-                          const SizedBox(height: AppSpacing.md),
-                          Text(description,
-                              style: AppTypography.bodySerif(colors.text2)),
-                        ],
-                        // Metadata-only titles keep the get/request/upload
-                        // stack in the body; readable ones get the pinned CTA.
-                        if (!book.isReadable) ...[
-                          const SizedBox(height: AppSpacing.xl),
-                          _storeActions(colors),
-                        ],
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            // Pinned primary CTA (reference layout). Owned → read; readable →
-            // add. Bottom SafeArea because the page has no global one (the
-            // header owns the status-bar area edge-to-edge).
-            if (ownedBook != null || book.isReadable)
-              SafeArea(
-                top: false,
-                child: Padding(
+                ),
+                Padding(
                   padding: const EdgeInsets.fromLTRB(
                     AppSpacing.pageHorizontal,
-                    AppSpacing.sm,
+                    AppSpacing.xl,
                     AppSpacing.pageHorizontal,
-                    AppSpacing.md,
+                    AppSpacing.xxl,
                   ),
-                  child: ownedBook != null
-                      ? _ownedActions(colors, ownedBook)
-                      : _readableActions(colors),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _statsRow(
+                        colors,
+                        rating: rating,
+                        reads: reads,
+                        pages: pages,
+                        year: year,
+                      ),
+                      if (description.isNotEmpty) ...[
+                        const SizedBox(height: AppSpacing.xl),
+                        Text(
+                          'Description',
+                          style: AppTypography.title3(colors.text),
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                        Text(
+                          description,
+                          style: AppTypography.bodySerif(colors.text2),
+                        ),
+                      ],
+                      // Metadata-only titles keep the get/request/upload
+                      // stack in the body; readable ones get the pinned CTA.
+                      if (!book.isReadable) ...[
+                        const SizedBox(height: AppSpacing.xl),
+                        _storeActions(colors),
+                      ],
+                    ],
+                  ),
                 ),
+              ],
+            ),
+          ),
+          // Pinned primary CTA (reference layout). Owned → read; readable →
+          // add. Bottom SafeArea because the page has no global one (the
+          // header owns the status-bar area edge-to-edge).
+          if (ownedBook != null || book.isReadable)
+            SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.pageHorizontal,
+                  AppSpacing.sm,
+                  AppSpacing.pageHorizontal,
+                  AppSpacing.md,
+                ),
+                child: ownedBook != null
+                    ? _ownedActions(colors, ownedBook)
+                    : _readableActions(colors),
               ),
-          ],
+            ),
+        ],
       ),
     );
   }
 
   /// Rating · readers · pages · year, as labeled stats (reference layout's
   /// KPI row). All values pre-merged from the catalog result + fetched extras.
-  Widget _statsRow(AppColorsExtension colors,
-      {double? rating, int? reads, int? pages, int? year}) {
+  Widget _statsRow(
+    AppColorsExtension colors, {
+    double? rating,
+    int? reads,
+    int? pages,
+    int? year,
+  }) {
     final stats = <Widget>[
       if (rating != null)
         StatChip(
@@ -423,8 +464,9 @@ class _CatalogBookScreenState extends ConsumerState<CatalogBookScreen> {
             progress > 0
                 ? 'Continue reading — ${progress.round()}%'
                 : 'Read now',
-            style: AppTypography.label(colors.bg)
-                .copyWith(fontWeight: FontWeight.w600),
+            style: AppTypography.label(
+              colors.bg,
+            ).copyWith(fontWeight: FontWeight.w600),
           ),
         ),
         const SizedBox(height: AppSpacing.sm),
@@ -455,10 +497,11 @@ class _CatalogBookScreenState extends ConsumerState<CatalogBookScreen> {
             _added
                 ? 'In your library ✓'
                 : _adding
-                    ? 'Adding…'
-                    : 'Add to library',
-            style: AppTypography.label(colors.bg)
-                .copyWith(fontWeight: FontWeight.w600),
+                ? 'Adding…'
+                : 'Add to library',
+            style: AppTypography.label(
+              colors.bg,
+            ).copyWith(fontWeight: FontWeight.w600),
           ),
         ),
         const SizedBox(height: AppSpacing.sm),
@@ -481,10 +524,15 @@ class _CatalogBookScreenState extends ConsumerState<CatalogBookScreen> {
           const SizedBox(height: AppSpacing.xs),
           TextButton.icon(
             onPressed: _readSample,
-            icon: Icon(Icons.auto_stories_outlined,
-                size: 18, color: colors.accent),
-            label: Text('Read a free sample',
-                style: AppTypography.label(colors.accent)),
+            icon: Icon(
+              Icons.auto_stories_outlined,
+              size: 18,
+              color: colors.accent,
+            ),
+            label: Text(
+              'Google Preview',
+              style: AppTypography.label(colors.accent),
+            ),
           ),
         ],
         const SizedBox(height: AppSpacing.lg),
@@ -498,8 +546,9 @@ class _CatalogBookScreenState extends ConsumerState<CatalogBookScreen> {
           ),
           child: Text(
             'Buy now',
-            style: AppTypography.label(colors.bg)
-                .copyWith(fontWeight: FontWeight.w600),
+            style: AppTypography.label(
+              colors.bg,
+            ).copyWith(fontWeight: FontWeight.w600),
           ),
         ),
         const SizedBox(height: AppSpacing.xs),
@@ -522,15 +571,20 @@ class _CatalogBookScreenState extends ConsumerState<CatalogBookScreen> {
             ),
             child: Row(
               children: [
-                Icon(Icons.upload_file_outlined,
-                    size: 22, color: colors.accent),
+                Icon(
+                  Icons.upload_file_outlined,
+                  size: 22,
+                  color: colors.accent,
+                ),
                 const SizedBox(width: AppSpacing.md),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Already own it?',
-                          style: AppTypography.label(colors.text)),
+                      Text(
+                        'Already own it?',
+                        style: AppTypography.label(colors.text),
+                      ),
                       const SizedBox(height: AppSpacing.xs),
                       Text(
                         'Upload your EPUB to read and listen here.',
@@ -586,9 +640,12 @@ class _StoreTile extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title,
-                      style: AppTypography.label(colors.text)
-                          .copyWith(fontWeight: FontWeight.w600)),
+                  Text(
+                    title,
+                    style: AppTypography.label(
+                      colors.text,
+                    ).copyWith(fontWeight: FontWeight.w600),
+                  ),
                   const SizedBox(height: AppSpacing.xs),
                   Text(subtitle, style: AppTypography.caption(colors.text2)),
                 ],

@@ -67,6 +67,33 @@ class AuthController extends StateNotifier<AuthState> {
     }
     state = const AuthState.unauthenticated();
   }
+
+  Future<bool> requestPasswordReset({required String email}) async {
+    state = const AuthState.loading();
+    try {
+      await _service.requestPasswordReset(email);
+      state = const AuthState.unauthenticated();
+      return true;
+    } on ApiError catch (e) {
+      state = AuthState.unauthenticated(message: e.message);
+      return false;
+    }
+  }
+
+  Future<bool> resetPassword({
+    required String token,
+    required String password,
+  }) async {
+    state = const AuthState.loading();
+    try {
+      await _service.resetPassword(token: token, password: password);
+      state = const AuthState.unauthenticated();
+      return true;
+    } on ApiError catch (e) {
+      state = AuthState.unauthenticated(message: e.message);
+      return false;
+    }
+  }
 }
 
 final authProvider =

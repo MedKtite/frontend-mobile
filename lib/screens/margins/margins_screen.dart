@@ -492,8 +492,8 @@ class _TypeTab extends StatelessWidget {
 
 // ─────────────────────────────────────────────────────────────── cards ──
 
-/// An audio bookmark is visually distinct from a quoted text passage: it uses
-/// a listening icon, timestamp, and soft accent surface, and opens the player.
+/// An audio bookmark uses the same card surface as passages and notes, with
+/// listening-specific content and a tap target that opens the player.
 class _AudioMomentCard extends ConsumerWidget {
   const _AudioMomentCard({
     required this.highlight,
@@ -521,83 +521,75 @@ class _AudioMomentCard extends ConsumerWidget {
           listening: true,
         );
 
-    return GestureDetector(
+    return _Card(
       onTap: open,
-      child: Container(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        decoration: BoxDecoration(
-          color: colors.accentSoft,
-          borderRadius: AppRadii.brLg,
-          border: Border.all(color: colors.border),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(AppSpacing.sm),
-                  decoration: BoxDecoration(
-                    color: colors.surface,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.headphones_rounded,
-                    size: AppSpacing.xl,
-                    color: colors.accent,
-                  ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(AppSpacing.sm),
+                decoration: BoxDecoration(
+                  color: colors.surface,
+                  shape: BoxShape.circle,
                 ),
-                const SizedBox(width: AppSpacing.md),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('AUDIO MOMENT',
-                        style: AppTypography.overline(colors.accent)),
-                    const SizedBox(height: AppSpacing.xs),
-                    Row(
-                      children: [
-                        Container(
-                          width: AppSpacing.sm,
-                          height: AppSpacing.sm,
-                          decoration: BoxDecoration(
-                            color: AppColors.forTag(tag),
-                            shape: BoxShape.circle,
-                          ),
+                child: Icon(
+                  Icons.headphones_rounded,
+                  size: AppSpacing.xl,
+                  color: colors.accent,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('AUDIO MOMENT',
+                      style: AppTypography.overline(colors.accent)),
+                  const SizedBox(height: AppSpacing.xs),
+                  Row(
+                    children: [
+                      Container(
+                        width: AppSpacing.sm,
+                        height: AppSpacing.sm,
+                        decoration: BoxDecoration(
+                          color: AppColors.forTag(tag),
+                          shape: BoxShape.circle,
                         ),
-                        const SizedBox(width: AppSpacing.sm),
-                        Text(_capitalize(tag),
-                            style: AppTypography.caption(colors.text2)),
-                      ],
-                    ),
-                  ],
-                ),
-                const Spacer(),
-                Text(_shortDate(highlight.createdAt),
-                    style: AppTypography.caption(colors.text3)),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            Text(time, style: AppTypography.title1(colors.text)),
-            const SizedBox(height: AppSpacing.xs),
-            Text('Listening bookmark',
-                style: AppTypography.subtitle(colors.text2)),
-            for (final note in notes) ...[
-              const SizedBox(height: AppSpacing.md),
-              _NoteBox(note: note),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Text(_capitalize(tag),
+                          style: AppTypography.caption(colors.text2)),
+                    ],
+                  ),
+                ],
+              ),
+              const Spacer(),
+              Text(_shortDate(highlight.createdAt),
+                  style: AppTypography.caption(colors.text3)),
             ],
-            const SizedBox(height: AppSpacing.lg),
-            Divider(height: 1, color: colors.border),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          Text(time, style: AppTypography.title1(colors.text)),
+          const SizedBox(height: AppSpacing.xs),
+          Text('Listening bookmark',
+              style: AppTypography.subtitle(colors.text2)),
+          for (final note in notes) ...[
             const SizedBox(height: AppSpacing.md),
-            _BookFooter(
-              book: book,
-              locationRef: null,
-              saved: highlight.isSaved,
-              onOpenBook: open,
-              onToggleSave: (saved) =>
-                  _toggleHighlightSave(context, ref, saved),
-            ),
+            _NoteBox(note: note),
           ],
-        ),
+          const SizedBox(height: AppSpacing.lg),
+          Divider(height: 1, color: colors.border),
+          const SizedBox(height: AppSpacing.md),
+          _BookFooter(
+            book: book,
+            locationRef: null,
+            saved: highlight.isSaved,
+            onOpenBook: open,
+            onToggleSave: (saved) =>
+                _toggleHighlightSave(context, ref, saved),
+          ),
+        ],
       ),
     );
   }

@@ -13,6 +13,7 @@ class AuthValidators {
   static String? password(String? v) {
     if (v == null || v.isEmpty) return 'Password is required';
     if (v.length < 8) return 'At least 8 characters';
+    if (v.length > 128) return 'No more than 128 characters';
     return null;
   }
 

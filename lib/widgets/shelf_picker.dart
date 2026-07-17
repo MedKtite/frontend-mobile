@@ -4,14 +4,15 @@ import '../app/theme/tokens/colors.dart';
 import '../app/theme/tokens/radii.dart';
 import '../app/theme/tokens/spacing.dart';
 import '../app/theme/tokens/typography.dart';
+import '../core/widgets/adaptive_modal.dart';
 import 'glass_panel.dart';
 
-/// Asks which shelf a book goes on. Returns `'reading'` / `'listening'`, or null
-/// if dismissed. Used both to re-shelf an owned book and to add a catalog result.
+/// Asks which shelf a book goes on. Returns `'archived'`, `'reading'`, or
+/// `'listening'`; returns null if dismissed. The backend's archived status is
+/// presented as the friendlier "Saved" shelf in the UI.
 Future<String?> showShelfPicker(BuildContext context) {
-  return showModalBottomSheet<String>(
+  return showAdaptiveModal<String>(
     context: context,
-    useRootNavigator: true,
     backgroundColor: Colors.transparent,
     builder: (_) => const _ShelfPicker(),
   );
@@ -25,9 +26,7 @@ class _ShelfPicker extends StatelessWidget {
     final colors = context.appColors;
     return GlassPanel(
       radius: AppRadii.xl,
-      borderRadius: const BorderRadius.vertical(
-        top: Radius.circular(AppRadii.xl),
-      ),
+      borderRadius: adaptiveModalBorderRadius(context),
       child: SafeArea(
         top: false,
         child: Padding(
@@ -40,20 +39,15 @@ class _ShelfPicker extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Container(
-                width: 36,
-                height: 4,
-                margin: const EdgeInsets.only(
-                  top: AppSpacing.sm,
-                  bottom: AppSpacing.xl,
-                ),
-                decoration: BoxDecoration(
-                  color: colors.border,
-                  borderRadius: AppRadii.brFull,
-                ),
-              ),
+              AdaptiveModalHandle(color: colors.border),
               Text('Add to shelf', style: AppTypography.title2(colors.text)),
               const SizedBox(height: AppSpacing.xl),
+              _ShelfOption(
+                icon: Icons.bookmark_outline_rounded,
+                label: 'Saved',
+                onTap: () => Navigator.of(context).pop('archived'),
+              ),
+              const SizedBox(height: AppSpacing.md),
               _ShelfOption(
                 icon: Icons.menu_book_outlined,
                 label: 'Reading',

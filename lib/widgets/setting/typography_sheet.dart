@@ -5,6 +5,7 @@ import '../../app/theme/tokens/colors.dart';
 import '../../app/theme/tokens/radii.dart';
 import '../../app/theme/tokens/spacing.dart';
 import '../../app/theme/tokens/typography.dart';
+import '../../core/widgets/adaptive_modal.dart';
 import '../../providers/reading_settings_provider.dart';
 import '../glass_panel.dart';
 
@@ -12,11 +13,9 @@ import '../glass_panel.dart';
 /// [readingSettingsProvider] immediately, so the reader behind it live-previews.
 /// Styled with the *app* tokens (not the reader palette) — it's a settings UI.
 Future<void> showTypographySheet(BuildContext context) {
-  return showModalBottomSheet<void>(
+  return showAdaptiveModal<void>(
     context: context,
-    useRootNavigator: true,
     backgroundColor: Colors.transparent,
-    barrierColor: Colors.black.withValues(alpha: 0.18),
     builder: (_) => const _TypographySheet(),
   );
 }
@@ -32,34 +31,21 @@ class _TypographySheet extends ConsumerWidget {
 
     return GlassPanel(
       radius: AppRadii.xl,
-      borderRadius: const BorderRadius.vertical(
-        top: Radius.circular(AppRadii.xl),
-      ),
+      borderRadius: adaptiveModalBorderRadius(context),
       child: SafeArea(
         top: false,
         child: Padding(
           padding: const EdgeInsets.fromLTRB(
-            AppSpacing.readingHorizontal,
+            AppSpacing.pageHorizontal,
             AppSpacing.sm,
-            AppSpacing.readingHorizontal,
-            AppSpacing.xl,
+            AppSpacing.pageHorizontal,
+            AppSpacing.lg,
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Center(
-                child: Container(
-                  width: 36,
-                  height: 4,
-                  margin: const EdgeInsets.only(
-                      top: AppSpacing.xs, bottom: AppSpacing.lg),
-                  decoration: BoxDecoration(
-                    color: colors.text3,
-                    borderRadius: AppRadii.brFull,
-                  ),
-                ),
-              ),
+              Center(child: AdaptiveModalHandle(color: colors.border)),
               Center(
                 child: Text('Typography',
                     style: AppTypography.title2(colors.text)),
@@ -141,7 +127,7 @@ class _TypefaceToggle extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(2),
       decoration: BoxDecoration(
-        color: colors.surface2,
+        color: colors.surface,
         borderRadius: AppRadii.brXl,
       ),
       child: Row(
@@ -184,7 +170,7 @@ class _SizeRow extends StatelessWidget {
                 height: 56,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: value == size ? colors.text : colors.surface2,
+                  color: value == size ? colors.text : colors.surface,
                   borderRadius: AppRadii.brMd,
                 ),
                 child: Text(
@@ -240,7 +226,7 @@ class _SpacingRow extends StatelessWidget {
                 height: 48,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: value == sp ? colors.text : colors.surface2,
+                  color: value == sp ? colors.text : colors.surface,
                   borderRadius: AppRadii.brMd,
                 ),
                 child: rules(value == sp ? colors.bg : colors.text2, _gap[sp]!),

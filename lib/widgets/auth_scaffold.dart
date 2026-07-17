@@ -18,6 +18,7 @@ class AuthScaffold extends StatelessWidget {
     required this.body,
     this.footer,
     this.onBack,
+    this.showBack = true,
   });
 
   /// Rendered above [body] when set; leave null to place the heading inside
@@ -27,6 +28,7 @@ class AuthScaffold extends StatelessWidget {
   final Widget body;
   final Widget? footer;
   final VoidCallback? onBack;
+  final bool showBack;
 
   @override
   Widget build(BuildContext context) {
@@ -48,15 +50,19 @@ class AuthScaffold extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      AuthBackButton(onPressed: onBack),
-                      const SizedBox(height: AppSpacing.xl),
+                      if (showBack) ...[
+                        AuthBackButton(onPressed: onBack),
+                        const SizedBox(height: AppSpacing.xl),
+                      ],
                       if (title != null) ...[
                         Text(title!, style: AppTypography.title1(colors.text)),
                         const SizedBox(height: AppSpacing.sm),
                       ],
                       if (subtitle != null)
-                        Text(subtitle!,
-                            style: AppTypography.subtitle(colors.text2)),
+                        Text(
+                          subtitle!,
+                          style: AppTypography.subtitle(colors.text2),
+                        ),
                       if (title != null || subtitle != null)
                         const SizedBox(height: AppSpacing.xxxl),
                       // Twin spacers center the form between the back chevron
@@ -126,8 +132,9 @@ class AuthTextLink extends StatelessWidget {
         onTap: onTap,
         child: Text(
           label,
-          style: AppTypography.label(muted ? colors.text3 : colors.accent)
-              .copyWith(fontWeight: muted ? FontWeight.w500 : FontWeight.w600),
+          style: AppTypography.label(
+            muted ? colors.text3 : colors.accent,
+          ).copyWith(fontWeight: muted ? FontWeight.w500 : FontWeight.w600),
         ),
       ),
     );
@@ -153,7 +160,6 @@ class OrDivider extends StatelessWidget {
     );
   }
 }
-
 
 class SocialAuthButton extends StatelessWidget {
   const SocialAuthButton({
@@ -198,8 +204,9 @@ class SocialAuthButton extends StatelessWidget {
             const SizedBox(width: AppSpacing.md),
             Text(
               label,
-              style: AppTypography.label(colors.text)
-                  .copyWith(fontWeight: FontWeight.w500),
+              style: AppTypography.label(
+                colors.text,
+              ).copyWith(fontWeight: FontWeight.w500),
             ),
           ],
         ),
@@ -268,8 +275,9 @@ class AuthFooterLink extends StatelessWidget {
           onTap: onTap,
           child: Text(
             action,
-            style: AppTypography.label(colors.accent)
-                .copyWith(fontWeight: FontWeight.w600),
+            style: AppTypography.label(
+              colors.accent,
+            ).copyWith(fontWeight: FontWeight.w600),
           ),
         ),
       ],

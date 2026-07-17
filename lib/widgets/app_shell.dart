@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../app/routes.dart';
+import '../app/theme/tokens/spacing.dart';
 import '../providers/annotations_provider.dart';
 import '../providers/author_provider.dart';
 import '../providers/home_provider.dart';
@@ -11,6 +12,7 @@ import '../providers/trending_provider.dart';
 import 'audio_mini_player.dart';
 import 'glass_nav_bar.dart';
 import 'reading_mini_bar.dart';
+import 'tablet_sidebar.dart';
 
 class AppShell extends ConsumerWidget {
   const AppShell({super.key, required this.shell});
@@ -20,13 +22,74 @@ class AppShell extends ConsumerWidget {
   /// Branch order — must match the branches in routes.dart.
   static const _tabs = [
     NavTab.home,
-    NavTab.margins,
+    NavTab.discovery,
     NavTab.library,
+    NavTab.margins,
     NavTab.insights,
   ];
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    void onSelect(NavTab tab) {
+      switch (tab) {
+        case NavTab.home ||
+              NavTab.discovery ||
+              NavTab.library ||
+              NavTab.margins ||
+              NavTab.insights:
+          final index = _tabs.indexOf(tab);
+          // Returning to Home refreshes it in place — reading progress and
+          // library changes made on other screens show up without a flash.
+          if (tab == NavTab.home && index != shell.currentIndex) {
+            ref.read(homeProvider.notifier).load(silent: true);
+            ref.invalidate(recommendedBooksProvider);
+            if (ref.read(trendingBooksProvider).hasError) {
+              ref.invalidate(trendingBooksProvider);
+            }
+            if (ref.read(topAuthorsProvider).hasError) {
+              ref.invalidate(topAuthorsProvider);
+            }
+          }
+          // Returning to Margins refreshes highlights made in the reader.
+          if (tab == NavTab.margins && index != shell.currentIndex) {
+            refreshAnnotations(ref);
+          }
+          shell.goBranch(index, initialLocation: index == shell.currentIndex);
+        case NavTab.profile:
+          context.push(Routes.settings);
+      }
+    }
+
+    final isTablet = MediaQuery.sizeOf(context).shortestSide >= 600;
+    if (isTablet) {
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          final expanded =
+              constraints.maxWidth >= AppSpacing.tabletSidebarBreakpoint;
+          return Scaffold(
+            body: Row(
+              children: [
+                TabletSidebar(
+                  current: _tabs[shell.currentIndex],
+                  expanded: expanded,
+                  onSelect: onSelect,
+                ),
+                Expanded(
+                  child: Column(
+                    children: [
+                      Expanded(child: shell),
+                      const ReadingMiniBar(),
+                      const AudioMiniPlayer(),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      );
+    }
+
     return Scaffold(
       extendBody: true, // tab content scrolls beneath the glass bar
       bottomNavigationBar: Column(
@@ -36,42 +99,7 @@ class AppShell extends ConsumerWidget {
           // switches. Both can stack (reading above listening).
           const ReadingMiniBar(),
           const AudioMiniPlayer(),
-          GlassNavBar(
-            current: _tabs[shell.currentIndex],
-            onSelect: (tab) {
-              switch (tab) {
-                case NavTab.home ||
-                      NavTab.margins ||
-                      NavTab.library ||
-                      NavTab.insights:
-                  final index = _tabs.indexOf(tab);
-                  // Returning to Home refreshes it in place — reading progress
-                  // and library changes made on other screens show up without
-                  // a loading flash (the tab keeps its content while fetching).
-                  if (tab == NavTab.home && index != shell.currentIndex) {
-                    ref.read(homeProvider.notifier).load(silent: true);
-                    ref.invalidate(recommendedBooksProvider);
-                    if (ref.read(trendingBooksProvider).hasError) {
-                      ref.invalidate(trendingBooksProvider);
-                    }
-                    if (ref.read(topAuthorsProvider).hasError) {
-                      ref.invalidate(topAuthorsProvider);
-                    }
-                  }
-                  // Returning to Margins re-fetches its feed so highlights made
-                  // in the reader appear without a restart. (Providers keep
-                  // their old value while refreshing — no flash.)
-                  if (tab == NavTab.margins && index != shell.currentIndex) {
-                    refreshAnnotations(ref);
-                  }
-                  // Re-tapping the active tab pops it back to its root.
-                  shell.goBranch(index,
-                      initialLocation: index == shell.currentIndex);
-                case NavTab.profile:
-                  context.push(Routes.settings);
-              }
-            },
-          ),
+          GlassNavBar(current: _tabs[shell.currentIndex], onSelect: onSelect),
         ],
       ),
       body: shell,

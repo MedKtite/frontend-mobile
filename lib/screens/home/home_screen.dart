@@ -20,6 +20,7 @@ import '../../providers/state/home_state.dart';
 import '../../providers/trending_provider.dart';
 import '../../widgets/add_to_library_sheet.dart';
 import '../../widgets/author_avatar.dart';
+import '../../widgets/book_card.dart';
 import '../../widgets/book_cover.dart';
 import '../../widgets/glass_panel.dart';
 
@@ -52,11 +53,12 @@ class HomeScreen extends ConsumerWidget {
       body: SafeArea(
         bottom: false,
         child: switch (state) {
-          HomeLoading() =>
-            Center(child: CircularProgressIndicator(color: colors.accent)),
+          HomeLoading() => Center(
+            child: CircularProgressIndicator(color: colors.accent),
+          ),
           HomeEmpty() => _EmptyHome(
-              onAdd: () => showAddToLibrarySheet(context),
-            ),
+            onAdd: () => showAddToLibrarySheet(context),
+          ),
           HomeLoaded(
             :final continueReading,
             :final passage,
@@ -78,9 +80,9 @@ class HomeScreen extends ConsumerWidget {
               },
             ),
           HomeError(:final message) => _ErrorState(
-              message: message,
-              onRetry: () => ref.read(homeProvider.notifier).load(),
-            ),
+            message: message,
+            onRetry: () => ref.read(homeProvider.notifier).load(),
+          ),
         },
       ),
     );
@@ -100,7 +102,9 @@ class _EmptyHome extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.pageHorizontal),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.pageHorizontal,
+      ),
       child: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -158,7 +162,9 @@ class _FormatChip extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: AppTypography.caption(colors.text3).copyWith(fontWeight: FontWeight.w500),
+        style: AppTypography.caption(
+          colors.text3,
+        ).copyWith(fontWeight: FontWeight.w500),
       ),
     );
   }
@@ -183,7 +189,11 @@ class _OpenBookPainter extends CustomPainter {
     for (final left in [0.0, pageW + gap]) {
       canvas.drawRRect(
         RRect.fromLTRBR(
-          left, 0, left + pageW, size.height, const Radius.circular(3),
+          left,
+          0,
+          left + pageW,
+          size.height,
+          const Radius.circular(3),
         ),
         paint,
       );
@@ -191,7 +201,9 @@ class _OpenBookPainter extends CustomPainter {
       for (var i = 1; i <= 4; i++) {
         final y = size.height * i / 5;
         canvas.drawLine(
-          Offset(left + inset, y), Offset(left + pageW - inset, y), paint,
+          Offset(left + inset, y),
+          Offset(left + pageW - inset, y),
+          paint,
         );
       }
     }
@@ -213,7 +225,9 @@ class _ErrorState extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.pageHorizontal),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.pageHorizontal,
+      ),
       child: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -350,21 +364,22 @@ class _Header extends StatelessWidget {
           children: [
             Text(date, style: AppTypography.label(colors.text2)),
             const SizedBox(width: AppSpacing.md),
-            Container(
-              width: 34,
-              height: 34,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: colors.border),
-              ),
-              child: Text(
-                avatarInitial,
-                style: AppTypography.serif(TextStyle(
-                  color: colors.text2,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w500,
-                )),
+            Material(
+              color: colors.surface.withValues(alpha: 0),
+              shape: CircleBorder(side: BorderSide(color: colors.border)),
+              child: InkWell(
+                onTap: () => context.push(Routes.settings),
+                customBorder: const CircleBorder(),
+                child: SizedBox.square(
+                  dimension: AppSpacing.xxl + AppSpacing.sm,
+                  child: Center(
+                    child: Text(
+                      avatarInitial,
+                      style: AppTypography.label(colors.text2)
+                          .copyWith(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ),
               ),
             ),
           ],
@@ -436,11 +451,15 @@ class _ContinueRow extends ConsumerWidget {
     final books = ref.watch(libraryBooksProvider).valueOrNull;
     if (books == null) return const SizedBox.shrink();
 
-    final reading = [
-      for (final b in books)
-        if (b.status == 'reading' && b.id != excludeId) b,
-    ]..sort((a, b) => (b.lastOpenedAt ?? b.updatedAt ?? '')
-        .compareTo(a.lastOpenedAt ?? a.updatedAt ?? ''));
+    final reading =
+        [
+          for (final b in books)
+            if (b.status == 'reading' && b.id != excludeId) b,
+        ]..sort(
+          (a, b) => (b.lastOpenedAt ?? b.updatedAt ?? '').compareTo(
+            a.lastOpenedAt ?? a.updatedAt ?? '',
+          ),
+        );
     if (reading.isEmpty) return const SizedBox.shrink();
 
     return Column(
@@ -524,8 +543,10 @@ class _ContinueRowCard extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: AppSpacing.sm),
-                        Text('${pct.round()}%',
-                            style: AppTypography.caption(colors.text3)),
+                        Text(
+                          '${pct.round()}%',
+                          style: AppTypography.caption(colors.text3),
+                        ),
                       ],
                     ),
                   ],
@@ -548,7 +569,7 @@ class _ContinueRowCard extends StatelessWidget {
 class _TrendingSection extends ConsumerWidget {
   const _TrendingSection();
 
-  static const double _coverW = 96;
+  static const double _coverW = BookCard.cardWidth;
   static const double _rowH = 196; // cover 144 + gaps + two text lines
 
   @override
@@ -580,7 +601,7 @@ class _TrendingSection extends ConsumerWidget {
     } else if (trending.hasError) {
       content = _DiscoveryStatus(
         message: "Trending books couldn't load.",
-        onRetry: () => ref.invalidate(trendingBooksProvider),
+        onRetry: () => ref.invalidate(popularGutenbergResultsProvider),
       );
     } else {
       content = const _DiscoveryStatus(
@@ -630,7 +651,10 @@ class _TopAuthorsSection extends ConsumerWidget {
                 child: Column(
                   children: [
                     AuthorAvatar(
-                        name: a.name, imageUrl: a.imageUrl, size: _avatar),
+                      name: a.name,
+                      imageUrl: a.imageUrl,
+                      size: _avatar,
+                    ),
                     const SizedBox(height: AppSpacing.sm),
                     Text(
                       a.name,
@@ -659,7 +683,7 @@ class _TopAuthorsSection extends ConsumerWidget {
     } else if (authorsAsync.hasError) {
       content = _DiscoveryStatus(
         message: "Top authors couldn't load.",
-        onRetry: () => ref.invalidate(topAuthorsProvider),
+        onRetry: () => ref.invalidate(popularGutenbergResultsProvider),
       );
     } else {
       content = const _DiscoveryStatus(
@@ -751,8 +775,11 @@ class _DiscoveryStatus extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(Icons.auto_stories_outlined,
-              size: AppSpacing.xl, color: colors.text3),
+          Icon(
+            Icons.auto_stories_outlined,
+            size: AppSpacing.xl,
+            color: colors.text3,
+          ),
           const SizedBox(width: AppSpacing.md),
           Expanded(
             child: Text(message, style: AppTypography.label(colors.text2)),
@@ -797,41 +824,11 @@ class _TrendingCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return GestureDetector(
+    return BookCard(
+      title: book.title,
+      author: book.author,
+      coverUrl: proxiedCoverUrl(book.thumbnailUrl),
       onTap: () => context.push(Routes.catalogBook, extra: book),
-      child: SizedBox(
-        width: _TrendingSection._coverW,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            BookCover(
-              title: book.title,
-              author: book.author ?? '',
-              bg: colors.surface2,
-              fg: colors.text2,
-              coverUrl: proxiedCoverUrl(book.thumbnailUrl),
-              width: _TrendingSection._coverW,
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              book.title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: AppTypography.label(colors.text),
-            ),
-            if (book.author != null && book.author!.isNotEmpty) ...[
-              const SizedBox(height: AppSpacing.xs),
-              Text(
-                book.author!,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: AppTypography.caption(colors.text2),
-              ),
-            ],
-          ],
-        ),
-      ),
     );
   }
 }
@@ -882,8 +879,10 @@ class _ContinueReadingCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text('CONTINUE READING',
-                    style: AppTypography.overline(colors.text3)),
+                Text(
+                  'CONTINUE READING',
+                  style: AppTypography.overline(colors.text3),
+                ),
                 const SizedBox(height: AppSpacing.xs),
                 Text(book.title, style: AppTypography.title2(colors.text)),
                 Text(book.author, style: AppTypography.subtitle(colors.text2)),
@@ -902,8 +901,10 @@ class _ContinueReadingCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: AppSpacing.sm),
-                    Text('${book.progress.round()}%',
-                        style: AppTypography.label(colors.text2)),
+                    Text(
+                      '${book.progress.round()}%',
+                      style: AppTypography.label(colors.text2),
+                    ),
                   ],
                 ),
                 const SizedBox(height: AppSpacing.md),
@@ -969,27 +970,31 @@ class _PassageBlock extends StatelessWidget {
               // there's no sub-fragment in the data to scope it to).
               Text(
                 passage.text,
-                style: AppTypography.serif(TextStyle(
-                  color: colors.text,
-                  fontSize: 17,
-                  height: 1.4,
-                  fontStyle: FontStyle.italic,
-                  decoration: TextDecoration.underline,
-                  decorationStyle: TextDecorationStyle.wavy,
-                  decorationColor: colors.gilt,
-                  decorationThickness: 1,
-                )),
+                style: AppTypography.serif(
+                  TextStyle(
+                    color: colors.text,
+                    fontSize: 17,
+                    height: 1.4,
+                    fontStyle: FontStyle.italic,
+                    decoration: TextDecoration.underline,
+                    decorationStyle: TextDecorationStyle.wavy,
+                    decorationColor: colors.gilt,
+                    decorationThickness: 1,
+                  ),
+                ),
               ),
               if (passage.source.isNotEmpty) ...[
                 const SizedBox(height: AppSpacing.md), // Figma: 12 to source
                 // Figma 273:139 — serif italic 12, muted ink.
                 Text(
                   passage.source,
-                  style: AppTypography.serif(TextStyle(
-                    color: colors.text3,
-                    fontSize: 12,
-                    fontStyle: FontStyle.italic,
-                  )),
+                  style: AppTypography.serif(
+                    TextStyle(
+                      color: colors.text3,
+                      fontSize: 12,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
                 ),
               ],
             ],

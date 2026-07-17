@@ -11,6 +11,7 @@ import '../screens/auth/forgot_password_screen.dart';
 import '../screens/auth/login_screen.dart';
 import '../screens/auth/register_screen.dart';
 import '../screens/auth/reset_password_screen.dart';
+import '../screens/discovery/discovery_screen.dart';
 import '../screens/home/home_screen.dart';
 import '../screens/insights/insights_screen.dart';
 import '../screens/library/author_details_screen.dart';
@@ -36,6 +37,7 @@ abstract final class Routes {
   static const checkEmail = '/check-email';
   static const resetPassword = '/reset-password';
   static const home = '/home';
+  static const discovery = '/discovery';
 
   /// Margins — the annotation hub (was the Search tab).
   static const margins = '/margins';
@@ -115,10 +117,11 @@ GoRouter createAppRouter({required bool isFirstLaunch}) => GoRouter(
     ),
     GoRoute(
       path: Routes.resetPassword,
-      builder: (context, state) =>
-          const _AuthGuard(child: ResetPasswordScreen()),
+      builder: (context, state) => ResetPasswordScreen(
+        token: state.uri.queryParameters['token'] ?? '',
+      ),
     ),
-    // The three main tabs live inside ONE persistent shell: the glass nav bar
+    // The main tabs live inside ONE persistent shell: the glass nav bar
     // is built once (in AppShell) and never rebuilds on tab switches; each
     // branch keeps its own state (scroll, search text) in an IndexedStack.
     StatefulShellRoute.indexedStack(
@@ -133,15 +136,20 @@ GoRouter createAppRouter({required bool isFirstLaunch}) => GoRouter(
         ]),
         StatefulShellBranch(routes: [
           GoRoute(
-            path: Routes.margins,
-            builder: (context, state) => const MarginsScreen(),
+            path: Routes.discovery,
+            builder: (context, state) => const DiscoveryScreen(),
           ),
         ]),
         StatefulShellBranch(routes: [
           GoRoute(
             path: Routes.library,
-            builder: (context, state) =>
-                LibraryScreen(autofocusSearch: state.extra as bool? ?? false),
+            builder: (context, state) => const LibraryScreen(),
+          ),
+        ]),
+        StatefulShellBranch(routes: [
+          GoRoute(
+            path: Routes.margins,
+            builder: (context, state) => const MarginsScreen(),
           ),
         ]),
         StatefulShellBranch(routes: [

@@ -98,7 +98,10 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
       if (!_iframeLoaded.isCompleted) _iframeLoaded.complete();
     });
     // ignore: undefined_prefixed_name
-    ui_web.platformViewRegistry.registerViewFactory(_viewType, (int _) => _iframe);
+    ui_web.platformViewRegistry.registerViewFactory(
+      _viewType,
+      (int _) => _iframe,
+    );
     _msgSub = html.window.onMessage.listen(_onWindowMessage);
   }
 
@@ -119,8 +122,10 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
   // ── Bridge ────────────────────────────────────────────────────────────
 
   void _send(String cmd, [List<Object?> args = const []]) {
-    _iframe.contentWindow
-        ?.postMessage(jsonEncode({'cmd': cmd, 'args': args}), '*');
+    _iframe.contentWindow?.postMessage(
+      jsonEncode({'cmd': cmd, 'args': args}),
+      '*',
+    );
   }
 
   void _onWindowMessage(html.MessageEvent e) {
@@ -156,8 +161,7 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
         final total = (data['total'] as num?)?.toInt() ?? 0;
         final chapter = (data['chapter'] as num?)?.toInt() ?? 0;
         final chapters = (data['chapters'] as num?)?.toInt() ?? 0;
-        final chapterPct =
-            (data['chapterPercent'] as num?)?.toDouble() ?? 0;
+        final chapterPct = (data['chapterPercent'] as num?)?.toDouble() ?? 0;
         if (mounted) {
           setState(() {
             _pct = (pct * 100).clamp(0, 100).toDouble();
@@ -174,7 +178,10 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
       case 'selected':
         final selCfi = data['cfiRange'] as String?;
         final selText = (data['text'] as String?)?.trim();
-        if (selCfi != null && selText != null && selText.isNotEmpty && mounted) {
+        if (selCfi != null &&
+            selText != null &&
+            selText.isNotEmpty &&
+            mounted) {
           setState(() {
             _selCfi = selCfi;
             _selText = selText;
@@ -205,7 +212,9 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
         if (json != null && json.isNotEmpty && id != null) {
           try {
             html.window.localStorage['marg_locations_$id'] = json;
-          } catch (_) {/* storage full — regenerate next time */}
+          } catch (_) {
+            /* storage full — regenerate next time */
+          }
         }
       case 'error':
         _watchdog?.cancel();
@@ -220,8 +229,10 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
         if (!_ready) {
           _watchdog?.cancel();
           if (mounted) {
-            setState(() =>
-                _loadError = 'Could not open this book. (${data['message']})');
+            setState(
+              () =>
+                  _loadError = 'Could not open this book. (${data['message']})',
+            );
           }
         }
     }
@@ -252,8 +263,10 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
       if (mounted) setState(() => _loadError = e.message);
     } catch (_) {
       if (mounted) {
-        setState(() => _loadError =
-            'No readable copy found. Upload an EPUB on mobile to read it.');
+        setState(
+          () => _loadError =
+              'No readable copy found. Upload an EPUB on mobile to read it.',
+        );
       }
     }
   }
@@ -295,9 +308,10 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
     // Catalog/physical → find the Gutenberg id by title + author.
     final gutendex = Dio();
     try {
-      final query = [book.title, book.author]
-          .where((s) => s != null && s.trim().isNotEmpty)
-          .join(' ');
+      final query = [
+        book.title,
+        book.author,
+      ].where((s) => s != null && s.trim().isNotEmpty).join(' ');
       final search = await gutendex.get<Map<String, dynamic>>(
         'https://gutendex.com/books/',
         queryParameters: {'search': query},
@@ -305,7 +319,8 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
       final results = (search.data?['results'] as List?) ?? const [];
       int? id;
       for (final r in results) {
-        if (r is Map && (r['formats'] as Map?)?['application/epub+zip'] != null) {
+        if (r is Map &&
+            (r['formats'] as Map?)?['application/epub+zip'] != null) {
           id = (r['id'] as num?)?.toInt();
           if (id != null) break;
         }
@@ -323,8 +338,9 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
   void _applyTheme() {
     final s = ref.read(readingSettingsProvider);
     final p = s.paletteFor(Theme.of(context).brightness);
-    final family =
-        s.font == ReaderFont.serif ? 'Georgia, serif' : 'system-ui, sans-serif';
+    final family = s.font == ReaderFont.serif
+        ? 'Georgia, serif'
+        : 'system-ui, sans-serif';
     _send('setTheme', [
       cssHex(p.bg),
       cssHex(p.text),
@@ -338,8 +354,8 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
   String get _label => _chapters > 0
       ? 'Chapter $_chapter/$_chapters'
       : _total > 0
-          ? 'Page $_page of $_total'
-          : 'Reading';
+      ? 'Page $_page of $_total'
+      : 'Reading';
 
   void _next() {
     if (_ready) _send('nextPage');
@@ -398,24 +414,33 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
           _mark(cfi, h.colorTag ?? 'revisit');
         }
       }
-    } catch (_) {/* marks are decoration — never block reading */}
+    } catch (_) {
+      /* marks are decoration — never block reading */
+    }
   }
 
   Future<void> _quickTag(String tag) async {
     final cfiRange = _selCfi;
     final passage = _selText;
     final book = _bookForSave;
-    if (cfiRange == null || passage == null || passage.isEmpty || book == null) {
+    if (cfiRange == null ||
+        passage == null ||
+        passage.isEmpty ||
+        book == null) {
       return;
     }
     final messenger = ScaffoldMessenger.of(context);
     try {
-      await ref.read(highlightServiceProvider).create(HighlightCreateRequest(
-            bookId: book.id,
-            colorTag: tag,
-            passageText: passage,
-            textChapterRef: cfiRange,
-          ));
+      await ref
+          .read(highlightServiceProvider)
+          .create(
+            HighlightCreateRequest(
+              bookId: book.id,
+              colorTag: tag,
+              passageText: passage,
+              textChapterRef: cfiRange,
+            ),
+          );
       if (!mounted) return;
       _mark(cfiRange, tag);
       ref.invalidate(bookHighlightsProvider(book.id));
@@ -442,7 +467,10 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
     final cfiRange = _selCfi;
     final passage = _selText;
     final book = _bookForSave;
-    if (cfiRange == null || passage == null || passage.isEmpty || book == null) {
+    if (cfiRange == null ||
+        passage == null ||
+        passage.isEmpty ||
+        book == null) {
       return;
     }
     final messenger = ScaffoldMessenger.of(context);
@@ -451,12 +479,16 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
       if (!asNote) {
         final tag = await showTagPickerSheet(context, passage: passage);
         if (tag == null || !mounted) return;
-        await ref.read(highlightServiceProvider).create(HighlightCreateRequest(
-              bookId: book.id,
-              colorTag: tag,
-              passageText: passage,
-              textChapterRef: cfiRange,
-            ));
+        await ref
+            .read(highlightServiceProvider)
+            .create(
+              HighlightCreateRequest(
+                bookId: book.id,
+                colorTag: tag,
+                passageText: passage,
+                textChapterRef: cfiRange,
+              ),
+            );
         if (!mounted) return;
         _mark(cfiRange, tag);
         messenger
@@ -464,22 +496,31 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
           ..showSnackBar(appSnackBar('Tagged “$tag”', SnackType.success));
       } else {
         final reference = 'FROM ${book.title.toUpperCase()}';
-        final body =
-            await showNoteSheet(context, passage: passage, reference: reference);
+        final body = await showNoteSheet(
+          context,
+          passage: passage,
+          reference: reference,
+        );
         if (body == null || !mounted) return;
         final highlight = await ref
             .read(highlightServiceProvider)
-            .create(HighlightCreateRequest(
-              bookId: book.id,
-              colorTag: 'revisit',
-              passageText: passage,
-              textChapterRef: cfiRange,
-            ));
-        await ref.read(noteServiceProvider).create(NoteCreateRequest(
-              bookId: book.id,
-              highlightId: highlight.id,
-              bodyMd: body,
-            ));
+            .create(
+              HighlightCreateRequest(
+                bookId: book.id,
+                colorTag: 'revisit',
+                passageText: passage,
+                textChapterRef: cfiRange,
+              ),
+            );
+        await ref
+            .read(noteServiceProvider)
+            .create(
+              NoteCreateRequest(
+                bookId: book.id,
+                highlightId: highlight.id,
+                bodyMd: body,
+              ),
+            );
         if (!mounted) return;
         _mark(cfiRange, 'revisit');
         messenger
@@ -520,10 +561,9 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
       accent: p.accent,
     );
     final theme = Theme.of(context);
-    final extensions = theme.extensions.values
-        .where((e) => e is! AppColorsExtension)
-        .toList()
-      ..add(readerColors);
+    final extensions =
+        theme.extensions.values.where((e) => e is! AppColorsExtension).toList()
+          ..add(readerColors);
 
     ref.listen(readingSettingsProvider, (_, __) {
       if (_ready) _applyTheme();
@@ -540,7 +580,8 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
           if (!isSample) {
             final bookAsync = ref.watch(bookByIdProvider(widget.bookId));
             displayBook = bookAsync.valueOrNull ?? widget.initialBook;
-            readerBook = bookAsync.valueOrNull ??
+            readerBook =
+                bookAsync.valueOrNull ??
                 (bookAsync.hasError ? widget.initialBook : null);
           }
 
@@ -556,7 +597,8 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
             }
           }
 
-          final unsupported = displayBook != null &&
+          final unsupported =
+              displayBook != null &&
               (displayBook.format == 'pdf' ||
                   displayBook.format == 'm4b' ||
                   displayBook.format == 'mp3');
@@ -568,7 +610,7 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
                 children: [
                   ReaderTopBar(
                     title: isSample
-                        ? widget.sampleTitle ?? 'Free sample'
+                        ? widget.sampleTitle ?? 'Google Preview'
                         : displayBook?.title ?? 'Reading',
                   ),
                   Expanded(
@@ -580,38 +622,47 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
                                 'it in the mobile app.',
                           )
                         : _loadError != null
-                            ? ReaderMessage(
-                                icon: Icons.menu_book_outlined,
-                                text: _loadError!,
-                              )
-                            : LayoutBuilder(
-                                builder: (context, box) => Stack(
-                                  children: [
-                                    Positioned.fill(
-                                        child: ColoredBox(color: colors.bg)),
-                                    HtmlElementView(viewType: _viewType),
-                                    if (!_ready)
-                                      Center(
+                        ? ReaderMessage(
+                            icon: Icons.menu_book_outlined,
+                            text: _loadError!,
+                          )
+                        : LayoutBuilder(
+                            builder: (context, box) => Stack(
+                              children: [
+                                Positioned.fill(
+                                  child: ColoredBox(color: colors.bg),
+                                ),
+                                HtmlElementView(viewType: _viewType),
+                                if (!_ready)
+                                  Positioned.fill(
+                                    child: ColoredBox(
+                                      color: colors.bg,
+                                      child: Center(
                                         child: Column(
                                           mainAxisSize: MainAxisSize.min,
                                           children: [
                                             CircularProgressIndicator(
-                                                color: colors.accent),
-                                            if (_takingLong) ...[
-                                              const SizedBox(
-                                                  height: AppSpacing.md),
-                                              Text(
-                                                'Still opening this book…',
-                                                style: AppTypography.subtitle(
-                                                    colors.text2),
+                                              color: colors.accent,
+                                            ),
+                                            const SizedBox(
+                                              height: AppSpacing.md,
+                                            ),
+                                            Text(
+                                              _takingLong
+                                                  ? 'Still opening this book…'
+                                                  : 'Loading text…',
+                                              style: AppTypography.subtitle(
+                                                colors.text2,
                                               ),
-                                            ],
+                                            ),
                                           ],
                                         ),
                                       ),
-                                  ],
-                                ),
-                              ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
                   ),
                   if (!unsupported && !isSample)
                     PagedNavBar(

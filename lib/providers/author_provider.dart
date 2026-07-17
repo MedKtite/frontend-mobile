@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/catalog_book.dart';
 import '../services/backend/catalog_service.dart';
+import 'trending_provider.dart';
 
 /// Author surfaces, no backend/DB required:
 /// - Top authors: aggregated from Gutendex's most-downloaded books.
@@ -39,24 +40,18 @@ Future<Map<String, dynamic>?> _wikiSummary(Dio dio, String name) async {
 /// Most-downloaded Gutenberg authors, with Wikipedia portraits. One fetch per
 /// session (non-autoDispose) — the ranking barely moves.
 final topAuthorsProvider = FutureProvider<List<TopAuthor>>((ref) async {
+  final results = await ref.watch(popularGutenbergResultsProvider.future);
   final dio = Dio();
   try {
-    final res = await dio.get<Map<String, dynamic>>(
-      'https://gutendex.com/books/',
-      queryParameters: {'sort': 'popular', 'languages': 'en'},
-      options: Options(receiveTimeout: const Duration(seconds: 15)),
-    );
-    final results = (res.data?['results'] as List?) ?? const [];
-
     final downloadsByAuthor = <String, int>{};
     for (final r in results) {
-      if (r is! Map) continue;
       final authors = r['authors'];
       if (authors is! List || authors.isEmpty) continue;
       final name = (authors.first as Map?)?['name'] as String?;
       if (name == null || name.isEmpty) continue;
       final display = _displayAuthor(name);
-      downloadsByAuthor[display] = (downloadsByAuthor[display] ?? 0) +
+      downloadsByAuthor[display] =
+          (downloadsByAuthor[display] ?? 0) +
           ((r['download_count'] as num?)?.toInt() ?? 0);
     }
     final ranked = downloadsByAuthor.entries.toList()
@@ -64,10 +59,12 @@ final topAuthorsProvider = FutureProvider<List<TopAuthor>>((ref) async {
     final top = ranked.take(8).toList();
 
     // Portraits in parallel, best-effort — a missing photo becomes initials.
-    final portraits = await Future.wait(top.map((e) async {
-      final s = await _wikiSummary(dio, e.key);
-      return (s?['thumbnail'] as Map?)?['source'] as String?;
-    }));
+    final portraits = await Future.wait(
+      top.map((e) async {
+        final s = await _wikiSummary(dio, e.key);
+        return (s?['thumbnail'] as Map?)?['source'] as String?;
+      }),
+    );
 
     return [
       for (var i = 0; i < top.length; i++)
@@ -84,8 +81,10 @@ final topAuthorsProvider = FutureProvider<List<TopAuthor>>((ref) async {
 /// Gutenberg index answers instantly (direct Gutendex search proved too slow
 /// from devices) and the Google layer adds in-copyright titles, so modern
 /// authors get a bibliography too.
-final authorDetailsProvider =
-    FutureProvider.family<AuthorDetails, String>((ref, name) async {
+final authorDetailsProvider = FutureProvider.family<AuthorDetails, String>((
+  ref,
+  name,
+) async {
   // Fire both in parallel; each is independently best-effort.
   final dio = Dio();
   final wikiF = _wikiSummary(dio, name);
@@ -115,14 +114,15 @@ final authorDetailsProvider =
       if (byThisAuthor(c) && seen.add(c.title.toLowerCase())) c,
   ];
   // Readable-in-app first, then the rest.
-  books.sort((a, b) =>
-      (b.isReadable ? 1 : 0).compareTo(a.isReadable ? 1 : 0));
+  books.sort((a, b) => (b.isReadable ? 1 : 0).compareTo(a.isReadable ? 1 : 0));
 
   return (
     tagline: wiki?['description'] as String?,
     bio: wiki?['extract'] as String?,
-    imageUrl: ((wiki?['originalimage'] as Map?)?['source'] ??
-        (wiki?['thumbnail'] as Map?)?['source']) as String?,
+    imageUrl:
+        ((wiki?['originalimage'] as Map?)?['source'] ??
+                (wiki?['thumbnail'] as Map?)?['source'])
+            as String?,
     books: books,
   );
 });

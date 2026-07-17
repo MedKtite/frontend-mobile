@@ -22,6 +22,48 @@ class ReaderProgress {
   final String label;
 }
 
+/// The single loading treatment used by every text reader on every platform.
+class ReaderTextLoading extends StatelessWidget {
+  const ReaderTextLoading({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return ColoredBox(
+      color: colors.bg,
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.pageHorizontal,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                width: 220,
+                child: ClipRRect(
+                  borderRadius: AppRadii.brFull,
+                  child: LinearProgressIndicator(
+                    minHeight: 4,
+                    color: colors.accent,
+                    backgroundColor: colors.border,
+                  ),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              Text(
+                'Loading text…',
+                textAlign: TextAlign.center,
+                style: AppTypography.subtitle(colors.text2),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// Back · centered book title · "Aa" type control. Title is centered with a
 /// Stack so the asymmetric side controls don't push it off-axis.
 class ReaderTopBar extends StatelessWidget {

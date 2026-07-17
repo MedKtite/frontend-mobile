@@ -49,8 +49,37 @@ class ProPurchases {
   /// when the store isn't reachable / not configured.
   static Future<Package?> proPackage() async {
     final offerings = await Purchases.getOfferings();
-    final packages = offerings.current?.availablePackages;
+    final current = offerings.current;
+    final packages = current?.availablePackages;
+    final annual = current?.annual;
+    if (annual != null) return annual;
     return (packages == null || packages.isEmpty) ? null : packages.first;
+  }
+
+  /// Whether this customer can start the store-configured seven-day trial.
+  /// The store remains authoritative and re-checks eligibility at checkout.
+  static Future<bool> hasEligibleSevenDayTrial(Package package) async {
+    try {
+      final product = package.storeProduct;
+      if (defaultTargetPlatform == TargetPlatform.android) {
+        return product.defaultOption?.freePhase?.billingPeriod?.iso8601 ==
+            'P1W';
+      }
+      if (defaultTargetPlatform != TargetPlatform.iOS) return false;
+
+      final intro = product.introductoryPrice;
+      if (intro == null || intro.price != 0 || intro.period != 'P1W') {
+        return false;
+      }
+      final eligibility =
+          await Purchases.checkTrialOrIntroductoryPriceEligibility(
+        [product.identifier],
+      );
+      return eligibility[product.identifier]?.status ==
+          IntroEligibilityStatus.introEligibilityStatusEligible;
+    } on PlatformException {
+      return false;
+    }
   }
 
   /// Runs the store purchase sheet. Returns true when the purchase went
@@ -69,4 +98,12 @@ class ProPurchases {
   }
 
   static Future<void> restore() => Purchases.restorePurchases();
+
+  /// Store-hosted subscription management page for the current customer.
+  /// RevenueCat returns the correct App Store / Play Store destination.
+  static Future<String?> managementUrl() async {
+    if (!available) return null;
+    final info = await Purchases.getCustomerInfo();
+    return info.managementURL;
+  }
 }

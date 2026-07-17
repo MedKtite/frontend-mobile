@@ -4,17 +4,16 @@ import '../../app/theme/tokens/colors.dart';
 import '../../app/theme/tokens/radii.dart';
 import '../../app/theme/tokens/spacing.dart';
 import '../../app/theme/tokens/typography.dart';
+import '../../core/widgets/adaptive_modal.dart';
 import '../glass_panel.dart';
 
 Future<ThemeMode?> showThemePickerSheet(
   BuildContext context, {
   required ThemeMode selected,
 }) {
-  return showModalBottomSheet<ThemeMode>(
+  return showAdaptiveModal<ThemeMode>(
     context: context,
-    useRootNavigator: true,
     backgroundColor: Colors.transparent,
-    barrierColor: Colors.black.withValues(alpha: 0.18),
     builder: (_) => _ThemePickerSheet(selected: selected),
   );
 }
@@ -35,9 +34,7 @@ class _ThemePickerSheet extends StatelessWidget {
     final colors = context.appColors;
     return GlassPanel(
       radius: AppRadii.xl,
-      borderRadius: const BorderRadius.vertical(
-        top: Radius.circular(AppRadii.xl),
-      ),
+      borderRadius: adaptiveModalBorderRadius(context),
       child: SafeArea(
         top: false,
         child: Padding(
@@ -50,18 +47,7 @@ class _ThemePickerSheet extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Container(
-                width: 36,
-                height: AppSpacing.xs,
-                margin: const EdgeInsets.only(
-                  top: AppSpacing.sm,
-                  bottom: AppSpacing.xl,
-                ),
-                decoration: BoxDecoration(
-                  color: colors.border,
-                  borderRadius: AppRadii.brFull,
-                ),
-              ),
+              AdaptiveModalHandle(color: colors.border),
               Text('Theme', style: AppTypography.title2(colors.text)),
               const SizedBox(height: AppSpacing.xs),
               Text(

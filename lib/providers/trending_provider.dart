@@ -1,43 +1,87 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/catalog_book.dart';
 
+/// One cached Gutendex response shared by Trending and Top Authors. Both Home
+/// sections need the same popular-books payload, so issuing independent startup
+/// requests only increases the chance of a transient DNS/timeout/rate failure.
+final popularGutenbergResultsProvider =
+    FutureProvider<List<Map<String, dynamic>>>((ref) async {
+      final dio = Dio(
+        BaseOptions(
+          connectTimeout: const Duration(seconds: 10),
+          receiveTimeout: const Duration(seconds: 15),
+          headers: const {'Accept': 'application/json'},
+        ),
+      );
+      try {
+        final res = await _getPopularBooks(dio);
+        final results = (res.data?['results'] as List?) ?? const [];
+        return [
+          for (final result in results)
+            if (result is Map<String, dynamic>) result,
+        ];
+      } finally {
+        dio.close();
+      }
+    });
+
+Future<Response<Map<String, dynamic>>> _getPopularBooks(Dio dio) async {
+  const attempts = 3;
+  for (var attempt = 1; attempt <= attempts; attempt++) {
+    try {
+      return await dio.get<Map<String, dynamic>>(
+        'https://gutendex.com/books/',
+        queryParameters: const {'sort': 'popular', 'languages': 'en'},
+      );
+    } on DioException catch (error) {
+      if (kDebugMode) {
+        debugPrint(
+          'Gutendex popular books attempt $attempt/$attempts failed: '
+          '${error.type} ${error.response?.statusCode ?? ''}',
+        );
+      }
+      if (attempt == attempts || !_isTransient(error)) rethrow;
+      await Future<void>.delayed(Duration(milliseconds: 500 * attempt));
+    }
+  }
+  throw StateError('Gutendex retry loop completed unexpectedly.');
+}
+
+bool _isTransient(DioException error) {
+  final status = error.response?.statusCode;
+  return status == 429 ||
+      (status != null && status >= 500) ||
+      error.type == DioExceptionType.connectionTimeout ||
+      error.type == DioExceptionType.sendTimeout ||
+      error.type == DioExceptionType.receiveTimeout ||
+      error.type == DioExceptionType.connectionError ||
+      error.type == DioExceptionType.unknown;
+}
+
 /// Trending books for the Home screen — Project Gutenberg's most-downloaded
 /// titles (Gutendex `sort=popular` ranks by real download counts). Every result
-/// is public-domain, so each one is instantly readable in-app: tapping goes to
-/// the catalog book page whose action is "Add to library — read free".
-///
-/// External host → bare [Dio] (no auth cookies), same as gutenberg_provider.
-/// Not autoDispose: trending barely changes — one fetch per app session.
+/// is public-domain, so each one is instantly readable in-app.
 final trendingBooksProvider = FutureProvider<List<CatalogBook>>((ref) async {
-  final dio = Dio();
-  try {
-    final res = await dio.get<Map<String, dynamic>>(
-      'https://gutendex.com/books/',
-      queryParameters: {'sort': 'popular', 'languages': 'en'},
-      options: Options(receiveTimeout: const Duration(seconds: 15)),
-    );
-    final results = (res.data?['results'] as List?) ?? const [];
+  final results = await ref.watch(popularGutenbergResultsProvider.future);
 
-    return [
-      for (final r in results.take(12))
-        if (r is Map<String, dynamic> && (r['title'] as String?) != null)
-          CatalogBook(
-            title: r['title'] as String,
-            author: _displayAuthor(r['authors']),
-            gutenbergId: (r['id'] as num?)?.toInt(),
-            source: 'GUTENBERG',
-            contentAvailability: 'FULL', // on Gutenberg ⇒ readable in-app
-            language: 'en',
-            thumbnailUrl: _coverUrl(r),
-            description: _summary(r),
-            downloadCount: (r['download_count'] as num?)?.toInt(),
-          ),
-    ];
-  } finally {
-    dio.close();
-  }
+  return [
+    for (final r in results.take(12))
+      if ((r['title'] as String?) != null)
+        CatalogBook(
+          title: r['title'] as String,
+          author: _displayAuthor(r['authors']),
+          gutenbergId: (r['id'] as num?)?.toInt(),
+          source: 'GUTENBERG',
+          contentAvailability: 'FULL',
+          language: 'en',
+          thumbnailUrl: _coverUrl(r),
+          description: _summary(r),
+          downloadCount: (r['download_count'] as num?)?.toInt(),
+        ),
+  ];
 });
 
 /// Gutendex lists authors as "Last, First" — flip to display order.
@@ -55,7 +99,9 @@ String? _summary(Map<String, dynamic> r) {
   if (s is! List || s.isEmpty || s.first is! String) return null;
   return (s.first as String)
       .replaceAll(
-          RegExp(r'\(This is an automatically generated summary\.?\)\s*$'), '')
+        RegExp(r'\(This is an automatically generated summary\.?\)\s*$'),
+        '',
+      )
       .trim();
 }
 

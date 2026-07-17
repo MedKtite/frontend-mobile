@@ -25,5 +25,8 @@ class Subscription with _$Subscription {
       _$SubscriptionFromJson(json);
 
   bool get isPro =>
-      tier == 'pro' && (status == 'active' || status == 'in_grace_period');
+      tier == 'pro' &&
+      (status == 'active' ||
+          status == 'in_grace_period' ||
+          status == 'billing_retry');
 }

@@ -62,7 +62,7 @@ class InsightsScreen extends ConsumerWidget {
             const SizedBox(height: AppSpacing.xs),
             Text('Insights', style: AppTypography.display(colors.text)),
             const SizedBox(height: AppSpacing.xl),
-            _YearCard(insights: insights),
+            _WeekCard(insights: insights),
             const SizedBox(height: AppSpacing.md),
             _StatRow(insights: insights),
             const SizedBox(height: AppSpacing.xxl),
@@ -88,8 +88,8 @@ class InsightsScreen extends ConsumerWidget {
   }
 }
 
-class _YearCard extends StatelessWidget {
-  const _YearCard({required this.insights});
+class _WeekCard extends StatelessWidget {
+  const _WeekCard({required this.insights});
 
   final _Insights insights;
 
@@ -112,7 +112,7 @@ class _YearCard extends StatelessWidget {
                 text: TextSpan(
                   children: [
                     TextSpan(
-                      text: '${insights.finishedBooks}',
+                      text: '${insights.finishedBooksThisWeek}',
                       style: AppTypography.statNumber(colors.text),
                     ),
                     TextSpan(
@@ -127,11 +127,11 @@ class _YearCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    '${_compactNumber(insights.finishedPages)} pages',
+                    '${_compactNumber(insights.finishedPagesThisWeek)} pages',
                     style: AppTypography.caption(colors.text2),
                   ),
                   Text(
-                    '${insights.booksPerMonth.toStringAsFixed(1)} / month',
+                    '${insights.booksPerDayThisWeek.toStringAsFixed(1)} / day',
                     style: AppTypography.caption(colors.text2),
                   ),
                 ],
@@ -139,19 +139,19 @@ class _YearCard extends StatelessWidget {
             ],
           ),
           Text(
-            'finished so far this year',
+            'finished so far this week',
             style: AppTypography.label(colors.text3),
           ),
           const SizedBox(height: AppSpacing.xl),
-          _MonthlyChart(values: insights.finishedByMonth),
+          _WeeklyChart(values: insights.finishedByWeekday),
         ],
       ),
     );
   }
 }
 
-class _MonthlyChart extends StatelessWidget {
-  const _MonthlyChart({required this.values});
+class _WeeklyChart extends StatelessWidget {
+  const _WeeklyChart({required this.values});
 
   final List<int> values;
 
@@ -159,7 +159,7 @@ class _MonthlyChart extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     final maxValue = values.fold(1, (max, value) => value > max ? value : max);
-    const labels = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
+    const labels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
     return SizedBox(
       height: AppSpacing.xxxl + AppSpacing.xxl,
       child: Row(
@@ -534,10 +534,10 @@ class _QuietSuggestion extends StatelessWidget {
 class _Insights {
   const _Insights({
     required this.year,
-    required this.finishedBooks,
-    required this.finishedPages,
-    required this.booksPerMonth,
-    required this.finishedByMonth,
+    required this.finishedBooksThisWeek,
+    required this.finishedPagesThisWeek,
+    required this.booksPerDayThisWeek,
+    required this.finishedByWeekday,
     required this.activeDays,
     required this.annotationsPerBook,
     required this.highlights,
@@ -548,10 +548,10 @@ class _Insights {
   });
 
   final int year;
-  final int finishedBooks;
-  final int finishedPages;
-  final double booksPerMonth;
-  final List<int> finishedByMonth;
+  final int finishedBooksThisWeek;
+  final int finishedPagesThisWeek;
+  final double booksPerDayThisWeek;
+  final List<int> finishedByWeekday;
   final int activeDays;
   final double annotationsPerBook;
   final int highlights;
@@ -566,14 +566,19 @@ class _Insights {
     List<Note> notes,
     DateTime now,
   ) {
-    final finishedThisYear = books.where((book) {
+    final today = DateTime(now.year, now.month, now.day);
+    final weekStart = today.subtract(Duration(days: now.weekday - 1));
+    final weekEnd = weekStart.add(const Duration(days: 7));
+    final finishedThisWeek = books.where((book) {
       final date = DateTime.tryParse(book.finishedAt ?? '');
-      return date?.year == now.year;
+      if (date == null) return false;
+      final localDate = date.toLocal();
+      return !localDate.isBefore(weekStart) && localDate.isBefore(weekEnd);
     }).toList();
-    final finishedByMonth = List<int>.filled(12, 0);
-    for (final book in finishedThisYear) {
-      final month = DateTime.tryParse(book.finishedAt!)!.month;
-      finishedByMonth[month - 1]++;
+    final finishedByWeekday = List<int>.filled(7, 0);
+    for (final book in finishedThisWeek) {
+      final weekday = DateTime.parse(book.finishedAt!).toLocal().weekday;
+      finishedByWeekday[weekday - 1]++;
     }
     final tagMap = <String, int>{};
     final bookCount = <String, int>{};
@@ -596,14 +601,17 @@ class _Insights {
     final audio = books.where((book) => _isAudio(book.format)).length;
     final print = books.where((book) => _isPrint(book.format)).length;
     final both = books.length - audio - print;
-    final monthCount = now.month;
+    final elapsedDaysThisWeek = now.weekday;
 
     return _Insights(
       year: now.year,
-      finishedBooks: finishedThisYear.length,
-      finishedPages: finishedThisYear.fold(0, (total, book) => total + (book.pageCount ?? 0)),
-      booksPerMonth: finishedThisYear.length / monthCount,
-      finishedByMonth: finishedByMonth,
+      finishedBooksThisWeek: finishedThisWeek.length,
+      finishedPagesThisWeek: finishedThisWeek.fold(
+        0,
+        (total, book) => total + (book.pageCount ?? 0),
+      ),
+      booksPerDayThisWeek: finishedThisWeek.length / elapsedDaysThisWeek,
+      finishedByWeekday: finishedByWeekday,
       activeDays: activeDates.length,
       annotationsPerBook: books.isEmpty ? 0 : (highlights.length + notes.length) / books.length,
       highlights: highlights.length,

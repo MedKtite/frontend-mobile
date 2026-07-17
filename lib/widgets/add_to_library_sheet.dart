@@ -10,6 +10,7 @@ import '../app/theme/tokens/radii.dart';
 import '../app/theme/tokens/spacing.dart';
 import '../app/theme/tokens/typography.dart';
 import '../core/dio_client.dart';
+import '../core/widgets/adaptive_modal.dart';
 import '../core/widgets/app_snackbar.dart';
 import '../models/book_create_request.dart';
 import '../models/presign_upload_request.dart';
@@ -20,9 +21,8 @@ import 'glass_panel.dart';
 
 /// Presents the "Add to library" modal sheet (frames 287:2 / 287:181).
 Future<void> showAddToLibrarySheet(BuildContext context) {
-  return showModalBottomSheet<void>(
+  return showAdaptiveModal<void>(
     context: context,
-    useRootNavigator: true,
     backgroundColor: Colors.transparent,
     // Light scrim: the sheet is frosted GLASS — it needs bright content
     // behind it to transmit. The default black54 turns the frost muddy.
@@ -134,8 +134,7 @@ class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
     // since the sheet is flush with the screen bottom.
     return GlassPanel(
       radius: AppRadii.xl,
-      borderRadius:
-          const BorderRadius.vertical(top: Radius.circular(AppRadii.xl)),
+      borderRadius: adaptiveModalBorderRadius(context),
       child: SafeArea(
         top: false,
         child: Padding(
@@ -148,18 +147,7 @@ class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Container(
-                width: 36,
-                height: 4,
-                margin: const EdgeInsets.only(
-                  top: AppSpacing.sm,
-                  bottom: AppSpacing.xl,
-                ),
-                decoration: BoxDecoration(
-                  color: colors.border,
-                  borderRadius: AppRadii.brFull,
-                ),
-              ),
+              AdaptiveModalHandle(color: colors.border),
               if (_busy) ..._uploading(colors) else ..._options(colors),
             ],
           ),

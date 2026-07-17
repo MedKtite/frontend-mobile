@@ -10,7 +10,7 @@ import '../welcome_screen.dart';
 import 'onboarding_1.dart';
 import 'onboarding_2.dart';
 import 'onboarding_3.dart';
-
+import 'tablet_onboarding.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -32,10 +32,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   void _goTo(int index) => _controller.animateToPage(
-        index,
-        duration: const Duration(milliseconds: 320),
-        curve: Curves.easeOut,
-      );
+    index,
+    duration: const Duration(milliseconds: 320),
+    curve: Curves.easeOut,
+  );
 
   void _next() {
     if (_page < _pageCount - 1) _goTo(_page + 1);
@@ -43,6 +43,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (MediaQuery.sizeOf(context).shortestSide >= 600) {
+      return const TabletOnboardingScreen();
+    }
+
     return Scaffold(
       body: SafeArea(
         child: Column(
@@ -98,11 +102,7 @@ class _BottomChrome extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _DotsIndicator(
-            count: pageCount,
-            activeIndex: page,
-            onTap: onDotTap,
-          ),
+          _DotsIndicator(count: pageCount, activeIndex: page, onTap: onDotTap),
           const SizedBox(height: AppSpacing.xl),
           _Cta(page: page, onNext: onNext),
         ],
@@ -152,7 +152,6 @@ class _Cta extends StatelessWidget {
                 // style: OutlinedButton.styleFrom(
                 //   backgroundColor: colors.surface,
                 // ),
-                
                 onPressed: () => context.push(Routes.login),
                 child: const Text('Sign in'),
               ),
@@ -175,14 +174,10 @@ class _PrimaryButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       width: double.infinity,
-      child: FilledButton(
-        onPressed: onPressed,
-        child: Text(label),
-      ),
+      child: FilledButton(onPressed: onPressed, child: Text(label)),
     );
   }
 }
-
 
 class _DotsIndicator extends StatelessWidget {
   const _DotsIndicator({
