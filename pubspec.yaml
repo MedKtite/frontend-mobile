@@ -39,6 +39,10 @@ dependencies:
   epub_view: ^3.2.0
   webview_flutter: ^4.13.1
   url_launcher: ^6.3.1
+  google_sign_in: ^7.2.0
+  flutter_web_auth_2: ^5.0.3
+  crypto: ^3.0.6
+  http: ^1.2.2
   # Audiobook playback (Listen Now) — streams the presigned S3 URL.
   just_audio: ^0.9.40
   # In-app purchases via RevenueCat (brokers App Store / Play Store IAP —

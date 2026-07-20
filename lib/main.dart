@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
 import 'app/routes.dart';
@@ -11,6 +12,7 @@ import 'services/frontend/launch_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
 
   // Safari can deny browser storage (notably in private browsing or with
   // strict content blockers). Startup must still mount the app; otherwise an
@@ -33,15 +35,17 @@ Future<void> main() async {
     debugPrint('Dio bootstrap skipped (auth disabled until available): $e');
   }
 
-  runApp(ProviderScope(
-    overrides: overrides,
-    child: MarginaliaApp(isFirstLaunch: isFirstLaunch),
-  ));
+  runApp(
+    ProviderScope(
+      overrides: overrides,
+      child: MarginaliaApp(isFirstLaunch: isFirstLaunch),
+    ),
+  );
 }
 
 class MarginaliaApp extends ConsumerWidget {
   MarginaliaApp({super.key, required bool isFirstLaunch})
-      : router = createAppRouter(isFirstLaunch: isFirstLaunch);
+    : router = createAppRouter(isFirstLaunch: isFirstLaunch);
 
   final GoRouter router;
 

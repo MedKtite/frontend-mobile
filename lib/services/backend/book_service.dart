@@ -42,6 +42,13 @@ class BookService {
     }
   }
 
+  /// Book lists are session-scoped. Clear them when the authenticated user
+  /// changes so one account can never render another account's library.
+  void clearListCache() {
+    _listCache.clear();
+    _listRequests.clear();
+  }
+
   Future<List<Book>> _fetchList(String? status) async {
     final res = await _dio.get<List<dynamic>>(
       '/me/books',
@@ -64,7 +71,7 @@ class BookService {
       '/me/books',
       data: req.toJson(),
     );
-    _listCache.clear();
+    clearListCache();
     return Book.fromJson(res.data!);
   }
 
@@ -76,14 +83,14 @@ class BookService {
       '/me/books/$id',
       data: body,
     );
-    _listCache.clear();
+    clearListCache();
     return Book.fromJson(res.data!);
   }
 
   /// DELETE /me/books/{id} — remove a book from the library (204 No Content).
   Future<void> delete(String id) async {
     await _dio.delete<void>('/me/books/$id');
-    _listCache.clear();
+    clearListCache();
   }
 
   /// GET /me/books/{id}/download-url — a short-lived presigned S3/MinIO URL for

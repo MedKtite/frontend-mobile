@@ -12,6 +12,7 @@ import '../../core/widgets/app_text_field.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/state/auth_state.dart';
 import '../../services/frontend/auth_validators.dart';
+import '../../services/frontend/social_auth_service.dart';
 import '../../widgets/auth_scaffold.dart';
 import '../../widgets/glass_panel.dart';
 
@@ -24,6 +25,8 @@ class RegisterScreen extends ConsumerStatefulWidget {
 }
 
 class _RegisterScreenState extends ConsumerState<RegisterScreen> {
+  final _socialAuth = SocialAuthService();
+
   final _formKey = GlobalKey<FormState>();
   final _name = TextEditingController();
   final _email = TextEditingController();
@@ -59,18 +62,32 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       return;
     }
     FocusScope.of(context).unfocus();
-    // TODO(backend): persist _emailUpdates once RegisterRequest carries an
-    // email-opt-in flag (notification_preferences).
     ref
         .read(authProvider.notifier)
         .register(
           email: _email.text.trim(),
           password: _password.text,
           displayName: _name.text.trim(),
+          emailUpdates: _emailUpdates,
         );
   }
 
-  void _comingSoon(String what) => showAppSnack(context, '$what — coming soon');
+  Future<void> _socialRegister(String provider) async {
+    try {
+      final token = provider == 'Google'
+          ? await _socialAuth.signInWithGoogle()
+          : await _socialAuth.signInWithX();
+      if (token == null || !mounted) return;
+      final auth = ref.read(authProvider.notifier);
+      if (provider == 'Google') {
+        await auth.loginWithGoogle(token: token);
+      } else {
+        await auth.loginWithX(token: token);
+      }
+    } on SocialAuthException catch (e) {
+      if (mounted) showAppSnack(context, e.message, type: SnackType.error);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -157,13 +174,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             glyph: 'google', // assets are google.svg / devicon_twitter.svg
             label: 'Continue with Google',
             monochrome: false,
-            onPressed: () => _comingSoon('Google sign-in'),
+            onPressed: () => _socialRegister('Google'),
           ),
           const SizedBox(height: AppSpacing.md),
           SocialAuthButton(
             glyph: 'devicon_twitter',
             label: 'Continue with X',
-            onPressed: () => _comingSoon('X sign-in'),
+            onPressed: () => _socialRegister('X'),
           ),
         ],
       ),

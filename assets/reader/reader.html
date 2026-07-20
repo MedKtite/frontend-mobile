@@ -7,9 +7,9 @@
   <style>
     html, body {
       margin: 0; padding: 0; height: 100%; background: #faf8f5;
-      overflow: hidden; -webkit-touch-callout: none;
+      overflow-y: auto; -webkit-touch-callout: none;
     }
-    #viewer { height: 100%; width: 100%; }
+    #viewer { min-height: 100%; width: 100%; overflow-y: auto; }
     #selection-toolbar {
       position: fixed; z-index: 2147483647; left: 50%; bottom: 16px;
       transform: translateX(-50%); display: none; align-items: center;
@@ -58,7 +58,7 @@
     var gutenbergInitialTarget = null;
     var initialStartCfi = null;
     var initialGutenbergRedirectPending = false;
-    var selecting = false; // an active text selection suppresses page turns
+    var selecting = false;
     var selectionToolbar = document.getElementById('selection-toolbar');
 
     function hasNativeFlutterPalette() {
@@ -521,7 +521,7 @@
         book = ePub(source);
         rendition = book.renderTo('viewer', {
           width: '100%', height: '100%',
-          flow: 'paginated', spread: 'none', manager: 'default'
+          flow: 'scrolled-doc', spread: 'none', manager: 'continuous'
         });
         applyTheme();
         // Inspect the book while the existing reader loader is visible. A
@@ -598,62 +598,6 @@
           // selection and handle-dragging stay fully native. A swipe must
           // START MOVING immediately — any gesture that begins with a still
           // finger (the long-press-to-select shape) can never turn a page.
-          var sx = 0, sy = 0, st = 0, firstMoveAt = 0;
-          doc.addEventListener('touchstart', function (ev) {
-            var t = ev.changedTouches[0];
-            sx = t.clientX; sy = t.clientY; st = Date.now();
-            firstMoveAt = 0;
-          }, { passive: true });
-          doc.addEventListener('touchmove', function (ev) {
-            if (firstMoveAt) return;
-            var t = ev.changedTouches[0];
-            if (Math.abs(t.clientX - sx) > 10 || Math.abs(t.clientY - sy) > 10) {
-              firstMoveAt = Date.now();
-            }
-          }, { passive: true });
-          doc.addEventListener('touchend', function (ev) {
-            if (selecting || hasSelection()) return;   // never over a selection
-            var t = ev.changedTouches[0];
-            var dx = t.clientX - sx, dy = t.clientY - sy, now = Date.now();
-            if (now - st > 600) return;                // too slow — not a flick
-            if (!firstMoveAt || firstMoveAt - st > 250) return; // held still first → selecting
-            if (Math.abs(dx) < 60) return;             // too short
-            if (Math.abs(dx) < Math.abs(dy) * 1.5) return; // mostly vertical
-            if (dx < 0) rendition.next().catch(function () {});
-            else rendition.prev().catch(function () {});
-          }, { passive: true });
-
-          // Desktop/web: horizontal trackpad scrolling and mouse dragging use
-          // the same page-turn model as touch swipes.
-          var wheelLocked = false;
-          doc.addEventListener('wheel', function (ev) {
-            if (selecting || hasSelection() || wheelLocked) return;
-            if (Math.abs(ev.deltaX) < 35 || Math.abs(ev.deltaX) < Math.abs(ev.deltaY)) return;
-            ev.preventDefault();
-            wheelLocked = true;
-            if (ev.deltaX > 0) rendition.next().catch(function () {});
-            else rendition.prev().catch(function () {});
-            setTimeout(function () { wheelLocked = false; }, 350);
-          }, { passive: false });
-
-          var pointerDown = false, px = 0, py = 0;
-          doc.addEventListener('pointerdown', function (ev) {
-            if (ev.pointerType !== 'mouse' || ev.button !== 0) return;
-            pointerDown = true; px = ev.clientX; py = ev.clientY;
-          }, { passive: true });
-          doc.addEventListener('pointerup', function (ev) {
-            if (!pointerDown) return;
-            pointerDown = false;
-            if (selecting || hasSelection()) return;
-            var dx = ev.clientX - px, dy = ev.clientY - py;
-            if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
-            if (dx < 0) rendition.next().catch(function () {});
-            else rendition.prev().catch(function () {});
-          }, { passive: true });
-          doc.addEventListener('pointercancel', function () {
-            pointerDown = false;
-          }, { passive: true });
-
           // When the selection dies natively (Copy tapped, handles collapsed,
           // toolbar dismissed), retire the Flutter Tag/Note bar too.
           doc.addEventListener('selectionchange', function () {

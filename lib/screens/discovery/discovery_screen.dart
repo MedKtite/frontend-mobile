@@ -26,7 +26,9 @@ import '../../widgets/glass_panel.dart';
 import '../../widgets/shelf_picker.dart';
 
 class DiscoveryScreen extends ConsumerStatefulWidget {
-  const DiscoveryScreen({super.key});
+  const DiscoveryScreen({super.key, this.initialCategory});
+
+  final String? initialCategory;
 
   @override
   ConsumerState<DiscoveryScreen> createState() => _DiscoveryScreenState();
@@ -48,6 +50,39 @@ class _DiscoveryScreenState extends ConsumerState<DiscoveryScreen> {
   bool _freeOnly = false;
   final Set<String> _adding = {};
   final Set<String> _added = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _setInitialCategory(widget.initialCategory);
+  }
+
+  @override
+  void didUpdateWidget(covariant DiscoveryScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialCategory != widget.initialCategory) {
+      _setInitialCategory(widget.initialCategory, notify: true);
+    }
+  }
+
+  void _setInitialCategory(String? value, {bool notify = false}) {
+    final category = value?.trim() ?? '';
+    if (category.isEmpty) return;
+
+    void update() {
+      _searchController.text = category;
+      _subjectController.text = category;
+      _advanced = true;
+      _query = category;
+      _catalogQuery = 'subject:"$category"';
+    }
+
+    if (notify) {
+      setState(update);
+    } else {
+      update();
+    }
+  }
 
   @override
   void dispose() {
@@ -106,8 +141,7 @@ class _DiscoveryScreenState extends ConsumerState<DiscoveryScreen> {
         'inauthor:"${text(_authorController)}"',
       if (text(_subjectController).isNotEmpty)
         'subject:"${text(_subjectController)}"',
-      if (text(_isbnController).isNotEmpty)
-        'isbn:${text(_isbnController)}',
+      if (text(_isbnController).isNotEmpty) 'isbn:${text(_isbnController)}',
     ];
     if (parts.isEmpty) {
       showAppSnack(
@@ -168,7 +202,9 @@ class _DiscoveryScreenState extends ConsumerState<DiscoveryScreen> {
     setState(() => _adding.add(key));
     String? error;
     try {
-      await ref.read(bookServiceProvider).create(
+      await ref
+          .read(bookServiceProvider)
+          .create(
             BookCreateRequest(
               title: book.title,
               format: 'physical',
@@ -213,12 +249,13 @@ class _DiscoveryScreenState extends ConsumerState<DiscoveryScreen> {
     final recommendationBooks = personalized != null && personalized.isNotEmpty
         ? personalized
         : (featured.valueOrNull?.skip(1).take(8).toList() ??
-            const <CatalogBook>[]);
+              const <CatalogBook>[]);
     final recommendationLabel = personalized != null && personalized.isNotEmpty
         ? 'BECAUSE OF YOUR RECENT SEARCHES'
         : 'POPULAR WITH READERS';
 
     return Scaffold(
+      backgroundColor: colors.bg,
       body: SafeArea(
         bottom: false,
         child: SingleChildScrollView(
@@ -307,10 +344,8 @@ class _DiscoveryScreenState extends ConsumerState<DiscoveryScreen> {
 
   bool _isOwned(CatalogBook catalogBook, List<Book>? libraryBooks) {
     if (libraryBooks == null) return false;
-    String normalize(String value) => value
-        .toLowerCase()
-        .replaceAll(RegExp(r'[^a-z0-9]+'), ' ')
-        .trim();
+    String normalize(String value) =>
+        value.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), ' ').trim();
 
     return libraryBooks.any((book) {
       if (catalogBook.googleId != null &&
@@ -368,12 +403,16 @@ class _DiscoveryScreenState extends ConsumerState<DiscoveryScreen> {
       children: [
         Row(
           children: [
-            Text('CATALOG RESULTS',
-                style: AppTypography.overline(colors.text3)),
+            Text(
+              'CATALOG RESULTS',
+              style: AppTypography.overline(colors.text3),
+            ),
             const Spacer(),
             if (_freeOnly)
-              Text('FREE TO READ',
-                  style: AppTypography.overline(colors.accent)),
+              Text(
+                'FREE TO READ',
+                style: AppTypography.overline(colors.accent),
+              ),
           ],
         ),
         const SizedBox(height: AppSpacing.md),
@@ -391,13 +430,12 @@ class _DiscoveryScreenState extends ConsumerState<DiscoveryScreen> {
     final results = ref.watch(catalogSearchProvider(_catalogQuery));
     return results.when(
       loading: () => _busy(colors),
-      error: (error, _) => _message(
-        colors,
-        error is ApiError ? error.message : 'Search failed',
-      ),
+      error: (error, _) =>
+          _message(colors, error is ApiError ? error.message : 'Search failed'),
       data: (raw) {
-        final books =
-            _freeOnly ? raw.where((book) => book.isReadable).toList() : raw;
+        final books = _freeOnly
+            ? raw.where((book) => book.isReadable).toList()
+            : raw;
         if (books.isEmpty) {
           return _message(
             colors,
@@ -415,20 +453,18 @@ class _DiscoveryScreenState extends ConsumerState<DiscoveryScreen> {
   }
 
   Widget _busy(AppColorsExtension colors) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: AppSpacing.xxl),
-        child: Center(
-          child: CircularProgressIndicator(color: colors.accent),
-        ),
-      );
+    padding: const EdgeInsets.symmetric(vertical: AppSpacing.xxl),
+    child: Center(child: CircularProgressIndicator(color: colors.accent)),
+  );
 
   Widget _message(AppColorsExtension colors, String message) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: AppSpacing.xxl),
-        child: Text(
-          message,
-          textAlign: TextAlign.center,
-          style: AppTypography.subtitle(colors.text2),
-        ),
-      );
+    padding: const EdgeInsets.symmetric(vertical: AppSpacing.xxl),
+    child: Text(
+      message,
+      textAlign: TextAlign.center,
+      style: AppTypography.subtitle(colors.text2),
+    ),
+  );
 }
 
 class _FeaturedCard extends StatelessWidget {
@@ -481,8 +517,7 @@ class _FeaturedCard extends StatelessWidget {
                           style: AppTypography.title2(colors.bg),
                         ),
                       ),
-                      if (book.author != null &&
-                          book.author!.isNotEmpty) ...[
+                      if (book.author != null && book.author!.isNotEmpty) ...[
                         const SizedBox(height: AppSpacing.xs),
                         Text(
                           book.author!,
@@ -497,10 +532,12 @@ class _FeaturedCard extends StatelessWidget {
                         style: FilledButton.styleFrom(
                           backgroundColor: colors.bg,
                           foregroundColor: colors.text,
-                          disabledBackgroundColor:
-                              colors.bg.withValues(alpha: 0.72),
-                          disabledForegroundColor:
-                              colors.text.withValues(alpha: 0.58),
+                          disabledBackgroundColor: colors.bg.withValues(
+                            alpha: 0.72,
+                          ),
+                          disabledForegroundColor: colors.text.withValues(
+                            alpha: 0.58,
+                          ),
                           padding: const EdgeInsets.symmetric(
                             horizontal: AppSpacing.lg,
                             vertical: AppSpacing.sm,
@@ -515,10 +552,11 @@ class _FeaturedCard extends StatelessWidget {
                           added
                               ? 'In your library'
                               : adding
-                                  ? 'Adding…'
-                                  : 'Add to library',
-                          style: AppTypography.caption(colors.text)
-                              .copyWith(fontWeight: FontWeight.w600),
+                              ? 'Adding…'
+                              : 'Add to library',
+                          style: AppTypography.caption(
+                            colors.text,
+                          ).copyWith(fontWeight: FontWeight.w600),
                         ),
                       ),
                     ],
@@ -594,8 +632,7 @@ class _RecommendationShelf extends StatelessWidget {
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             itemCount: books.length,
-            separatorBuilder: (_, __) =>
-                const SizedBox(width: AppSpacing.md),
+            separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.md),
             itemBuilder: (context, index) {
               final book = books[index];
               return _RecommendationCell(
@@ -612,10 +649,7 @@ class _RecommendationShelf extends StatelessWidget {
 }
 
 class _RecommendationCell extends StatelessWidget {
-  const _RecommendationCell({
-    required this.book,
-    required this.onOpen,
-  });
+  const _RecommendationCell({required this.book, required this.onOpen});
 
   final CatalogBook book;
   final VoidCallback onOpen;
@@ -647,8 +681,7 @@ class _RecommendationLoading extends StatelessWidget {
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             itemCount: 4,
-            separatorBuilder: (_, __) =>
-                const SizedBox(width: AppSpacing.md),
+            separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.md),
             itemBuilder: (_, __) => Container(
               width: BookCard.cardWidth,
               height: BookCard.cardWidth * 1.5,
@@ -774,13 +807,18 @@ class _AdvancedPanel extends StatelessWidget {
         children: [
           Row(
             children: [
-              Text('ADVANCED SEARCH',
-                  style: AppTypography.overline(colors.text3)),
+              Text(
+                'ADVANCED SEARCH',
+                style: AppTypography.overline(colors.text3),
+              ),
               const Spacer(),
               IconButton(
                 onPressed: onClose,
-                icon: Icon(Icons.close,
-                    size: AppSpacing.xl, color: colors.text3),
+                icon: Icon(
+                  Icons.close,
+                  size: AppSpacing.xl,
+                  color: colors.text3,
+                ),
               ),
             ],
           ),
@@ -817,8 +855,10 @@ class _AdvancedPanel extends StatelessWidget {
               Expanded(
                 child: OutlinedButton(
                   onPressed: onReset,
-                  child: Text('Reset',
-                      style: AppTypography.label(colors.text2)),
+                  child: Text(
+                    'Reset',
+                    style: AppTypography.label(colors.text2),
+                  ),
                 ),
               ),
               const SizedBox(width: AppSpacing.md),
@@ -831,8 +871,9 @@ class _AdvancedPanel extends StatelessWidget {
                   ),
                   child: Text(
                     'Search',
-                    style: AppTypography.label(colors.bg)
-                        .copyWith(fontWeight: FontWeight.w600),
+                    style: AppTypography.label(
+                      colors.bg,
+                    ).copyWith(fontWeight: FontWeight.w600),
                   ),
                 ),
               ),
@@ -877,8 +918,9 @@ class _GenreCard extends StatelessWidget {
                   label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: AppTypography.title3(foreground)
-                      .copyWith(fontStyle: FontStyle.italic),
+                  style: AppTypography.title3(
+                    foreground,
+                  ).copyWith(fontStyle: FontStyle.italic),
                 ),
               ),
             ],
@@ -890,10 +932,7 @@ class _GenreCard extends StatelessWidget {
 }
 
 class _CatalogGrid extends StatelessWidget {
-  const _CatalogGrid({
-    required this.books,
-    required this.onOpen,
-  });
+  const _CatalogGrid({required this.books, required this.onOpen});
 
   final List<CatalogBook> books;
   final ValueChanged<CatalogBook> onOpen;
@@ -901,16 +940,23 @@ class _CatalogGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const gap = AppSpacing.md;
-    return Wrap(
-      spacing: gap,
-      runSpacing: AppSpacing.xl,
-      children: [
-        for (final book in books)
-          _CatalogCell(
-            book: book,
-            onOpen: () => onOpen(book),
-          ),
-      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = constraints.maxWidth >= 520 ? 4 : 3;
+        final width = (constraints.maxWidth - gap * (columns - 1)) / columns;
+        return Wrap(
+          spacing: gap,
+          runSpacing: AppSpacing.xl,
+          children: [
+            for (final book in books)
+              _CatalogCell(
+                book: book,
+                width: width,
+                onOpen: () => onOpen(book),
+              ),
+          ],
+        );
+      },
     );
   }
 }
@@ -918,10 +964,12 @@ class _CatalogGrid extends StatelessWidget {
 class _CatalogCell extends StatelessWidget {
   const _CatalogCell({
     required this.book,
+    required this.width,
     required this.onOpen,
   });
 
   final CatalogBook book;
+  final double width;
   final VoidCallback onOpen;
 
   @override
@@ -930,6 +978,7 @@ class _CatalogCell extends StatelessWidget {
       title: book.title,
       author: book.author,
       coverUrl: proxiedCoverUrl(book.thumbnailUrl),
+      width: width,
       onTap: onOpen,
     );
   }

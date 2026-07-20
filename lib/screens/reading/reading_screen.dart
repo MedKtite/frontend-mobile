@@ -167,8 +167,8 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
                         ? _body(context, readerBook)
                         : const _TextLoading(),
                   ),
-                  // EPUB has its own paginated footer (PagedNavBar); only the
-                  // PDF reader uses the shared progress bar.
+                  // EPUB has its footer progress/navigation bar; PDF uses the
+                  // shared progress bar.
                   if (displayBook?.format == 'pdf')
                     ValueListenableBuilder<ReaderProgress>(
                       valueListenable: _progress,
@@ -330,8 +330,8 @@ class _PdfReaderState extends ConsumerState<_PdfReader> {
   }
 }
 
-/// Paginated EPUB reader (epub.js in a WebView). Real book-style page turns —
-/// footer prev/next + left/right edge taps — resuming from a
+/// Scrollable EPUB reader (epub.js in a WebView) with footer navigation,
+/// resuming from a
 /// `{"type":"epubjs","cfi":"…"}` cursor, reporting page X of Y and a 0–100%.
 class _EpubReader extends ConsumerStatefulWidget {
   const _EpubReader({

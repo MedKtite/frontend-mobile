@@ -1,12 +1,14 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/dio_client.dart';
-import '../widgets/book_cover.dart';
 import '../models/book.dart';
 import '../models/highlight.dart';
 import '../services/backend/book_service.dart';
 import '../services/backend/highlight_service.dart';
+import '../widgets/book_cover.dart';
+import 'auth_provider.dart';
 import 'library_provider.dart';
+import 'state/auth_state.dart';
 import 'state/home_state.dart';
 
 /// Loads the Home tab from the backend: the user's library (`/me/books`) and
@@ -167,6 +169,9 @@ final homeProvider =
   // libraryBooksProvider), refresh Home in place — no spinner flash.
   ref.listen(libraryBooksProvider, (_, next) {
     if (next.hasValue) controller.load(silent: true);
+  });
+  ref.listen<AuthState>(authProvider, (_, next) {
+    if (next is AuthAuthenticated) controller.load();
   });
   return controller;
 });

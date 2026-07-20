@@ -1,6 +1,5 @@
-import 'dart:typed_data';
-
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/dio_client.dart';
@@ -33,24 +32,45 @@ class UploadService {
   /// sent to [presign]; the S3 signature covers both.
   Future<void> putToStorage({
     required String uploadUrl,
-    required Uint8List bytes,
+    required Stream<List<int>> body,
+    required int contentLength,
     required String contentType,
+    ProgressCallback? onSendProgress,
   }) async {
-    final raw = Dio();
+    debugPrint(
+      '[UploadService] PUT starting, length=$contentLength, '
+      'contentType=$contentType',
+    );
+    final raw = Dio(
+      BaseOptions(
+        connectTimeout: const Duration(seconds: 10),
+        sendTimeout: const Duration(minutes: 5),
+        receiveTimeout: const Duration(seconds: 20),
+      ),
+    );
     try {
       await raw.put<void>(
         uploadUrl,
-        data: Stream<List<int>>.fromIterable([bytes]),
+        data: body,
         options: Options(
           contentType: contentType,
-          headers: {Headers.contentLengthHeader: bytes.length},
+          headers: {Headers.contentLengthHeader: contentLength},
         ),
+        onSendProgress: onSendProgress,
       );
+      debugPrint('[UploadService] PUT completed');
+    } on DioException catch (e) {
+      debugPrint(
+        '[UploadService] PUT failed: type=${e.type}, '
+        'status=${e.response?.statusCode}, message=${e.message}',
+      );
+      rethrow;
     } finally {
       raw.close();
     }
   }
 }
 
-final uploadServiceProvider =
-    Provider<UploadService>((ref) => UploadService(ref.watch(dioProvider)));
+final uploadServiceProvider = Provider<UploadService>(
+  (ref) => UploadService(ref.watch(dioProvider)),
+);

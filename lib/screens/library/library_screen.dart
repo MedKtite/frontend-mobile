@@ -29,12 +29,12 @@ enum _Filter {
   final String section;
 
   bool matches(Book b) => switch (this) {
-        _Filter.all => true,
-        _Filter.saved => b.status == 'archived',
-        _Filter.reading => b.status == 'reading',
-        _Filter.listening => b.status == 'listening',
-        _Filter.finished => b.status == 'finished',
-      };
+    _Filter.all => true,
+    _Filter.saved => b.status == 'archived',
+    _Filter.reading => b.status == 'reading',
+    _Filter.listening => b.status == 'listening',
+    _Filter.finished => b.status == 'finished',
+  };
 }
 
 class LibraryScreen extends ConsumerStatefulWidget {
@@ -74,7 +74,8 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     if (error == null) {
       ref.invalidate(libraryBooksProvider);
       messenger.showSnackBar(
-          appSnackBar('Removed “${book.title}”', SnackType.success));
+        appSnackBar('Removed “${book.title}”', SnackType.success),
+      );
     } else {
       messenger.showSnackBar(appSnackBar(error, SnackType.error));
     }
@@ -100,8 +101,9 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
             onPressed: () => Navigator.of(ctx).pop(true),
             child: Text(
               'Remove',
-              style: AppTypography.label(colors.accent)
-                  .copyWith(fontWeight: FontWeight.w600),
+              style: AppTypography.label(
+                colors.accent,
+              ).copyWith(fontWeight: FontWeight.w600),
             ),
           ),
         ],
@@ -113,16 +115,25 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     final booksAsync = ref.watch(libraryBooksProvider);
+    final books = booksAsync.valueOrNull;
+    final showFab = books != null && books.isNotEmpty;
 
     // Nav bar lives in AppShell (persistent across tabs) — not here.
     return Scaffold(
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => showAddToLibrarySheet(context),
-        backgroundColor: colors.text,
-        foregroundColor: colors.bg,
-        shape: const CircleBorder(),
-        child: const Icon(Icons.add),
-      ),
+      floatingActionButton: showFab
+          ? Padding(
+              padding: const EdgeInsets.only(
+                bottom: AppSpacing.xxxl + AppSpacing.xxxl + AppSpacing.md,
+              ),
+              child: FloatingActionButton(
+                onPressed: () => showAddToLibrarySheet(context),
+                backgroundColor: colors.text,
+                foregroundColor: colors.bg,
+                shape: const CircleBorder(),
+                child: const Icon(Icons.add),
+              ),
+            )
+          : null,
       body: SafeArea(
         bottom: false,
         child: booksAsync.when(
@@ -178,7 +189,27 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
             ),
           ],
           if (books.isEmpty)
-            const _EmptyLibrary()
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final screenHeight = MediaQuery.sizeOf(context).height;
+                final topInset = MediaQuery.paddingOf(context).top;
+                final emptyHeight =
+                    screenHeight -
+                    topInset -
+                    AppSpacing.xxxl * 5 -
+                    AppSpacing.xxxl * 2 -
+                    AppSpacing.lg;
+                return SizedBox(
+                  height: emptyHeight.clamp(
+                    AppSpacing.xxxl * 6,
+                    double.infinity,
+                  ),
+                  child: _EmptyLibrary(
+                    onAdd: () => showAddToLibrarySheet(context),
+                  ),
+                );
+              },
+            )
           else
             ..._libraryBody(books),
         ],
@@ -229,18 +260,19 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
         _BookGrid(books: visible, onDelete: _delete),
     ];
   }
-
 }
 
 class _EmptyLibrary extends StatelessWidget {
-  const _EmptyLibrary();
+  const _EmptyLibrary({required this.onAdd});
+
+  final VoidCallback onAdd;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    return Padding(
-      padding: const EdgeInsets.only(top: AppSpacing.xxxl),
+    return Center(
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
             Icons.auto_stories_outlined,
@@ -248,13 +280,28 @@ class _EmptyLibrary extends StatelessWidget {
             color: colors.text3,
           ),
           const SizedBox(height: AppSpacing.lg),
-          Text('Your library is empty.',
-              textAlign: TextAlign.center,
-              style: AppTypography.title3(colors.text)),
+          Text(
+            'Your library is empty.',
+            textAlign: TextAlign.center,
+            style: AppTypography.title3(colors.text),
+          ),
           const SizedBox(height: AppSpacing.sm),
-          Text('Tap + to add your first book.',
-              textAlign: TextAlign.center,
-              style: AppTypography.subtitle(colors.text2)),
+          Text(
+            'Add a book, ebook, or audiobook to get started.',
+            textAlign: TextAlign.center,
+            style: AppTypography.subtitle(colors.text2),
+          ),
+          const SizedBox(height: AppSpacing.xl),
+          FilledButton.icon(
+            onPressed: onAdd,
+            icon: const Icon(Icons.add, size: AppSpacing.xl),
+            label: Text(
+              'Add to your library',
+              style: AppTypography.label(
+                colors.bg,
+              ).copyWith(fontWeight: FontWeight.w600),
+            ),
+          ),
         ],
       ),
     );
@@ -323,8 +370,9 @@ class _Chip extends StatelessWidget {
         ),
         child: Text(
           '$label $count',
-          style: AppTypography.label(active ? colors.bg : colors.text2)
-              .copyWith(fontWeight: FontWeight.w500),
+          style: AppTypography.label(
+            active ? colors.bg : colors.text2,
+          ).copyWith(fontWeight: FontWeight.w500),
         ),
       ),
     );
@@ -332,10 +380,7 @@ class _Chip extends StatelessWidget {
 }
 
 class _BookGrid extends StatelessWidget {
-  const _BookGrid({
-    required this.books,
-    required this.onDelete,
-  });
+  const _BookGrid({required this.books, required this.onDelete});
   final List<Book> books;
   final ValueChanged<Book> onDelete;
 
@@ -346,7 +391,7 @@ class _BookGrid extends StatelessWidget {
       builder: (context, constraints) {
         final isTablet =
             MediaQuery.sizeOf(context).shortestSide >=
-                AppSpacing.tabletBreakpoint;
+            AppSpacing.tabletBreakpoint;
         if (isTablet) {
           return Wrap(
             spacing: gap,
@@ -413,7 +458,9 @@ class _ErrorRetry extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.pageHorizontal),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.pageHorizontal,
+      ),
       child: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -424,13 +471,17 @@ class _ErrorRetry extends StatelessWidget {
               color: colors.text3,
             ),
             const SizedBox(height: AppSpacing.lg),
-            Text("Couldn't load your library.",
-                textAlign: TextAlign.center,
-                style: AppTypography.title3(colors.text)),
+            Text(
+              "Couldn't load your library.",
+              textAlign: TextAlign.center,
+              style: AppTypography.title3(colors.text),
+            ),
             const SizedBox(height: AppSpacing.sm),
-            Text(message,
-                textAlign: TextAlign.center,
-                style: AppTypography.caption(colors.text2)),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: AppTypography.caption(colors.text2),
+            ),
             const SizedBox(height: AppSpacing.xl),
             OutlinedButton(onPressed: onRetry, child: const Text('Try again')),
           ],

@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -27,7 +29,8 @@ Future<void> showAddToLibrarySheet(BuildContext context) {
     // Light scrim: the sheet is frosted GLASS — it needs bright content
     // behind it to transmit. The default black54 turns the frost muddy.
     barrierColor: Colors.black.withValues(alpha: 0.18),
-    isScrollControlled: true, // size to content, not the default half-screen cap
+    isScrollControlled:
+        true, // size to content, not the default half-screen cap
     builder: (_) => const _AddToLibrarySheet(),
   );
 }
@@ -41,15 +44,15 @@ class _AddToLibrarySheet extends ConsumerStatefulWidget {
 
 class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
   bool _busy = false;
-
+  String _busyMessage = 'Preparing your book…';
 
   static String? _contentTypeFor(String ext) => switch (ext) {
-        'epub' => 'application/epub+zip',
-        'pdf' => 'application/pdf',
-        'm4b' => 'audio/mp4',
-        'mp3' => 'audio/mpeg',
-        _ => null,
-      };
+    'epub' => 'application/epub+zip',
+    'pdf' => 'application/pdf',
+    'm4b' => 'audio/mp4',
+    'mp3' => 'audio/mpeg',
+    _ => null,
+  };
 
   static String _titleFrom(String fileName) {
     final dot = fileName.lastIndexOf('.');
@@ -59,48 +62,124 @@ class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
   }
 
   Future<void> _pickAndUpload() async {
+    debugPrint('[AddBook] Opening file picker');
     final result = await FilePicker.pickFiles(
       type: FileType.custom,
       allowedExtensions: const ['epub', 'pdf', 'm4b', 'mp3'],
-      withData: true, // we PUT the bytes straight to S3
+      withData: true,
     );
-    if (result == null || result.files.isEmpty) return; // cancelled
+    if (result == null || result.files.isEmpty) {
+      debugPrint('[AddBook] File picker cancelled');
+      _toast('No file selected.');
+      return;
+    }
 
     final picked = result.files.single;
-    final bytes = picked.bytes;
     final ext = (picked.extension ?? '').toLowerCase();
+    debugPrint(
+      '[AddBook] Selected name=${picked.name}, extension=$ext, '
+      'path=${picked.path != null}, bytes=${picked.bytes?.length ?? 0}',
+    );
     final contentType = _contentTypeFor(ext);
-    if (bytes == null || contentType == null) {
+    if (contentType == null) {
       _toast('Unsupported file — pick an EPUB, PDF, M4B or MP3.');
+      return;
+    }
+    final bytes = picked.bytes;
+    final path = picked.path;
+    if ((bytes == null || bytes.isEmpty) && path == null) {
+      _toast('Could not read that file. Try downloading it locally first.');
       return;
     }
     if (!mounted) return; // the OS picker is an async gap
 
-    setState(() => _busy = true);
+    final title = _titleFrom(picked.name);
+    setState(() {
+      _busy = true;
+      _busyMessage = 'Preparing “$title”…';
+    });
     final messenger = ScaffoldMessenger.of(context);
     final router = GoRouter.of(context);
     final navigator = Navigator.of(context);
-    final title = _titleFrom(picked.name);
 
     try {
+      final file = path == null ? null : File(path);
+      final contentLength = file != null
+          ? await file.length()
+          : bytes!.length;
+      debugPrint(
+        '[AddBook] Upload source=${file != null ? 'file' : 'memory'}, '
+        'length=$contentLength, contentType=$contentType',
+      );
+      final body = file != null
+          ? file.openRead()
+          : Stream<List<int>>.fromIterable([bytes!]);
       final upload = ref.read(uploadServiceProvider);
-      final presigned = await upload.presign(PresignUploadRequest(
-        format: ext,
-        contentType: contentType,
-        contentLength: bytes.length,
-      ));
+      debugPrint('[AddBook] Requesting presigned upload');
+      if (mounted) {
+        setState(() => _busyMessage = 'Reserving upload space…');
+      }
+      final presigned = await upload.presign(
+        PresignUploadRequest(
+          format: ext,
+          contentType: contentType,
+          contentLength: contentLength,
+        ),
+      );
+      debugPrint(
+        '[AddBook] Presign succeeded, fileKey=${presigned.fileKey}, '
+        'method=${presigned.method}',
+      );
+      if (mounted) {
+        setState(() => _busyMessage = 'Uploading “$title”…');
+      }
       await upload.putToStorage(
         uploadUrl: presigned.uploadUrl,
-        bytes: bytes,
+        body: body,
+        contentLength: contentLength,
         contentType: contentType,
+        onSendProgress: (sent, total) {
+          if (!mounted || total <= 0) return;
+          final percent = (sent / total * 100).round();
+          if (percent == 1 || percent % 10 == 0) {
+            debugPrint('[AddBook] Storage upload progress=$percent%');
+          }
+          setState(() => _busyMessage = 'Uploading “$title”… $percent%');
+        },
       );
-      await ref.read(bookServiceProvider).create(BookCreateRequest(
-            title: title,
-            format: ext,
-            // Audio files land straight on the Listening shelf.
-            status: (ext == 'm4b' || ext == 'mp3') ? 'listening' : null,
-            fileKey: presigned.fileKey,
-          ));
+      debugPrint('[AddBook] Storage upload completed');
+      if (mounted) {
+        setState(() => _busyMessage = 'Saving “$title” to your library…');
+      }
+      final request = BookCreateRequest(
+        title: title,
+        format: ext,
+        // Audio files land straight on the Listening shelf.
+        status: (ext == 'm4b' || ext == 'mp3') ? 'listening' : null,
+        fileKey: presigned.fileKey,
+      );
+      final books = ref.read(bookServiceProvider);
+      var createAttempt = 0;
+      while (true) {
+        try {
+          await books.create(request);
+          break;
+        } on ApiError catch (e) {
+          final uploadNotVisible = e.message.toLowerCase().contains(
+            'upload not found',
+          );
+          if (!uploadNotVisible || createAttempt >= 2) rethrow;
+          createAttempt++;
+          debugPrint(
+            '[AddBook] Uploaded object not visible yet; retrying book '
+            'creation ($createAttempt/2)',
+          );
+          await Future<void>.delayed(
+            Duration(milliseconds: 500 * createAttempt),
+          );
+        }
+      }
+      debugPrint('[AddBook] Book creation completed');
       ref.invalidate(libraryBooksProvider);
       if (!mounted) return;
       navigator.pop(); // close the sheet
@@ -109,19 +188,38 @@ class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
         ..hideCurrentSnackBar()
         ..showSnackBar(appSnackBar('Added “$title”', SnackType.success));
     } on ApiError catch (e) {
+      debugPrint('[AddBook] API error: ${e.message}');
       if (!mounted) return;
       setState(() => _busy = false);
       messenger
         ..hideCurrentSnackBar()
         ..showSnackBar(appSnackBar(e.message, SnackType.error));
-    } on DioException catch (_) {
+    } on DioException catch (e) {
+      debugPrint(
+        '[AddBook] Dio error: type=${e.type}, status=${e.response?.statusCode}, '
+        'message=${e.message}',
+      );
       if (!mounted) return;
       setState(() => _busy = false);
       messenger
         ..hideCurrentSnackBar()
-        ..showSnackBar(appSnackBar(
-            'Upload failed — check your connection.', SnackType.error));
+        ..showSnackBar(appSnackBar(_uploadErrorMessage(e), SnackType.error));
+    } catch (e) {
+      debugPrint('[AddBook] Unexpected error: $e');
+      if (!mounted) return;
+      setState(() => _busy = false);
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          appSnackBar('Upload failed — ${e.toString()}', SnackType.error),
+        );
     }
+  }
+
+  String _uploadErrorMessage(DioException error) {
+    final status = error.response?.statusCode;
+    if (status != null) return 'Upload failed — storage returned HTTP $status.';
+    return 'Upload failed — check your connection.';
   }
 
   void _toast(String message) =>
@@ -157,48 +255,51 @@ class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
   }
 
   List<Widget> _uploading(AppColorsExtension colors) => [
-        Text('Add to library', style: AppTypography.title2(colors.text)),
-        const SizedBox(height: AppSpacing.xxxl),
-        CircularProgressIndicator(color: colors.accent),
-        const SizedBox(height: AppSpacing.lg),
-        Text(
-          'Uploading your book…',
-          style: AppTypography.subtitle(colors.text2),
-        ),
-        const SizedBox(height: AppSpacing.xxxl),
-      ];
+    Text('Add to library', style: AppTypography.title2(colors.text)),
+    const SizedBox(height: AppSpacing.xxxl),
+    CircularProgressIndicator(color: colors.accent),
+    const SizedBox(height: AppSpacing.lg),
+    Text(
+      _busyMessage,
+      textAlign: TextAlign.center,
+      style: AppTypography.subtitle(colors.text2),
+    ),
+    const SizedBox(height: AppSpacing.xxxl),
+  ];
 
   List<Widget> _options(AppColorsExtension colors) => [
-        Text('Add to library', style: AppTypography.title2(colors.text)),
-        const SizedBox(height: AppSpacing.xs),
-        Text(
-          'Bring your own books.',
-          style: AppTypography.subtitle(colors.text2),
-        ),
-        const SizedBox(height: AppSpacing.xl),
-        
-        _AddOption(
-          icon: Icons.file_upload_outlined,
-          title: 'Upload a file',
-          subtitle: 'EPUB · PDF · M4B · MP3',
-          onTap: _pickAndUpload,
-        ),
-        const SizedBox(height: AppSpacing.md),
-        _AddOption(
-          icon: Icons.qr_code_scanner,
-          title: 'Scan an ISBN',
-          subtitle: 'Point your camera at the back cover',
-          onTap: () => _stub('ISBN scan'),
-        ),
-        const SizedBox(height: AppSpacing.md),
-        _AddOption(
-          icon: Icons.menu_book_outlined,
-          title: 'Log a physical book',
-          subtitle: 'Track a book you read on paper',
-          onTap: () => _stub('Logging a physical book'),
-        ),
+    Text('Add to library', style: AppTypography.title2(colors.text)),
+    const SizedBox(height: AppSpacing.xs),
+    Text('Bring your own books.', style: AppTypography.subtitle(colors.text2)),
+    const SizedBox(height: AppSpacing.xl),
 
-      ];
+    _AddOption(
+      icon: Icons.file_upload_outlined,
+      title: 'Upload a file',
+      subtitle: 'EPUB · PDF · M4B · MP3',
+      onTap: _pickAndUpload,
+    ),
+    const SizedBox(height: AppSpacing.md),
+    _AddOption(
+      icon: Icons.qr_code_scanner,
+      title: 'Scan an ISBN',
+      subtitle: 'Point your camera at the back cover',
+      onTap: () => _stub('ISBN scan'),
+    ),
+    const SizedBox(height: AppSpacing.md),
+    _AddOption(
+      icon: Icons.search,
+      title: 'Search for a book',
+      subtitle: 'Find titles from Google Books and Gutenberg',
+      onTap: _openDiscovery,
+    ),
+  ];
+
+  void _openDiscovery() {
+    final router = GoRouter.of(context);
+    Navigator.of(context).pop();
+    router.go(Routes.discovery);
+  }
 
   // The remaining add flows aren't built yet — close the sheet and acknowledge.
   void _stub(String what) {
@@ -235,10 +336,7 @@ class _AddOption extends StatelessWidget {
         borderRadius: AppRadii.brLg,
         child: Container(
           padding: const EdgeInsets.all(AppSpacing.md),
-          decoration: BoxDecoration(
-            borderRadius: AppRadii.brLg,
-          
-          ),
+          decoration: BoxDecoration(borderRadius: AppRadii.brLg),
           child: Row(
             children: [
               // Translucent accent tint, not an opaque surface — the glass
@@ -262,8 +360,9 @@ class _AddOption extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: AppTypography.body(colors.text)
-                          .copyWith(fontWeight: FontWeight.w600),
+                      style: AppTypography.body(
+                        colors.text,
+                      ).copyWith(fontWeight: FontWeight.w600),
                     ),
                     const SizedBox(height: AppSpacing.xs),
                     Text(subtitle, style: AppTypography.caption(colors.text2)),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:marginalia/screens/notifications/notifications.dart';
 
 import '../models/book.dart';
 import '../models/catalog_book.dart';
@@ -42,26 +43,22 @@ abstract final class Routes {
   /// Margins — the annotation hub (was the Search tab).
   static const margins = '/margins';
   static const library = '/library';
+  static const notifications = '/notifications';
   static const settings = '/settings';
   static const insights = '/insights';
 
   /// Marginalia Pro paywall — store IAP via RevenueCat.
   static const paywall = '/paywall';
 
-
   static const reading = '/reading';
   static String readingPath(String bookId) => '$reading/$bookId';
   static String readingSamplePath({
     required String identifier,
     required String title,
-  }) =>
-      Uri(
-        path: readingPath('sample'),
-        queryParameters: {
-          'sampleIdentifier': identifier,
-          'sampleTitle': title,
-        },
-      ).toString();
+  }) => Uri(
+    path: readingPath('sample'),
+    queryParameters: {'sampleIdentifier': identifier, 'sampleTitle': title},
+  ).toString();
 
   /// Full-screen audio player (Figma 235:2 "Reading · audio").
   static const listening = '/listening';
@@ -104,9 +101,7 @@ GoRouter createAppRouter({required bool isFirstLaunch}) => GoRouter(
     GoRoute(
       path: Routes.forgotPassword,
       builder: (context, state) => _AuthGuard(
-        child: ForgotPasswordScreen(
-          initialEmail: state.extra as String? ?? '',
-        ),
+        child: ForgotPasswordScreen(initialEmail: state.extra as String? ?? ''),
       ),
     ),
     GoRoute(
@@ -117,9 +112,8 @@ GoRouter createAppRouter({required bool isFirstLaunch}) => GoRouter(
     ),
     GoRoute(
       path: Routes.resetPassword,
-      builder: (context, state) => ResetPasswordScreen(
-        token: state.uri.queryParameters['token'] ?? '',
-      ),
+      builder: (context, state) =>
+          ResetPasswordScreen(token: state.uri.queryParameters['token'] ?? ''),
     ),
     // The main tabs live inside ONE persistent shell: the glass nav bar
     // is built once (in AppShell) and never rebuilds on tab switches; each
@@ -128,41 +122,57 @@ GoRouter createAppRouter({required bool isFirstLaunch}) => GoRouter(
       builder: (context, state, navigationShell) =>
           AppShell(shell: navigationShell),
       branches: [
-        StatefulShellBranch(routes: [
-          GoRoute(
-            path: Routes.home,
-            builder: (context, state) => const HomeScreen(),
-          ),
-        ]),
-        StatefulShellBranch(routes: [
-          GoRoute(
-            path: Routes.discovery,
-            builder: (context, state) => const DiscoveryScreen(),
-          ),
-        ]),
-        StatefulShellBranch(routes: [
-          GoRoute(
-            path: Routes.library,
-            builder: (context, state) => const LibraryScreen(),
-          ),
-        ]),
-        StatefulShellBranch(routes: [
-          GoRoute(
-            path: Routes.margins,
-            builder: (context, state) => const MarginsScreen(),
-          ),
-        ]),
-        StatefulShellBranch(routes: [
-          GoRoute(
-            path: Routes.insights,
-            builder: (context, state) => const InsightsScreen(),
-          ),
-        ]),
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: Routes.home,
+              builder: (context, state) => const HomeScreen(),
+            ),
+          ],
+        ),
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: Routes.discovery,
+              builder: (context, state) => DiscoveryScreen(
+                initialCategory: state.uri.queryParameters['category'],
+              ),
+            ),
+          ],
+        ),
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: Routes.library,
+              builder: (context, state) => const LibraryScreen(),
+            ),
+          ],
+        ),
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: Routes.margins,
+              builder: (context, state) => const MarginsScreen(),
+            ),
+          ],
+        ),
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: Routes.insights,
+              builder: (context, state) => const InsightsScreen(),
+            ),
+          ],
+        ),
       ],
     ),
     GoRoute(
       path: Routes.settings,
       builder: (context, state) => const SettingsScreen(),
+    ),
+    GoRoute(
+      path: Routes.notifications,
+      builder: (context, state) => const NotificationsScreen(),
     ),
     GoRoute(
       path: Routes.paywall,
@@ -175,8 +185,7 @@ GoRouter createAppRouter({required bool isFirstLaunch}) => GoRouter(
     ),
     GoRoute(
       path: Routes.bookDetail,
-      builder: (context, state) =>
-          BookDetailScreen(book: state.extra as Book),
+      builder: (context, state) => BookDetailScreen(book: state.extra as Book),
     ),
     GoRoute(
       path: Routes.catalogBook,

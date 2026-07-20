@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
@@ -10,15 +11,16 @@ import '../../app/theme/tokens/spacing.dart';
 import '../../app/theme/tokens/typography.dart';
 import '../../models/book.dart';
 import '../../models/catalog_book.dart';
+import '../../models/insights_response.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/author_provider.dart';
 import '../../providers/home_provider.dart';
+import '../../providers/insights_provider.dart';
 import '../../providers/library_provider.dart';
 import '../../providers/recommendations_provider.dart';
 import '../../providers/state/auth_state.dart';
 import '../../providers/state/home_state.dart';
 import '../../providers/trending_provider.dart';
-import '../../widgets/add_to_library_sheet.dart';
 import '../../widgets/author_avatar.dart';
 import '../../widgets/book_card.dart';
 import '../../widgets/book_cover.dart';
@@ -47,17 +49,31 @@ class HomeScreen extends ConsumerWidget {
         user?.shortName ?? user?.displayName.split(' ').first ?? 'reader';
     final initial =
         user?.avatarInitial ?? (name.isEmpty ? '?' : name[0].toUpperCase());
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     // Nav bar lives in AppShell (persistent across tabs) — not here.
-    return Scaffold(
-      body: SafeArea(
-        bottom: false,
-        child: switch (state) {
-          HomeLoading() => Center(
-            child: CircularProgressIndicator(color: colors.accent),
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+        statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
+      ),
+      child: Scaffold(
+        body: switch (state) {
+          HomeLoading() => SafeArea(
+            bottom: false,
+            child: Center(
+              child: CircularProgressIndicator(color: colors.accent),
+            ),
           ),
-          HomeEmpty() => _EmptyHome(
-            onAdd: () => showAddToLibrarySheet(context),
+          HomeEmpty() => _PopulatedHome(
+            greetingName: name,
+            avatarInitial: initial,
+            continueReading: null,
+            passage: null,
+            listening: null,
+            onResume: () {},
+            onPlay: () {},
           ),
           HomeLoaded(
             :final continueReading,
@@ -79,138 +95,17 @@ class HomeScreen extends ConsumerWidget {
                 if (l != null) context.push(Routes.listeningPath(l.id));
               },
             ),
-          HomeError(:final message) => _ErrorState(
-            message: message,
-            onRetry: () => ref.read(homeProvider.notifier).load(),
+          HomeError(:final message) => SafeArea(
+            bottom: false,
+            child: _ErrorState(
+              message: message,
+              onRetry: () => ref.read(homeProvider.notifier).load(),
+            ),
           ),
         },
       ),
     );
   }
-}
-
-// ─────────────────────────────────────────────────────────── Empty state ──
-
-class _EmptyHome extends StatelessWidget {
-  const _EmptyHome({required this.onAdd});
-
-  final VoidCallback onAdd;
-
-  static const _formats = ['EPUB', 'PDF', 'M4B', 'MP3'];
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.pageHorizontal,
-      ),
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            CustomPaint(
-              size: const Size(104, 70),
-              painter: _OpenBookPainter(colors.text2),
-            ),
-            const SizedBox(height: AppSpacing.xxl),
-            Text(
-              'Your library begins here.',
-              textAlign: TextAlign.center,
-              style: AppTypography.title1(colors.text),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              'Add a book, ebook, or audiobook\nto get started',
-              textAlign: TextAlign.center,
-              style: AppTypography.subtitle(colors.text2),
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            FilledButton.icon(
-              onPressed: onAdd,
-              icon: const Icon(Icons.add, size: 20),
-              label: const Text('Add your first book'),
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            Wrap(
-              spacing: AppSpacing.sm,
-              children: [for (final f in _formats) _FormatChip(label: f)],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _FormatChip extends StatelessWidget {
-  const _FormatChip({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.xs,
-      ),
-      decoration: BoxDecoration(
-        color: colors.surface2,
-        borderRadius: AppRadii.brFull,
-      ),
-      child: Text(
-        label,
-        style: AppTypography.caption(
-          colors.text3,
-        ).copyWith(fontWeight: FontWeight.w500),
-      ),
-    );
-  }
-}
-
-/// Two-page open-book line drawing for the empty state.
-class _OpenBookPainter extends CustomPainter {
-  const _OpenBookPainter(this.color);
-
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5
-      ..strokeCap = StrokeCap.round
-      ..color = color;
-
-    const gap = 8.0;
-    final pageW = (size.width - gap) / 2;
-    for (final left in [0.0, pageW + gap]) {
-      canvas.drawRRect(
-        RRect.fromLTRBR(
-          left,
-          0,
-          left + pageW,
-          size.height,
-          const Radius.circular(3),
-        ),
-        paint,
-      );
-      const inset = 9.0;
-      for (var i = 1; i <= 4; i++) {
-        final y = size.height * i / 5;
-        canvas.drawLine(
-          Offset(left + inset, y),
-          Offset(left + pageW - inset, y),
-          paint,
-        );
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(_OpenBookPainter old) => old.color != color;
 }
 
 // ──────────────────────────────────────────────────────────── Error state ──
@@ -277,112 +172,324 @@ class _PopulatedHome extends StatelessWidget {
   final VoidCallback onResume;
   final VoidCallback onPlay;
 
-  String get _greeting {
-    final h = DateTime.now().hour;
-    if (h < 12) return 'Good morning,';
-    if (h < 18) return 'Good afternoon,';
-    return 'Good evening,';
-  }
-
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
-
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.pageHorizontal,
-        AppSpacing.md,
-        AppSpacing.pageHorizontal,
-        _navClearance,
-      ),
+      padding: const EdgeInsets.only(bottom: _navClearance),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _Header(avatarInitial: avatarInitial),
-          const SizedBox(height: AppSpacing.xl),
-          Text.rich(
-            TextSpan(
-              style: AppTypography.display(colors.text),
+          _HomeHero(greetingName: greetingName, avatarInitial: avatarInitial),
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.pageHorizontal,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                TextSpan(text: '$_greeting\n'),
-                TextSpan(
-                  text: '$greetingName.',
-                  style: const TextStyle(fontStyle: FontStyle.italic),
-                ),
+                const SizedBox(height: AppSpacing.xxl),
+                const _TrendingSection(),
+                const _CategorySection(),
+                if (continueReading != null) ...[
+                  _ContinueReadingCard(
+                    book: continueReading!,
+                    onResume: onResume,
+                  ),
+                  const SizedBox(height: AppSpacing.xxl),
+                ],
+                _ContinueRow(excludeId: continueReading?.id),
+                const _TopAuthorsSection(),
+                const _RecommendedSection(),
+                if (passage != null) ...[
+                  _SectionLabel('PASSAGE OF THE DAY'),
+                  const SizedBox(height: AppSpacing.lg),
+                  _PassageBlock(passage: passage!),
+                  const SizedBox(height: AppSpacing.xxl),
+                ],
+                if (listening != null) ...[
+                  _SectionLabel('STILL LISTENING TO'),
+                  const SizedBox(height: AppSpacing.md),
+                  _ListeningCard(item: listening!, onPlay: onPlay),
+                ],
               ],
             ),
           ),
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            'Settle in. The page is still warm.',
-            style: AppTypography.subtitle(colors.text2),
-          ),
-          const SizedBox(height: AppSpacing.xxl),
-          const _TrendingSection(),
-          if (continueReading != null) ...[
-            _ContinueReadingCard(book: continueReading!, onResume: onResume),
-            const SizedBox(height: AppSpacing.xxl),
-          ],
-          _ContinueRow(excludeId: continueReading?.id),
-          const _TopAuthorsSection(),
-          const _RecommendedSection(),
-          if (passage != null) ...[
-            _SectionLabel('PASSAGE OF THE DAY'),
-            const SizedBox(height: AppSpacing.lg), // Figma 266:2: 16 to quote
-            _PassageBlock(passage: passage!),
-            const SizedBox(height: AppSpacing.xxl),
-          ],
-          if (listening != null) ...[
-            _SectionLabel('STILL LISTENING TO'),
-            const SizedBox(height: AppSpacing.md),
-            _ListeningCard(item: listening!, onPlay: onPlay),
-          ],
         ],
       ),
     );
   }
 }
 
-class _Header extends StatelessWidget {
-  const _Header({required this.avatarInitial});
+class _HomeHero extends ConsumerWidget {
+  const _HomeHero({required this.greetingName, required this.avatarInitial});
 
+  final String greetingName;
   final String avatarInitial;
 
+  String get _greeting {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return 'Good morning,';
+    if (hour < 18) return 'Good afternoon,';
+    return 'Good evening,';
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.appColors;
     final now = DateTime.now();
     final date =
         '${DateFormat('EEE').format(now)} · ${DateFormat('MMM d').format(now)}'
             .toUpperCase();
+    final summary = ref.watch(insightsProvider).valueOrNull?.summary;
 
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Stack(
       children: [
-        Text('MARGINALIA', style: AppTypography.overline(colors.text3)),
-        Row(
-          children: [
-            Text(date, style: AppTypography.label(colors.text2)),
-            const SizedBox(width: AppSpacing.md),
-            Material(
-              color: colors.surface.withValues(alpha: 0),
-              shape: CircleBorder(side: BorderSide(color: colors.border)),
-              child: InkWell(
-                onTap: () => context.push(Routes.settings),
-                customBorder: const CircleBorder(),
-                child: SizedBox.square(
-                  dimension: AppSpacing.xxl + AppSpacing.sm,
-                  child: Center(
-                    child: Text(
-                      avatarInitial,
-                      style: AppTypography.label(colors.text2)
-                          .copyWith(fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                ),
+        Positioned.fill(
+          child: Image.asset(
+            'lib/assets/images/header_bg.png',
+            fit: BoxFit.cover,
+            alignment: Alignment.topRight,
+          ),
+        ),
+        Positioned.fill(
+          child: ColoredBox(
+            color: colors.bg.withValues(
+              alpha: Theme.of(context).brightness == Brightness.dark
+                  ? 0.52
+                  : 0.06,
+            ),
+          ),
+        ),
+        Positioned.fill(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
+                colors: [
+                  colors.surface,
+                  colors.surface.withValues(alpha: 0.94),
+                  colors.surface.withValues(alpha: 0),
+                ],
               ),
             ),
+          ),
+        ),
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: 0,
+          height: AppSpacing.xxl,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [colors.bg.withValues(alpha: 0), colors.bg],
+              ),
+            ),
+          ),
+        ),
+        Padding(
+          padding: EdgeInsets.fromLTRB(
+            AppSpacing.pageHorizontal,
+            MediaQuery.paddingOf(context).top + AppSpacing.md,
+            AppSpacing.pageHorizontal,
+            AppSpacing.xxxl,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Text(date, style: AppTypography.overline(colors.text2)),
+                  const SizedBox(width: AppSpacing.md),
+                  _HeroAction(
+                    onTap: () => context.push(Routes.settings),
+                    child: Text(
+                      avatarInitial,
+                      style: AppTypography.label(
+                        colors.text,
+                      ).copyWith(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  _HeroAction(
+                    onTap: () => context.push(Routes.notifications),
+                    child: Icon(
+                      Icons.notifications_outlined,
+                      size: AppSpacing.xl,
+                      color: colors.text,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.md),
+              Text(
+                _greeting,
+                style: AppTypography.title3(
+                  colors.text,
+                ).copyWith(fontStyle: FontStyle.italic),
+              ),
+              Text.rich(
+                TextSpan(
+                  style: AppTypography.display(
+                    colors.text,
+                  ).copyWith(fontStyle: FontStyle.italic),
+                  children: [
+                    TextSpan(text: greetingName),
+                    TextSpan(
+                      text: '.',
+                      style: AppTypography.display(
+                        colors.gilt,
+                      ).copyWith(fontStyle: FontStyle.italic),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              ConstrainedBox(
+                constraints: const BoxConstraints(
+                  maxWidth: AppSpacing.tabletSidebarExpanded,
+                ),
+                child: Text(
+                  'Welcome to your reading journey.\n'
+                  "Let's discover something great today.",
+                  style: AppTypography.caption(
+                    colors.text2,
+                  ).copyWith(fontStyle: FontStyle.italic),
+                ),
+              ),
+              if (summary != null &&
+                  (summary.booksReadThisYear > 0 ||
+                      summary.minutesReadThisWeek > 0 ||
+                      summary.currentStreakDays > 0 ||
+                      summary.highlightsCount > 0)) ...[
+                const SizedBox(height: AppSpacing.xl),
+                _HeroStats(summary: summary),
+              ],
+              // _pubCard(),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+
+
+class _HeroAction extends StatelessWidget {
+  const _HeroAction({required this.onTap, required this.child});
+
+  final VoidCallback onTap;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Material(
+      color: colors.surface.withValues(alpha: 0.7),
+      shape: CircleBorder(side: BorderSide(color: colors.border)),
+      child: InkWell(
+        onTap: onTap,
+        customBorder: const CircleBorder(),
+        child: SizedBox.square(
+          dimension: AppSpacing.xxl + AppSpacing.sm,
+          child: Center(child: child),
+        ),
+      ),
+    );
+  }
+}
+
+class _HeroStats extends StatelessWidget {
+  const _HeroStats({required this.summary});
+
+  final InsightsSummary? summary;
+
+  String get _readingTime {
+    final minutes = summary?.minutesReadThisWeek;
+    if (minutes == null) return '—';
+    if (minutes < 60) return '${minutes}m';
+    return '${minutes ~/ 60}h';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final stats = [
+      (
+        icon: Icons.menu_book_outlined,
+        value: '${summary?.booksReadThisYear ?? '—'}',
+        label: 'Books\nRead',
+      ),
+      (
+        icon: Icons.schedule_outlined,
+        value: _readingTime,
+        label: 'Reading\nTime',
+      ),
+      (
+        icon: Icons.local_fire_department_outlined,
+        value: '${summary?.currentStreakDays ?? '—'}',
+        label: 'Day\nStreak',
+      ),
+      (
+        icon: Icons.bookmark_border,
+        value: '${summary?.highlightsCount ?? '—'}',
+        label: 'Quotes\nSaved',
+      ),
+    ];
+
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: colors.surface.withValues(alpha: 0.86),
+        borderRadius: AppRadii.brLg,
+        border: Border.all(color: colors.border),
+        boxShadow: [
+          BoxShadow(
+            color: colors.text.withValues(alpha: 0.06),
+            blurRadius: AppSpacing.md,
+            offset: const Offset(0, AppSpacing.xs),
+          ),
+        ],
+      ),
+      child: IntrinsicHeight(
+        child: Row(
+          children: [
+            for (var index = 0; index < stats.length; index++) ...[
+              Expanded(child: _HeroStatCell(stat: stats[index])),
+              if (index != stats.length - 1)
+                VerticalDivider(color: colors.border, width: AppSpacing.xs),
+            ],
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _HeroStatCell extends StatelessWidget {
+  const _HeroStatCell({required this.stat});
+
+  final ({IconData icon, String value, String label}) stat;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(stat.icon, size: AppSpacing.xl, color: colors.gilt),
+        const SizedBox(height: AppSpacing.sm),
+        Text(stat.value, style: AppTypography.title3(colors.text)),
+        const SizedBox(height: AppSpacing.xs),
+        Text(
+          stat.label,
+          textAlign: TextAlign.center,
+          style: AppTypography.caption(colors.text2),
         ),
       ],
     );
@@ -621,6 +728,102 @@ class _TrendingSection extends ConsumerWidget {
   }
 }
 
+class _CategorySection extends StatelessWidget {
+  const _CategorySection();
+
+  static const _categories = [
+    (label: 'Classics', icon: Icons.account_balance_outlined),
+    (label: 'Fiction', icon: Icons.menu_book_outlined),
+    (label: 'Self Help', icon: Icons.eco_outlined),
+    (label: 'Business', icon: Icons.business_center_outlined),
+    (label: 'History', icon: Icons.hourglass_bottom_outlined),
+    (label: 'Biography', icon: Icons.person_outline),
+  ];
+
+  String _pathFor(String category) => Uri(
+    path: Routes.discovery,
+    queryParameters: {'category': category},
+  ).toString();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            _SectionLabel('EXPLORE BY CATEGORY'),
+            GestureDetector(
+              onTap: () => context.go(Routes.discovery),
+              child: Text(
+                'See all',
+                style: AppTypography.caption(
+                  colors.text2,
+                ).copyWith(fontWeight: FontWeight.w500),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.md),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              for (var index = 0; index < _categories.length; index++) ...[
+                if (index > 0) const SizedBox(width: AppSpacing.md),
+                Builder(
+                  builder: (context) {
+                    final category = _categories[index];
+                    final warm = index.isEven;
+                    return GestureDetector(
+                      onTap: () => context.go(_pathFor(category.label)),
+                      child: SizedBox(
+                        width: AppSpacing.xxxl + AppSpacing.xl,
+                        child: Column(
+                          children: [
+                            Container(
+                              width: 52,
+                              height: 52,
+                              decoration: BoxDecoration(
+                                color: warm
+                                    ? colors.accentSoft
+                                    : colors.surface2,
+                                shape: BoxShape.circle,
+                              ),
+                              alignment: Alignment.center,
+                              child: Icon(
+                                category.icon,
+                                size: AppSpacing.xl,
+                                color: warm ? colors.gilt : colors.text2,
+                              ),
+                            ),
+                            const SizedBox(height: AppSpacing.sm),
+                            Text(
+                              category.label,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center,
+                              style: AppTypography.caption(colors.text2),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ],
+          ),
+        ),
+        const SizedBox(height: AppSpacing.xxl),
+      ],
+    );
+  }
+}
+
 /// "Top authors" — the most-downloaded Gutenberg authors, with Wikipedia
 /// portraits. Tap → the author profile (bio + their books).
 class _TopAuthorsSection extends ConsumerWidget {
@@ -742,14 +945,28 @@ class _RecommendedSection extends ConsumerWidget {
       );
     } else {
       content = const _DiscoveryStatus(
-        message: 'Search for books to shape your recommendations.',
+        message: 'Recommendations are warming up. Try Discovery meanwhile.',
       );
     }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _SectionLabel('RECOMMENDED FOR YOU'),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            _SectionLabel('RECOMMENDED FOR YOU'),
+            GestureDetector(
+              onTap: () => context.go(Routes.discovery),
+              child: Text(
+                'See all',
+                style: AppTypography.caption(
+                  context.appColors.text2,
+                ).copyWith(fontWeight: FontWeight.w500),
+              ),
+            ),
+          ],
+        ),
         const SizedBox(height: AppSpacing.md),
         content,
         const SizedBox(height: AppSpacing.xxl),

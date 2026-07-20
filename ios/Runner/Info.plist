@@ -24,6 +24,14 @@
 				<string>marginalia</string>
 			</array>
 		</dict>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.marginalia.oauth</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>marginalia-auth</string>
+			</array>
+		</dict>
 	</array>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>

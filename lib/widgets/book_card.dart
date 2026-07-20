@@ -47,8 +47,8 @@ class BookCard extends StatelessWidget {
               child: BookCover(
                 title: title,
                 author: author ?? '',
-                bg: colors.surface2,
-                fg: colors.text2,
+                bg: colors.accent,
+                fg: colors.surface,
                 coverUrl: coverUrl,
                 width: width,
               ),

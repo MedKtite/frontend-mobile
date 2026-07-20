@@ -12,12 +12,24 @@ class AuthService {
   final Dio _dio;
   AuthService(this._dio);
 
-  Future<User> register(RegisterRequest req) async {
+  Future<User> register(RegisterRequest req, {bool emailUpdates = false}) async {
     final res = await _dio.post<Map<String, dynamic>>(
       '/auth/register',
       data: req.toJson(),
     );
-    return User.fromJson(res.data!);
+    final user = User.fromJson(res.data!);
+
+    try {
+      final preferences = await _dio.get<Map<String, dynamic>>('/me/notifications');
+      final categories = Map<String, dynamic>.from(
+        (preferences.data?['categories'] as Map?) ?? const <String, dynamic>{},
+      )..['email_updates'] = emailUpdates;
+      await _dio.patch<void>('/me/notifications', data: {'categories': categories});
+    } on ApiError {
+      // Registration succeeded; preference sync is non-fatal.
+    }
+
+    return user;
   }
 
   Future<User> login(LoginRequest req) async {

@@ -12,9 +12,9 @@ import '../../core/widgets/app_text_field.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/state/auth_state.dart';
 import '../../services/frontend/auth_validators.dart';
+import '../../services/frontend/social_auth_service.dart';
 import '../../widgets/auth_scaffold.dart';
 import '../../widgets/glass_panel.dart';
-
 /// Login — authenticate a returning user (frame `78:66`).
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -24,6 +24,10 @@ class LoginScreen extends ConsumerStatefulWidget {
 }
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
+  final _socialAuth = SocialAuthService();
+
+  void _comingSoon(String what) => showAppSnack(context, '$what — coming soon');
+
   final _formKey = GlobalKey<FormState>();
   final _email = TextEditingController();
   final _password = TextEditingController();
@@ -52,7 +56,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     if (_passwordError != null) setState(() => _passwordError = null);
   }
 
-  void _comingSoon(String what) => showAppSnack(context, '$what — coming soon');
+  Future<void> _socialLogin(String provider) async {
+    try {
+      final token = provider == 'Google'
+          ? await _socialAuth.signInWithGoogle()
+          : await _socialAuth.signInWithX();
+      if (token == null || !mounted) return;
+      final auth = ref.read(authProvider.notifier);
+      if (provider == 'Google') {
+        await auth.loginWithGoogle(token: token);
+      } else {
+        await auth.loginWithX(token: token);
+      }
+    } on SocialAuthException catch (e) {
+      if (mounted) showAppSnack(context, e.message, type: SnackType.error);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -188,13 +207,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             glyph: 'google',
             label: 'Continue with Google',
             monochrome: false,
-            onPressed: () => _comingSoon('Google sign-in'),
+            onPressed: () => _socialLogin('Google'),
           ),
           const SizedBox(height: AppSpacing.md),
           SocialAuthButton(
             glyph: 'devicon_twitter',
             label: 'Continue with X',
-            onPressed: () => _comingSoon('X sign-in'),
+            onPressed: () => _socialLogin('X'),
           ),
         ],
       ),
