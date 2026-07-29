@@ -11,6 +11,7 @@ import '../../core/widgets/app_text_field.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/state/auth_state.dart';
 import '../../services/frontend/auth_validators.dart';
+import '../../services/frontend/auth_error_messages.dart';
 import '../../widgets/auth_scaffold.dart';
 import '../../widgets/glass_panel.dart';
 
@@ -70,7 +71,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
     }
     final state = ref.read(authProvider);
     if (state is AuthUnauthenticated && state.message != null) {
-      showAppSnack(context, state.message!, type: SnackType.error);
+      showAppSnack(context, AuthErrorMessages.from(state.message, context: AuthErrorContext.resetPassword), type: SnackType.error);
     }
   }
 

@@ -43,6 +43,7 @@ dependencies:
   flutter_web_auth_2: ^5.0.3
   crypto: ^3.0.6
   http: ^1.2.2
+  archive: ^3.6.1
   # Audiobook playback (Listen Now) — streams the presigned S3 URL.
   just_audio: ^0.9.40
   # In-app purchases via RevenueCat (brokers App Store / Play Store IAP —

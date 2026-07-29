@@ -117,21 +117,6 @@ class _CatalogBookScreenState extends ConsumerState<CatalogBookScreen> {
     await _showStores();
   }
 
-  void _readSample() {
-    final identifier = book.googleId ?? book.previewUrl;
-    if (identifier == null || identifier.isEmpty) {
-      showAppSnack(
-        context,
-        'This sample is not available right now.',
-        type: SnackType.error,
-      );
-      return;
-    }
-    context.push(
-      Routes.readingSamplePath(identifier: identifier, title: book.title),
-    );
-  }
-
   Future<void> _showStores() async {
     final colors = context.appColors;
     await showAdaptiveModal<void>(
@@ -351,7 +336,7 @@ class _CatalogBookScreenState extends ConsumerState<CatalogBookScreen> {
                       ],
                       // Metadata-only titles keep the get/request/upload
                       // stack in the body; readable ones get the pinned CTA.
-                      if (!book.isReadable) ...[
+                      if (!book.isReadable && ownedBook == null) ...[
                         const SizedBox(height: AppSpacing.xl),
                         _storeActions(colors),
                       ],
@@ -514,28 +499,12 @@ class _CatalogBookScreenState extends ConsumerState<CatalogBookScreen> {
     );
   }
 
-  // ── METADATA_ONLY: buy · sample · upload ──────────────────────────────
+  // ── METADATA_ONLY: buy · upload ───────────────────────────────────────
 
   Widget _storeActions(AppColorsExtension colors) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (book.previewUrl != null) ...[
-          const SizedBox(height: AppSpacing.xs),
-          TextButton.icon(
-            onPressed: _readSample,
-            icon: Icon(
-              Icons.auto_stories_outlined,
-              size: 18,
-              color: colors.accent,
-            ),
-            label: Text(
-              'Google Preview',
-              style: AppTypography.label(colors.accent),
-            ),
-          ),
-        ],
-        const SizedBox(height: AppSpacing.lg),
         FilledButton(
           onPressed: _buyNow,
           style: FilledButton.styleFrom(

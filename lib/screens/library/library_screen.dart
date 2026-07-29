@@ -11,11 +11,13 @@ import '../../core/dio_client.dart';
 import '../../core/widgets/app_snackbar.dart';
 import '../../core/widgets/app_text_field.dart';
 import '../../models/book.dart';
+import '../../providers/book_file_provider.dart';
 import '../../providers/library_provider.dart';
 import '../../services/backend/book_service.dart';
 import '../../widgets/add_to_library_sheet.dart';
 import '../../widgets/book_card.dart';
 import '../../widgets/book_cover.dart';
+import '../../widgets/delete_book_dialog.dart';
 
 enum _Filter {
   all('All', 'RECENTLY ADDED'),
@@ -66,6 +68,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     String? error;
     try {
       await ref.read(bookServiceProvider).delete(book.id);
+      await deleteCachedBookFiles(book.id);
     } on ApiError catch (e) {
       error = e.message;
     }
@@ -82,32 +85,9 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
   }
 
   Future<bool?> _confirmRemove(Book book) {
-    final colors = context.appColors;
     return showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: colors.surface,
-        title: Text('Remove book?', style: AppTypography.title3(colors.text)),
-        content: Text(
-          '“${book.title}” will be removed from your library.',
-          style: AppTypography.subtitle(colors.text2),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text('Cancel', style: AppTypography.label(colors.text2)),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text(
-              'Remove',
-              style: AppTypography.label(
-                colors.accent,
-              ).copyWith(fontWeight: FontWeight.w600),
-            ),
-          ),
-        ],
-      ),
+      builder: (_) => DeleteBookDialog(title: book.title),
     );
   }
 

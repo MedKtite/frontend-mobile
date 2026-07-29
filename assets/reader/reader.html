@@ -7,9 +7,9 @@
   <style>
     html, body {
       margin: 0; padding: 0; height: 100%; background: #faf8f5;
-      overflow-y: auto; -webkit-touch-callout: none;
+      overflow: hidden; -webkit-touch-callout: none;
     }
-    #viewer { min-height: 100%; width: 100%; overflow-y: auto; }
+    #viewer { height: 100%; width: 100%; }
     #selection-toolbar {
       position: fixed; z-index: 2147483647; left: 50%; bottom: 16px;
       transform: translateX(-50%); display: none; align-items: center;
@@ -535,14 +535,14 @@
           })
           .then(function () {
             initialGutenbergRedirectPending = false;
-            post({ type: 'ready' });
+            post({ type: 'ready', mode: 'scrolled' });
           })
           .catch(function () {
             // Bad/foreign CFI — retry from the clean initial target; if the
             // book itself is unreadable that fails too, and Dart gets an error
             // instead of an eternal spinner.
             rendition.display(gutenbergInitialTarget || undefined)
-              .then(function () { post({ type: 'ready' }); })
+              .then(function () { post({ type: 'ready', mode: 'scrolled' }); })
               .catch(function (e) { post({ type: 'error', message: 'display: ' + String(e) }); });
           });
         rendition.on('relocated', report);
@@ -562,7 +562,16 @@
             // Selection bounds (iframe CSS px == Flutter logical px at
             // initial-scale=1) — Dart anchors the highlight palette to it.
             var r = sel.getRangeAt(0).getBoundingClientRect();
-            rect = { x: r.left, y: r.top, w: r.width, h: r.height };
+            var frame = contents.document.defaultView.frameElement;
+            var frameRect = frame
+              ? frame.getBoundingClientRect()
+              : { left: 0, top: 0 };
+            rect = {
+              x: frameRect.left + r.left,
+              y: frameRect.top + r.top,
+              w: r.width,
+              h: r.height
+            };
           } catch (e) {}
           showSelectionToolbar();
           post({ type: 'selected', cfiRange: cfiRange, text: text, rect: rect });
@@ -594,10 +603,6 @@
           // Accent selection wash on every freshly rendered section.
           installSelectionCss(contents);
 
-          // Horizontal swipe → page turn. Passive listeners: long-press
-          // selection and handle-dragging stay fully native. A swipe must
-          // START MOVING immediately — any gesture that begins with a still
-          // finger (the long-press-to-select shape) can never turn a page.
           // When the selection dies natively (Copy tapped, handles collapsed,
           // toolbar dismissed), retire the Flutter Tag/Note bar too.
           doc.addEventListener('selectionchange', function () {

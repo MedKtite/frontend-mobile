@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdfx/pdfx.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 import '../../app/theme/tokens/colors.dart';
@@ -19,6 +20,7 @@ import '../../models/book.dart';
 import '../../models/book_update_request.dart';
 import '../../models/highlight_create_request.dart';
 import '../../models/note_create_request.dart';
+import '../../models/reader_package.dart';
 import '../../providers/book_file_provider.dart';
 import '../../providers/book_highlights_provider.dart';
 import '../../providers/book_provider.dart';
@@ -167,14 +169,6 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
                         ? _body(context, readerBook)
                         : const _TextLoading(),
                   ),
-                  // EPUB has its footer progress/navigation bar; PDF uses the
-                  // shared progress bar.
-                  if (displayBook?.format == 'pdf')
-                    ValueListenableBuilder<ReaderProgress>(
-                      valueListenable: _progress,
-                      builder: (_, pr, __) =>
-                          _BottomBar(progressPct: pr.pct, label: pr.label),
-                    ),
                 ],
               ),
             ),
@@ -190,6 +184,17 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
     }
 
     final fmt = book.format;
+    if ((fmt == 'epub' || fmt == 'pdf') &&
+        book.processingStatus != null &&
+        book.processingStatus != 'ready') {
+      final status = book.processingStatus;
+      return ReaderError(
+        message: status == 'failed'
+            ? (book.processingError ?? 'Book processing failed.')
+            : 'Preparing this book for reading…',
+        onRetry: () => ref.invalidate(bookByIdProvider(book.id)),
+      );
+    }
     if (fmt != 'epub' && fmt != 'pdf') {
       // Catalog/physical book → fetch the clean full text from Project Gutenberg
       // (public-domain) and render it exactly like an uploaded EPUB.
@@ -218,9 +223,22 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
             message: e is ApiError ? e.message : 'Could not load this book.',
             onRetry: () => ref.invalidate(bookFileProvider(fileRef)),
           ),
-          data: (file) => fmt == 'pdf'
-              ? _PdfReader(file: file, book: book, progress: _progress)
-              : _EpubReader(file: file, book: book, progress: _progress),
+          data: (readable) => switch (readable.format) {
+            'pdf' => _PdfReader(
+              file: readable.file,
+              book: book,
+              progress: _progress,
+            ),
+            'reader-v1' => _NativeReader(
+              file: readable.file,
+              book: book,
+              progress: _progress,
+            ),
+            _ => ReaderError(
+              message: 'This book is still being prepared for reading.',
+              onRetry: () => ref.invalidate(bookFileProvider(fileRef)),
+            ),
+          },
         );
   }
 }
@@ -311,28 +329,381 @@ class _PdfReaderState extends ConsumerState<_PdfReader> {
         text: 'Could not open this PDF.',
       );
     }
-    return PdfView(
-      controller: _controller,
-      scrollDirection: Axis.horizontal,
-      onDocumentLoaded: (doc) {
-        _total = doc.pagesCount;
-        _report();
-      },
-      onPageChanged: (page) {
-        _page = page;
-        _report();
-        _scheduleSave();
-      },
-      onDocumentError: (e) {
-        if (mounted) setState(() => _error = '$e');
-      },
+    return Column(
+      children: [
+        Expanded(
+          child: PdfView(
+            controller: _controller,
+            scrollDirection: Axis.horizontal,
+            onDocumentLoaded: (doc) {
+              _total = doc.pagesCount;
+              _report();
+            },
+            onPageChanged: (page) {
+              _page = page;
+              _report();
+              _scheduleSave();
+            },
+            onDocumentError: (e) {
+              if (mounted) setState(() => _error = '$e');
+            },
+          ),
+        ),
+        ValueListenableBuilder<ReaderProgress>(
+          valueListenable: widget.progress,
+          builder: (_, progress, __) =>
+              _BottomBar(progressPct: progress.pct, label: progress.label),
+        ),
+      ],
     );
   }
 }
 
-/// Scrollable EPUB reader (epub.js in a WebView) with footer navigation,
-/// resuming from a
-/// `{"type":"epubjs","cfi":"…"}` cursor, reporting page X of Y and a 0–100%.
+/// Native semantic reader for reader-v1 packages. No WebView or book HTML is
+/// rendered: the package contains only normalized blocks and local assets.
+class _NativeReader extends ConsumerStatefulWidget {
+  const _NativeReader({
+    required this.file,
+    required this.book,
+    required this.progress,
+  });
+
+  final File file;
+  final Book book;
+  final ValueNotifier<ReaderProgress> progress;
+
+  @override
+  ConsumerState<_NativeReader> createState() => _NativeReaderState();
+}
+
+class _NativeReaderState extends ConsumerState<_NativeReader> {
+  ReaderPackage? _package;
+  String? _error;
+  String? _selectedChapter;
+  ReaderBlock? _selectedBlock;
+  TextSelection? _selection;
+  String? _selectedText;
+  Timer? _saveTimer;
+  late final BookService _books;
+
+  @override
+  void initState() {
+    super.initState();
+    _books = ref.read(bookServiceProvider);
+    unawaited(_load());
+  }
+
+  Future<void> _load() async {
+    try {
+      final package = ReaderPackage.fromBytes(await widget.file.readAsBytes());
+      if (mounted) setState(() => _package = package);
+    } catch (_) {
+      if (mounted) {
+        setState(() => _error = 'Could not open this book right now.');
+      }
+    }
+  }
+
+  void _onScroll(ScrollNotification notification) {
+    if (notification.metrics.maxScrollExtent <= 0 || _package == null) return;
+    final pct =
+        (notification.metrics.pixels /
+                notification.metrics.maxScrollExtent *
+                100)
+            .clamp(0, 100)
+            .toDouble();
+    widget.progress.value = ReaderProgress(pct, 'Reading');
+    _scheduleSave(pct);
+  }
+
+  void _scheduleSave(double pct) {
+    _saveTimer?.cancel();
+    _saveTimer = Timer(const Duration(seconds: 2), () {
+      unawaited(
+        _books
+            .update(
+              widget.book.id,
+              BookUpdateRequest(
+                progressPct: pct,
+                cursor: jsonEncode({'type': 'reader-v1', 'progressPct': pct}),
+              ),
+            )
+            .then<void>(
+              (_) {},
+              onError: (Object error, StackTrace stack) {
+                debugPrint('[Reader] Cursor sync failed: $error');
+              },
+            ),
+      );
+    });
+  }
+
+  @override
+  void dispose() {
+    _saveTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _quickTag(String tag) async {
+    final chapter = _selectedChapter;
+    final block = _selectedBlock;
+    final selection = _selection;
+    final passage = _selectedText;
+    if (chapter == null ||
+        block == null ||
+        selection == null ||
+        passage == null) {
+      return;
+    }
+    final start = selection.start;
+    final end = selection.end;
+    try {
+      await ref
+          .read(highlightServiceProvider)
+          .create(
+            HighlightCreateRequest(
+              bookId: widget.book.id,
+              colorTag: tag,
+              textChapterRef: '$chapter:${block.id}',
+              textStartOffset: start,
+              textEndOffset: end,
+              passageText: passage,
+            ),
+          );
+      if (!mounted) return;
+      ref.invalidate(bookHighlightsProvider(widget.book.id));
+      _clearSelection();
+      showAppSnack(context, 'Tagged “$tag”', type: SnackType.success);
+    } on ApiError catch (e) {
+      if (mounted) showAppSnack(context, e.message, type: SnackType.error);
+    }
+  }
+
+  Future<void> _annotate({required bool asNote}) async {
+    final chapter = _selectedChapter;
+    final block = _selectedBlock;
+    final selection = _selection;
+    final passage = _selectedText;
+    if (chapter == null ||
+        block == null ||
+        selection == null ||
+        passage == null) {
+      return;
+    }
+    try {
+      final tag = asNote
+          ? 'revisit'
+          : await showTagPickerSheet(context, passage: passage);
+      if (tag == null || !mounted) return;
+      final highlight = await ref
+          .read(highlightServiceProvider)
+          .create(
+            HighlightCreateRequest(
+              bookId: widget.book.id,
+              colorTag: tag,
+              textChapterRef: '$chapter:${block.id}',
+              textStartOffset: selection.start,
+              textEndOffset: selection.end,
+              passageText: passage,
+            ),
+          );
+      if (asNote) {
+        final body = await showNoteSheet(
+          context,
+          passage: passage,
+          reference: 'FROM ${widget.book.title.toUpperCase()}',
+        );
+        if (body != null && mounted) {
+          await ref
+              .read(noteServiceProvider)
+              .create(
+                NoteCreateRequest(
+                  bookId: widget.book.id,
+                  highlightId: highlight.id,
+                  bodyMd: body,
+                ),
+              );
+        }
+      }
+      if (!mounted) return;
+      ref.invalidate(bookHighlightsProvider(widget.book.id));
+      _clearSelection();
+      showAppSnack(
+        context,
+        asNote ? 'Note saved' : 'Tagged “$tag”',
+        type: SnackType.success,
+      );
+    } on ApiError catch (e) {
+      if (mounted) showAppSnack(context, e.message, type: SnackType.error);
+    }
+  }
+
+  void _copySelection() {
+    final text = _selectedText;
+    if (text == null || text.isEmpty) return;
+    Clipboard.setData(ClipboardData(text: text));
+    _clearSelection();
+    showAppSnack(context, 'Copied', type: SnackType.success);
+  }
+
+  void _clearSelection() {
+    if (mounted) {
+      setState(() {
+        _selection = null;
+        _selectedChapter = null;
+        _selectedBlock = null;
+        _selectedText = null;
+      });
+    }
+  }
+
+  void _onSelection(
+    String chapterId,
+    ReaderBlock block,
+    TextSelection selection,
+  ) {
+    if (selection.isCollapsed ||
+        selection.start < 0 ||
+        selection.end > block.text.length) {
+      _clearSelection();
+      return;
+    }
+    setState(() {
+      _selectedChapter = chapterId;
+      _selectedBlock = block;
+      _selection = selection;
+      _selectedText = block.text.substring(selection.start, selection.end);
+    });
+  }
+
+  TextStyle _styleFor(BuildContext context, ReaderBlock block) {
+    final colors = context.appColors;
+    return switch (block.type) {
+      'heading' => AppTypography.title3(colors.text),
+      'quote' => AppTypography.subtitle(colors.text2),
+      'listItem' => AppTypography.bodySerif(colors.text),
+      _ => AppTypography.bodySerif(colors.text),
+    };
+  }
+
+  Widget _block(BuildContext context, String chapterId, ReaderBlock block) {
+    if (block.type == 'divider') {
+      return const Divider(height: AppSpacing.xl);
+    }
+    if (block.type == 'image' && block.asset != null) {
+      final bytes = _package?.assets[block.asset!];
+      return bytes == null
+          ? const SizedBox.shrink()
+          : Padding(
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+              child: Image.memory(bytes, fit: BoxFit.contain),
+            );
+    }
+    if (block.type == 'table') {
+      return SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+        child: DataTable(
+          columns: [
+            for (
+              var i = 0;
+              i < (block.rows.isEmpty ? 0 : block.rows.first.length);
+              i++
+            )
+              DataColumn(label: Text('')),
+          ],
+          rows: [
+            for (final row in block.rows)
+              DataRow(cells: [for (final cell in row) DataCell(Text(cell))]),
+          ],
+        ),
+      );
+    }
+    final text = block.type == 'listItem' ? '• ${block.text}' : block.text;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.md),
+      child: SelectableText.rich(
+        TextSpan(text: text, style: _styleFor(context, block)),
+        onSelectionChanged: (selection, _) =>
+            _onSelection(chapterId, block, selection),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final package = _package;
+    if (_error != null) {
+      return ReaderMessage(icon: Icons.menu_book_outlined, text: _error!);
+    }
+    if (package == null) return const ReaderTextLoading();
+    final blocks = <({String chapterId, ReaderBlock block})>[];
+    for (final chapter in package.chapters) {
+      blocks.add((
+        chapterId: chapter.id,
+        block: ReaderBlock(
+          id: '${chapter.id}-title',
+          type: 'heading',
+          text: chapter.title,
+        ),
+      ));
+      for (final block in chapter.blocks) {
+        blocks.add((chapterId: chapter.id, block: block));
+      }
+    }
+    return Stack(
+      children: [
+        Column(
+          children: [
+            Expanded(
+              child: NotificationListener<ScrollNotification>(
+                onNotification: (notification) {
+                  _onScroll(notification);
+                  return false;
+                },
+                child: ListView.builder(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.readingHorizontal,
+                    vertical: AppSpacing.lg,
+                  ),
+                  itemCount: blocks.length,
+                  itemBuilder: (context, index) {
+                    final item = blocks[index];
+                    return _block(context, item.chapterId, item.block);
+                  },
+                ),
+              ),
+            ),
+            ValueListenableBuilder<ReaderProgress>(
+              valueListenable: widget.progress,
+              builder: (_, progress, __) => ReaderProgressBar(
+                pct: progress.pct,
+                label: progress.label.isEmpty ? 'Reading' : progress.label,
+              ),
+            ),
+          ],
+        ),
+        if (_selectedText != null)
+          Positioned(
+            left: AppSpacing.md,
+            right: AppSpacing.md,
+            bottom: AppSpacing.xxl,
+            child: Center(
+              child: HighlightPalette(
+                onQuickTag: _quickTag,
+                onNote: () => _annotate(asNote: true),
+                onTag: () => _annotate(asNote: false),
+                onCopy: _copySelection,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+/// Vertically scrolling EPUB reader (epub.js in a WebView), resuming from an
+/// `{"type":"epubjs","cfi":"…"}` cursor and reporting reading progress.
 class _EpubReader extends ConsumerStatefulWidget {
   const _EpubReader({
     required this.file,
@@ -353,7 +724,7 @@ class _EpubReaderState extends ConsumerState<_EpubReader> {
   late final BookService _books;
   Timer? _saveTimer;
 
-  bool _ready = false; // epub.js finished its first paginated render
+  bool _ready = false; // epub.js finished its first scrolling render
   bool _booted = false; // loadBook() was injected once
   Brightness? _lastAppBrightness;
   int _page = 0;
@@ -361,7 +732,6 @@ class _EpubReaderState extends ConsumerState<_EpubReader> {
   int _chapter = 0;
   int _chapters = 0;
   double _pct = 0;
-  double _chapterPct = 0;
   String? _cfi;
   String? _loadError; // set if epub.js can't load/parse the book
 
@@ -391,8 +761,7 @@ class _EpubReaderState extends ConsumerState<_EpubReader> {
         if (mounted) {
           setState(
             () => _loadError =
-                'Reader assets aren’t in this build. Stop the app fully and '
-                'run flutter run again — hot restart can’t bundle new assets.',
+                'Could not open this book right now. Please try again.',
           );
         }
       }),
@@ -417,6 +786,32 @@ class _EpubReaderState extends ConsumerState<_EpubReader> {
   /// it parses the whole book, so it should only ever happen once per file.
   File get _locationsCache => File('${widget.file.path}.locations.json');
 
+  String get _localCursorKey => 'reader.cursor.${widget.book.id}';
+
+  Future<String?> _resumeCfi() async {
+    final serverCfi = cursorCfi(widget.book.cursor);
+    try {
+      final raw = (await SharedPreferences.getInstance()).getString(
+        _localCursorKey,
+      );
+      if (raw == null) return serverCfi;
+      final local = jsonDecode(raw);
+      if (local is! Map) return serverCfi;
+      final localCfi = local['cfi'];
+      final savedAt = DateTime.tryParse(local['savedAt'] as String? ?? '');
+      final serverUpdatedAt = DateTime.tryParse(widget.book.updatedAt ?? '');
+      if (localCfi is String &&
+          localCfi.isNotEmpty &&
+          (serverUpdatedAt == null ||
+              (savedAt != null && savedAt.isAfter(serverUpdatedAt)))) {
+        return localCfi;
+      }
+    } catch (_) {
+      // A corrupt local fallback must never prevent the server cursor loading.
+    }
+    return serverCfi;
+  }
+
   /// Once the shell page loads, hand epub.js the EPUB bytes plus the saved CFI
   /// to resume from. Guarded — onPageFinished can fire more than once.
   Future<void> _boot() async {
@@ -435,7 +830,7 @@ class _EpubReaderState extends ConsumerState<_EpubReader> {
         "window.appendChunk('${b64.substring(i, end)}')",
       );
     }
-    final cfi = cursorCfi(widget.book.cursor);
+    final cfi = await _resumeCfi();
     final cfiArg = cfi == null ? 'null' : jsonEncode(cfi);
     var locArg = 'null';
     try {
@@ -470,6 +865,15 @@ class _EpubReaderState extends ConsumerState<_EpubReader> {
     if (data is! Map) return;
     switch (data['type']) {
       case 'ready':
+        if (data['mode'] != 'scrolled') {
+          if (mounted) {
+            setState(
+              () => _loadError =
+                  'Could not open this book right now. Please try again.',
+            );
+          }
+          return;
+        }
         if (mounted) {
           setState(() {
             _ready = true;
@@ -487,19 +891,13 @@ class _EpubReaderState extends ConsumerState<_EpubReader> {
         final total = (data['total'] as num?)?.toInt() ?? 0;
         final chapter = (data['chapter'] as num?)?.toInt() ?? 0;
         final chapters = (data['chapters'] as num?)?.toInt() ?? 0;
-        final chapterPct = (data['chapterPercent'] as num?)?.toDouble() ?? 0;
         if (mounted) {
           setState(() {
             _pct = (pct * 100).clamp(0, 100).toDouble();
-            _chapterPct = (chapterPct * 100).clamp(0, 100).toDouble();
             if (page > 0) _page = page;
             if (total > 0) _total = total;
             if (chapter > 0) _chapter = chapter;
             if (chapters > 0) _chapters = chapters;
-            // A page turn destroys any in-book selection.
-            _selCfi = null;
-            _selText = null;
-            _selRect = null;
           });
         }
         widget.progress.value = ReaderProgress(_pct, _label);
@@ -572,14 +970,6 @@ class _EpubReaderState extends ConsumerState<_EpubReader> {
       ? 'Page $_page of $_total'
       : 'Reading';
 
-  void _next() {
-    if (_ready) _web.runJavaScript('window.nextPage()');
-  }
-
-  void _prev() {
-    if (_ready) _web.runJavaScript('window.prevPage()');
-  }
-
   void _scheduleSave() {
     _saveTimer?.cancel();
     _saveTimer = Timer(const Duration(seconds: 2), _saveNow);
@@ -588,6 +978,7 @@ class _EpubReaderState extends ConsumerState<_EpubReader> {
   void _saveNow() {
     final cfi = _cfi;
     if (cfi == null) return;
+    unawaited(_saveLocalCursor(cfi));
     unawaited(
       _books
           .update(
@@ -600,8 +991,25 @@ class _EpubReaderState extends ConsumerState<_EpubReader> {
           .then((_) {
             if (mounted) ref.invalidate(libraryBooksProvider);
           })
-          .catchError((Object _) {}), // best-effort
+          .catchError((Object error) {
+            debugPrint('[Reader] Cursor sync failed: $error');
+          }),
     );
+  }
+
+  Future<void> _saveLocalCursor(String cfi) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(
+        _localCursorKey,
+        jsonEncode({
+          'cfi': cfi,
+          'savedAt': DateTime.now().toUtc().toIso8601String(),
+        }),
+      );
+    } catch (error) {
+      debugPrint('[Reader] Local cursor save failed: $error');
+    }
   }
 
   // ── Selection → Tag / Note ────────────────────────────────────────────
@@ -808,12 +1216,7 @@ class _EpubReaderState extends ConsumerState<_EpubReader> {
             ),
           ),
         ),
-        PagedNavBar(
-          pct: _chapters > 0 ? _chapterPct : _pct,
-          label: _label,
-          onPrev: _ready ? _prev : null,
-          onNext: _ready ? _next : null,
-        ),
+        ReaderProgressBar(pct: _pct, label: _label),
       ],
     );
   }
@@ -887,8 +1290,7 @@ class _GoogleBooksSampleReaderState extends State<_GoogleBooksSampleReader> {
         if (mounted) {
           setState(
             () => _error =
-                'Sample reader assets aren’t in this build. Stop the app fully '
-                'and rebuild it.',
+                'Could not open this sample right now. Please try again.',
           );
         }
       }),

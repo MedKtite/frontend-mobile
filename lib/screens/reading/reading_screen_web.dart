@@ -73,7 +73,6 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
   int _chapter = 0;
   int _chapters = 0;
   double _pct = 0;
-  double _chapterPct = 0;
   String? _cfi;
   String? _loadError;
   Book? _bookForSave; // the book the reader booted with (cursor saves)
@@ -161,17 +160,13 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
         final total = (data['total'] as num?)?.toInt() ?? 0;
         final chapter = (data['chapter'] as num?)?.toInt() ?? 0;
         final chapters = (data['chapters'] as num?)?.toInt() ?? 0;
-        final chapterPct = (data['chapterPercent'] as num?)?.toDouble() ?? 0;
         if (mounted) {
           setState(() {
             _pct = (pct * 100).clamp(0, 100).toDouble();
-            _chapterPct = (chapterPct * 100).clamp(0, 100).toDouble();
             if (page > 0) _page = page;
             if (total > 0) _total = total;
             if (chapter > 0) _chapter = chapter;
             if (chapters > 0) _chapters = chapters;
-            _selCfi = null;
-            _selText = null;
           });
         }
         _scheduleSave();
@@ -356,14 +351,6 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
       : _total > 0
       ? 'Page $_page of $_total'
       : 'Reading';
-
-  void _next() {
-    if (_ready) _send('nextPage');
-  }
-
-  void _prev() {
-    if (_ready) _send('prevPage');
-  }
 
   void _scheduleSave() {
     _saveTimer?.cancel();
@@ -665,12 +652,7 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
                           ),
                   ),
                   if (!unsupported && !isSample)
-                    PagedNavBar(
-                      pct: _chapters > 0 ? _chapterPct : _pct,
-                      label: _label,
-                      onPrev: _ready ? _prev : null,
-                      onNext: _ready ? _next : null,
-                    ),
+                    ReaderProgressBar(pct: _pct, label: _label),
                 ],
               ),
             ),

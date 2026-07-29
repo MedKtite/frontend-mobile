@@ -35,7 +35,7 @@ void showAppSnack(BuildContext context, String message,
     ..showSnackBar(appSnackBar(message, type));
 }
 
-/// Card-style body: surface, tone-tinted hairline + icon, label ink. Builds
+/// Filled status toast with semantic color, icon, message, and dismiss action. Builds
 /// under the messenger's context, so tokens resolve to the active theme.
 class _SnackContent extends StatelessWidget {
   const _SnackContent({required this.message, required this.type});
@@ -46,25 +46,32 @@ class _SnackContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final (icon, tone) = switch (type) {
-      SnackType.success => (Icons.check_circle_rounded, colors.success),
-      SnackType.error => (Icons.error_rounded, colors.danger),
-      SnackType.warning => (Icons.warning_amber_rounded, colors.warning),
-      SnackType.info => (Icons.info_rounded, colors.accent),
+    final (icon, background, foreground) = switch (type) {
+      SnackType.success => (
+          Icons.check_circle_outline_rounded,
+          colors.success,
+          Colors.white,
+        ),
+      SnackType.error => (Icons.error_outline_rounded, colors.danger, Colors.white),
+      SnackType.warning => (
+          Icons.warning_amber_rounded,
+          colors.warning,
+          colors.text,
+        ),
+      SnackType.info => (Icons.info_outline_rounded, colors.accent, Colors.white),
     };
 
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.md,
-        vertical: AppSpacing.md,
+        vertical: AppSpacing.sm,
       ),
       decoration: BoxDecoration(
-        color: colors.surface,
+        color: background,
         borderRadius: AppRadii.brMd,
-        border: Border.all(color: tone.withValues(alpha: 0.35)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.12),
+            color: Colors.black.withValues(alpha: 0.18),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -72,15 +79,25 @@ class _SnackContent extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(icon, size: 20, color: tone),
+          Icon(icon, size: 22, color: foreground),
           const SizedBox(width: AppSpacing.md),
           Expanded(
             child: Text(
               message,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: AppTypography.label(colors.text),
+              style: AppTypography.label(foreground),
             ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          IconButton(
+            onPressed: () => ScaffoldMessenger.of(context).hideCurrentSnackBar(),
+            icon: Icon(Icons.close_rounded, color: foreground),
+            iconSize: 22,
+            visualDensity: VisualDensity.compact,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+            tooltip: 'Dismiss',
           ),
         ],
       ),

@@ -97,11 +97,28 @@ class BookService {
   /// the uploaded file (epub/pdf/m4b/mp3). The URL expires, so callers cache the
   /// downloaded file, not this response.
   Future<DownloadUrlResponse> downloadUrl(String id) async {
-    final res =
-        await _dio.get<Map<String, dynamic>>('/me/books/$id/download-url');
+    final res = await _dio.get<Map<String, dynamic>>(
+      '/me/books/$id/download-url',
+    );
     return DownloadUrlResponse.fromJson(res.data!);
+  }
+
+  /// Prefer a backend-generated native reader package or reflowable copy when available (PDF → EPUB),
+  /// while preserving the original format as the fallback.
+  Future<({String downloadUrl, String format})> readingDownloadUrl(
+    String id,
+  ) async {
+    final res = await _dio.get<Map<String, dynamic>>(
+      '/me/books/$id/reading-download-url',
+    );
+    final data = res.data!;
+    return (
+      downloadUrl: data['downloadUrl'] as String,
+      format: data['format'] as String? ?? 'pdf',
+    );
   }
 }
 
-final bookServiceProvider =
-    Provider<BookService>((ref) => BookService(ref.watch(dioProvider)));
+final bookServiceProvider = Provider<BookService>(
+  (ref) => BookService(ref.watch(dioProvider)),
+);

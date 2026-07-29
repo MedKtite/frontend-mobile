@@ -52,13 +52,6 @@ abstract final class Routes {
 
   static const reading = '/reading';
   static String readingPath(String bookId) => '$reading/$bookId';
-  static String readingSamplePath({
-    required String identifier,
-    required String title,
-  }) => Uri(
-    path: readingPath('sample'),
-    queryParameters: {'sampleIdentifier': identifier, 'sampleTitle': title},
-  ).toString();
 
   /// Full-screen audio player (Figma 235:2 "Reading · audio").
   static const listening = '/listening';

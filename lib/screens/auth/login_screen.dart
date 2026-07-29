@@ -12,6 +12,7 @@ import '../../core/widgets/app_text_field.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/state/auth_state.dart';
 import '../../services/frontend/auth_validators.dart';
+import '../../services/frontend/auth_error_messages.dart';
 import '../../services/frontend/social_auth_service.dart';
 import '../../widgets/auth_scaffold.dart';
 import '../../widgets/glass_panel.dart';
@@ -31,7 +32,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _email = TextEditingController();
   final _password = TextEditingController();
-  String? _passwordError;
 
   @override
   void dispose() {
@@ -48,13 +48,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         .login(email: _email.text.trim(), password: _password.text);
   }
 
-  String? _passwordValidator(String? value) {
-    return AuthValidators.password(value) ?? _passwordError;
-  }
-
-  void _clearPasswordError(String _) {
-    if (_passwordError != null) setState(() => _passwordError = null);
-  }
 
   Future<void> _socialLogin(String provider) async {
     try {
@@ -69,7 +62,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         await auth.loginWithX(token: token);
       }
     } on SocialAuthException catch (e) {
-      if (mounted) showAppSnack(context, e.message, type: SnackType.error);
+      if (mounted) showAppSnack(context, AuthErrorMessages.from(e.message, context: AuthErrorContext.signIn), type: SnackType.error);
     }
   }
 
@@ -82,13 +75,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       if (next is AuthAuthenticated) {
         context.go(Routes.home);
       } else if (next is AuthUnauthenticated) {
-        final message = next.message ?? 'An error occurred.';
-        if (message.toLowerCase().contains('incorrect email or password')) {
-          setState(() => _passwordError = message);
-          _formKey.currentState?.validate();
-        } else {
-          showAppSnack(context, message, type: SnackType.error);
-        }
+        final message = AuthErrorMessages.from(
+          next.message,
+          context: AuthErrorContext.signIn,
+        );
+        showAppSnack(context, message, type: SnackType.error);
       }
     });
 
@@ -157,8 +148,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 obscure: true,
                 textInputAction: TextInputAction.done,
                 onSubmitted: (_) => _submit(),
-                onChanged: _clearPasswordError,
-                validator: _passwordValidator,
+                validator: AuthValidators.password,
               ),
             ],
           ),

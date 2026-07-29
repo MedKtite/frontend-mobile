@@ -9,38 +9,115 @@ import '../../app/theme/tokens/colors.dart';
 import '../../app/theme/tokens/radii.dart';
 import '../../app/theme/tokens/spacing.dart';
 import '../../app/theme/tokens/typography.dart';
+import '../../core/dio_client.dart';
+import '../../core/widgets/app_snackbar.dart';
 import '../../models/book.dart';
 import '../../providers/book_description_provider.dart';
+import '../../providers/book_file_provider.dart';
+import '../../providers/book_provider.dart';
+import '../../providers/library_provider.dart';
+import '../../services/backend/book_service.dart';
 import '../../widgets/book_cover.dart';
 import 'detail_shared.dart';
+import '../../widgets/delete_book_dialog.dart';
 
-/// Detail page for a book the user OWNS (library grid tap → here → reader).
-/// Same reference layout as the catalog page — tinted scrolling header,
-/// title/author left · cover right, KPI stats, Description — but the pinned
-/// CTA reads/continues instead of buying. Description/rating/pages arrive
-/// via the same on-demand enrichment the catalog page uses.
+
 class BookDetailScreen extends ConsumerWidget {
   const BookDetailScreen({super.key, required this.book});
 
   final Book book;
 
+  Future<void> _delete(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => DeleteBookDialog(title: book.title),
+    );
+    if (confirmed != true || !context.mounted) return;
+
+    final messenger = ScaffoldMessenger.of(context)..hideCurrentSnackBar();
+    try {
+      await ref.read(bookServiceProvider).delete(book.id);
+      await deleteCachedBookFiles(book.id);
+      ref.invalidate(libraryBooksProvider);
+      if (!context.mounted) return;
+      context.pop();
+      messenger.showSnackBar(
+        appSnackBar('Deleted “${book.title}”', SnackType.success),
+      );
+    } on ApiError catch (e) {
+      if (!context.mounted) return;
+      messenger.showSnackBar(appSnackBar(e.message, SnackType.error));
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.appColors;
+    final bookAsync = ref.watch(bookByIdProvider(book.id));
+    if (bookAsync.isLoading) {
+      return Scaffold(
+        body: SafeArea(
+          child: Center(
+            child: CircularProgressIndicator(color: colors.accent),
+          ),
+        ),
+      );
+    }
 
-    final extras = ref
-        .watch(bookExtrasProvider((
-          gutenbergId: null,
-          googleId: book.googleId,
-          title: book.title,
-          author: book.author,
-        )))
-        .valueOrNull;
-    final description = cleanHtml(extras?.description);
+    final latestBook = bookAsync.valueOrNull;
+    final displayBook = latestBook ?? book;
+
+    if (displayBook.processingStatus == 'pending' ||
+        displayBook.processingStatus == 'processing') {
+      return Scaffold(
+        body: SafeArea(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.xl),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const CircularProgressIndicator(),
+                  const SizedBox(height: AppSpacing.lg),
+                  Text('Preparing your book…',
+                      style: AppTypography.title3(colors.text)),
+                  const SizedBox(height: AppSpacing.sm),
+                  Text(
+                    'We are extracting the text, cover, and available details.',
+                    textAlign: TextAlign.center,
+                    style: AppTypography.bodySerif(colors.text2),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    final extrasKey = (
+      gutenbergId: null,
+      googleId: displayBook.googleId,
+      title: displayBook.title,
+      author: displayBook.author,
+    );
+    final extrasAsync = ref.watch(bookExtrasProvider(extrasKey));
+    if (extrasAsync.isLoading) {
+      return Scaffold(
+        body: SafeArea(
+          child: Center(
+            child: CircularProgressIndicator(color: colors.accent),
+          ),
+        ),
+      );
+    }
+
+    final extras = extrasAsync.valueOrNull;
+    final description = cleanHtml(displayBook.description ?? extras?.description);
     final rating = extras?.rating;
-    final pages = book.pageCount ?? extras?.pageCount;
-    final year = book.publishedYear ?? extras?.year;
-    final progress = (book.progressPct ?? 0).clamp(0.0, 100.0);
+    final pages = displayBook.pageCount ?? extras?.pageCount;
+    final year = displayBook.publishedYear ?? extras?.year;
+    final progress = (displayBook.progressPct ?? 0).clamp(0.0, 100.0);
 
     return Scaffold(
       body: Column(
@@ -50,8 +127,9 @@ class BookDetailScreen extends ConsumerWidget {
               padding: EdgeInsets.zero,
               children: [
                 _AmbientBookHeader(
-                  book: book,
+                  book: displayBook,
                   onBack: () => context.pop(),
+                  onDelete: () => _delete(context, ref),
                 ),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(
@@ -121,19 +199,16 @@ class BookDetailScreen extends ConsumerWidget {
                 AppSpacing.md,
               ),
               child: Builder(builder: (context) {
-                // Audio intent = an audio file OR the Listening shelf —
-                // catalog adds have format 'physical' (no file yet), so the
-                // shelf is the only signal of how the user wants this book.
-                final isAudio = book.status == 'listening' ||
-                    book.format == 'm4b' ||
-                    book.format == 'mp3';
+                final isAudio = displayBook.status == 'listening' ||
+                    displayBook.format == 'm4b' ||
+                    displayBook.format == 'mp3';
                 final verb = isAudio ? 'listening' : 'reading';
                 return FilledButton(
                   onPressed: () => context.push(
                     isAudio
-                        ? Routes.listeningPath(book.id)
-                        : Routes.readingPath(book.id),
-                    extra: book,
+                        ? Routes.listeningPath(displayBook.id)
+                        : Routes.readingPath(displayBook.id),
+                    extra: displayBook,
                   ),
                   style: FilledButton.styleFrom(
                     backgroundColor: colors.accent,
@@ -161,10 +236,15 @@ class BookDetailScreen extends ConsumerWidget {
 }
 
 class _AmbientBookHeader extends StatelessWidget {
-  const _AmbientBookHeader({required this.book, required this.onBack});
+  const _AmbientBookHeader({
+    required this.book,
+    required this.onBack,
+    required this.onDelete,
+  });
 
   final Book book;
   final VoidCallback onBack;
+  final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -231,6 +311,11 @@ class _AmbientBookHeader extends StatelessWidget {
                     CircleIconButton(
                       icon: Icons.chevron_left,
                       onTap: onBack,
+                    ),
+                    const Spacer(),
+                    CircleIconButton(
+                      icon: Icons.delete_outline,
+                      onTap: onDelete,
                     ),
                   ],
                 ),

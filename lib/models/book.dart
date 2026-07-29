@@ -23,6 +23,11 @@ class Book with _$Book {
     String? format, // epub | pdf | m4b | mp3 | physical
     String? coverUrl,
     String? coverDominantColor, // #RRGGBB
+    String? description,
+    String? processingStatus, // pending | processing | ready | failed
+    String? processingError,
+    String? readingFileKey,
+    String? processingVersion,
     String? status, // reading | listening | finished | archived
     double? progressPct, // 0–100
     String? cursor, // opaque JSONB reading position

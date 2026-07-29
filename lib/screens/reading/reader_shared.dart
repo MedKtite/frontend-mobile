@@ -88,8 +88,9 @@ class ReaderTopBar extends StatelessWidget {
             // them instead of running underneath the back arrow / "Aa".
             Align(
               child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: AppSpacing.xxxl),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.xxxl,
+                ),
                 child: Text(
                   title,
                   maxLines: 1,
@@ -134,21 +135,12 @@ class ReaderTopBar extends StatelessWidget {
   }
 }
 
-/// Footer navigation for the paginated EPUB reader: ‹ prev · chapter progress
-/// bar + "Chapter X/Y" + N% · next ›.
-class PagedNavBar extends StatelessWidget {
-  const PagedNavBar({
-    super.key,
-    required this.pct,
-    required this.label,
-    required this.onPrev,
-    required this.onNext,
-  });
+/// Footer progress for the vertically scrolling EPUB reader.
+class ReaderProgressBar extends StatelessWidget {
+  const ReaderProgressBar({super.key, required this.pct, required this.label});
 
   final double pct;
   final String label;
-  final VoidCallback? onPrev;
-  final VoidCallback? onNext;
 
   @override
   Widget build(BuildContext context) {
@@ -160,83 +152,44 @@ class PagedNavBar extends StatelessWidget {
         AppSpacing.md,
         AppSpacing.lg,
       ),
-      child: Row(
+      child: Column(
         children: [
-          _NavArrow(icon: Icons.chevron_left, onTap: onPrev),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-              child: Column(
+          ClipRRect(
+            borderRadius: AppRadii.brFull,
+            child: SizedBox(
+              height: 2,
+              child: Stack(
                 children: [
-                  ClipRRect(
-                    borderRadius: AppRadii.brFull,
-                    child: SizedBox(
-                      height: 2,
-                      child: Stack(
-                        children: [
-                          Positioned.fill(
-                              child: ColoredBox(color: colors.border)),
-                          FractionallySizedBox(
-                            alignment: Alignment.centerLeft,
-                            widthFactor: (pct / 100).clamp(0, 1).toDouble(),
-                            child: ColoredBox(color: colors.accent),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.xs),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Flexible(
-                        child: Text(
-                          label,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppTypography.caption(colors.text3),
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.sm),
-                      Text('${pct.round()}%',
-                          style: AppTypography.caption(colors.text3)),
-                    ],
+                  Positioned.fill(child: ColoredBox(color: colors.border)),
+                  FractionallySizedBox(
+                    alignment: Alignment.centerLeft,
+                    widthFactor: (pct / 100).clamp(0, 1).toDouble(),
+                    child: ColoredBox(color: colors.accent),
                   ),
                 ],
               ),
             ),
           ),
-          _NavArrow(icon: Icons.chevron_right, onTap: onNext),
-        ],
-      ),
-    );
-  }
-}
-
-/// A round page-turn button; dimmed + inert until the book is ready.
-class _NavArrow extends StatelessWidget {
-  const _NavArrow({required this.icon, required this.onTap});
-  final IconData icon;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final enabled = onTap != null;
-    return Material(
-      color: colors.surface2,
-      shape: const CircleBorder(),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.sm),
-          child: Icon(
-            icon,
-            size: 24,
-            color: enabled ? colors.text : colors.text3,
+          const SizedBox(height: AppSpacing.xs),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTypography.caption(colors.text3),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Text(
+                '${pct.round()}%',
+                style: AppTypography.caption(colors.text3),
+              ),
+            ],
           ),
-        ),
+        ],
       ),
     );
   }
@@ -328,11 +281,13 @@ class _PaletteAction extends StatelessWidget {
         // Figma 237:24-26 — Inter Medium 13 in the page (bg) color.
         child: Text(
           label,
-          style: AppTypography.sans(TextStyle(
-            color: colors.bg,
-            fontSize: 13,
-            fontWeight: FontWeight.w500,
-          )),
+          style: AppTypography.sans(
+            TextStyle(
+              color: colors.bg,
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
         ),
       ),
     );
@@ -350,16 +305,19 @@ class ReaderMessage extends StatelessWidget {
     final colors = context.appColors;
     return Center(
       child: Padding(
-        padding:
-            const EdgeInsets.symmetric(horizontal: AppSpacing.pageHorizontal),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.pageHorizontal,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(icon, size: 40, color: colors.text3),
             const SizedBox(height: AppSpacing.lg),
-            Text(text,
-                textAlign: TextAlign.center,
-                style: AppTypography.subtitle(colors.text2)),
+            Text(
+              text,
+              textAlign: TextAlign.center,
+              style: AppTypography.subtitle(colors.text2),
+            ),
           ],
         ),
       ),
@@ -377,20 +335,26 @@ class ReaderError extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.pageHorizontal),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.pageHorizontal,
+      ),
       child: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(Icons.cloud_off_outlined, size: 40, color: colors.text3),
             const SizedBox(height: AppSpacing.lg),
-            Text("Couldn't open this book.",
-                textAlign: TextAlign.center,
-                style: AppTypography.title3(colors.text)),
+            Text(
+              "Couldn't open this book.",
+              textAlign: TextAlign.center,
+              style: AppTypography.title3(colors.text),
+            ),
             const SizedBox(height: AppSpacing.sm),
-            Text(message,
-                textAlign: TextAlign.center,
-                style: AppTypography.caption(colors.text2)),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: AppTypography.caption(colors.text2),
+            ),
             const SizedBox(height: AppSpacing.xl),
             OutlinedButton(onPressed: onRetry, child: const Text('Try again')),
           ],

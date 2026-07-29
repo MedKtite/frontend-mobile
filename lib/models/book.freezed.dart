@@ -38,6 +38,12 @@ mixin _$Book {
   String? get coverUrl => throw _privateConstructorUsedError;
   String? get coverDominantColor =>
       throw _privateConstructorUsedError; // #RRGGBB
+  String? get description => throw _privateConstructorUsedError;
+  String? get processingStatus =>
+      throw _privateConstructorUsedError; // pending | processing | ready | failed
+  String? get processingError => throw _privateConstructorUsedError;
+  String? get readingFileKey => throw _privateConstructorUsedError;
+  String? get processingVersion => throw _privateConstructorUsedError;
   String? get status =>
       throw _privateConstructorUsedError; // reading | listening | finished | archived
   double? get progressPct => throw _privateConstructorUsedError; // 0–100
@@ -77,6 +83,11 @@ abstract class $BookCopyWith<$Res> {
     String? format,
     String? coverUrl,
     String? coverDominantColor,
+    String? description,
+    String? processingStatus,
+    String? processingError,
+    String? readingFileKey,
+    String? processingVersion,
     String? status,
     double? progressPct,
     String? cursor,
@@ -116,6 +127,11 @@ class _$BookCopyWithImpl<$Res, $Val extends Book>
     Object? format = freezed,
     Object? coverUrl = freezed,
     Object? coverDominantColor = freezed,
+    Object? description = freezed,
+    Object? processingStatus = freezed,
+    Object? processingError = freezed,
+    Object? readingFileKey = freezed,
+    Object? processingVersion = freezed,
     Object? status = freezed,
     Object? progressPct = freezed,
     Object? cursor = freezed,
@@ -182,6 +198,26 @@ class _$BookCopyWithImpl<$Res, $Val extends Book>
                 ? _value.coverDominantColor
                 : coverDominantColor // ignore: cast_nullable_to_non_nullable
                       as String?,
+            description: freezed == description
+                ? _value.description
+                : description // ignore: cast_nullable_to_non_nullable
+                      as String?,
+            processingStatus: freezed == processingStatus
+                ? _value.processingStatus
+                : processingStatus // ignore: cast_nullable_to_non_nullable
+                      as String?,
+            processingError: freezed == processingError
+                ? _value.processingError
+                : processingError // ignore: cast_nullable_to_non_nullable
+                      as String?,
+            readingFileKey: freezed == readingFileKey
+                ? _value.readingFileKey
+                : readingFileKey // ignore: cast_nullable_to_non_nullable
+                      as String?,
+            processingVersion: freezed == processingVersion
+                ? _value.processingVersion
+                : processingVersion // ignore: cast_nullable_to_non_nullable
+                      as String?,
             status: freezed == status
                 ? _value.status
                 : status // ignore: cast_nullable_to_non_nullable
@@ -239,6 +275,11 @@ abstract class _$$BookImplCopyWith<$Res> implements $BookCopyWith<$Res> {
     String? format,
     String? coverUrl,
     String? coverDominantColor,
+    String? description,
+    String? processingStatus,
+    String? processingError,
+    String? readingFileKey,
+    String? processingVersion,
     String? status,
     double? progressPct,
     String? cursor,
@@ -275,6 +316,11 @@ class __$$BookImplCopyWithImpl<$Res>
     Object? format = freezed,
     Object? coverUrl = freezed,
     Object? coverDominantColor = freezed,
+    Object? description = freezed,
+    Object? processingStatus = freezed,
+    Object? processingError = freezed,
+    Object? readingFileKey = freezed,
+    Object? processingVersion = freezed,
     Object? status = freezed,
     Object? progressPct = freezed,
     Object? cursor = freezed,
@@ -341,6 +387,26 @@ class __$$BookImplCopyWithImpl<$Res>
             ? _value.coverDominantColor
             : coverDominantColor // ignore: cast_nullable_to_non_nullable
                   as String?,
+        description: freezed == description
+            ? _value.description
+            : description // ignore: cast_nullable_to_non_nullable
+                  as String?,
+        processingStatus: freezed == processingStatus
+            ? _value.processingStatus
+            : processingStatus // ignore: cast_nullable_to_non_nullable
+                  as String?,
+        processingError: freezed == processingError
+            ? _value.processingError
+            : processingError // ignore: cast_nullable_to_non_nullable
+                  as String?,
+        readingFileKey: freezed == readingFileKey
+            ? _value.readingFileKey
+            : readingFileKey // ignore: cast_nullable_to_non_nullable
+                  as String?,
+        processingVersion: freezed == processingVersion
+            ? _value.processingVersion
+            : processingVersion // ignore: cast_nullable_to_non_nullable
+                  as String?,
         status: freezed == status
             ? _value.status
             : status // ignore: cast_nullable_to_non_nullable
@@ -392,6 +458,11 @@ class _$BookImpl implements _Book {
     this.format,
     this.coverUrl,
     this.coverDominantColor,
+    this.description,
+    this.processingStatus,
+    this.processingError,
+    this.readingFileKey,
+    this.processingVersion,
     this.status,
     this.progressPct,
     this.cursor,
@@ -436,6 +507,17 @@ class _$BookImpl implements _Book {
   final String? coverDominantColor;
   // #RRGGBB
   @override
+  final String? description;
+  @override
+  final String? processingStatus;
+  // pending | processing | ready | failed
+  @override
+  final String? processingError;
+  @override
+  final String? readingFileKey;
+  @override
+  final String? processingVersion;
+  @override
   final String? status;
   // reading | listening | finished | archived
   @override
@@ -455,7 +537,7 @@ class _$BookImpl implements _Book {
 
   @override
   String toString() {
-    return 'Book(id: $id, title: $title, author: $author, narrator: $narrator, publisher: $publisher, publishedYear: $publishedYear, isbn13: $isbn13, googleId: $googleId, pageCount: $pageCount, durationSec: $durationSec, language: $language, format: $format, coverUrl: $coverUrl, coverDominantColor: $coverDominantColor, status: $status, progressPct: $progressPct, cursor: $cursor, lastOpenedAt: $lastOpenedAt, finishedAt: $finishedAt, createdAt: $createdAt, updatedAt: $updatedAt)';
+    return 'Book(id: $id, title: $title, author: $author, narrator: $narrator, publisher: $publisher, publishedYear: $publishedYear, isbn13: $isbn13, googleId: $googleId, pageCount: $pageCount, durationSec: $durationSec, language: $language, format: $format, coverUrl: $coverUrl, coverDominantColor: $coverDominantColor, description: $description, processingStatus: $processingStatus, processingError: $processingError, readingFileKey: $readingFileKey, processingVersion: $processingVersion, status: $status, progressPct: $progressPct, cursor: $cursor, lastOpenedAt: $lastOpenedAt, finishedAt: $finishedAt, createdAt: $createdAt, updatedAt: $updatedAt)';
   }
 
   @override
@@ -486,6 +568,16 @@ class _$BookImpl implements _Book {
                 other.coverUrl == coverUrl) &&
             (identical(other.coverDominantColor, coverDominantColor) ||
                 other.coverDominantColor == coverDominantColor) &&
+            (identical(other.description, description) ||
+                other.description == description) &&
+            (identical(other.processingStatus, processingStatus) ||
+                other.processingStatus == processingStatus) &&
+            (identical(other.processingError, processingError) ||
+                other.processingError == processingError) &&
+            (identical(other.readingFileKey, readingFileKey) ||
+                other.readingFileKey == readingFileKey) &&
+            (identical(other.processingVersion, processingVersion) ||
+                other.processingVersion == processingVersion) &&
             (identical(other.status, status) || other.status == status) &&
             (identical(other.progressPct, progressPct) ||
                 other.progressPct == progressPct) &&
@@ -518,6 +610,11 @@ class _$BookImpl implements _Book {
     format,
     coverUrl,
     coverDominantColor,
+    description,
+    processingStatus,
+    processingError,
+    readingFileKey,
+    processingVersion,
     status,
     progressPct,
     cursor,
@@ -557,6 +654,11 @@ abstract class _Book implements Book {
     final String? format,
     final String? coverUrl,
     final String? coverDominantColor,
+    final String? description,
+    final String? processingStatus,
+    final String? processingError,
+    final String? readingFileKey,
+    final String? processingVersion,
     final String? status,
     final double? progressPct,
     final String? cursor,
@@ -596,6 +698,16 @@ abstract class _Book implements Book {
   String? get coverUrl;
   @override
   String? get coverDominantColor; // #RRGGBB
+  @override
+  String? get description;
+  @override
+  String? get processingStatus; // pending | processing | ready | failed
+  @override
+  String? get processingError;
+  @override
+  String? get readingFileKey;
+  @override
+  String? get processingVersion;
   @override
   String? get status; // reading | listening | finished | archived
   @override

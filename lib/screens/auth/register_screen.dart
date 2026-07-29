@@ -12,6 +12,7 @@ import '../../core/widgets/app_text_field.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/state/auth_state.dart';
 import '../../services/frontend/auth_validators.dart';
+import '../../services/frontend/auth_error_messages.dart';
 import '../../services/frontend/social_auth_service.dart';
 import '../../widgets/auth_scaffold.dart';
 import '../../widgets/glass_panel.dart';
@@ -85,7 +86,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         await auth.loginWithX(token: token);
       }
     } on SocialAuthException catch (e) {
-      if (mounted) showAppSnack(context, e.message, type: SnackType.error);
+      if (mounted) showAppSnack(context, AuthErrorMessages.from(e.message, context: AuthErrorContext.register), type: SnackType.error);
     }
   }
 
@@ -100,7 +101,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       } else if (next is AuthUnauthenticated) {
         showAppSnack(
           context,
-          next.message ?? 'An error occurred.',
+          AuthErrorMessages.from(next.message, context: AuthErrorContext.register),
           type: SnackType.error,
         );
       }

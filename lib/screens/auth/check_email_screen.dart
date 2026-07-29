@@ -10,6 +10,7 @@ import '../../app/theme/tokens/typography.dart';
 import '../../core/widgets/app_snackbar.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/state/auth_state.dart';
+import '../../services/frontend/auth_error_messages.dart';
 import '../../widgets/auth_scaffold.dart';
 import '../../widgets/glass_panel.dart';
 
@@ -72,7 +73,7 @@ class _CheckEmailScreenState extends ConsumerState<CheckEmailScreen> {
     }
     final state = ref.read(authProvider);
     if (state is AuthUnauthenticated && state.message != null) {
-      showAppSnack(context, state.message!, type: SnackType.error);
+      showAppSnack(context, AuthErrorMessages.from(state.message, context: AuthErrorContext.recovery), type: SnackType.error);
     }
   }
 

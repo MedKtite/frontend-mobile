@@ -69,27 +69,19 @@ class HomeScreen extends ConsumerWidget {
           HomeEmpty() => _PopulatedHome(
             greetingName: name,
             avatarInitial: initial,
-            continueReading: null,
             passage: null,
             listening: null,
-            onResume: () {},
             onPlay: () {},
           ),
           HomeLoaded(
-            :final continueReading,
             :final passage,
             :final listening,
           ) =>
             _PopulatedHome(
               greetingName: name,
               avatarInitial: initial,
-              continueReading: continueReading,
               passage: passage,
               listening: listening,
-              onResume: () {
-                final cr = continueReading;
-                if (cr != null) context.push(Routes.readingPath(cr.id));
-              },
               onPlay: () {
                 final l = listening;
                 if (l != null) context.push(Routes.listeningPath(l.id));
@@ -157,19 +149,15 @@ class _PopulatedHome extends StatelessWidget {
   const _PopulatedHome({
     required this.greetingName,
     required this.avatarInitial,
-    required this.continueReading,
     required this.passage,
     required this.listening,
-    required this.onResume,
     required this.onPlay,
   });
 
   final String greetingName;
   final String avatarInitial;
-  final ContinueReading? continueReading;
   final HomePassage? passage;
   final ListeningItem? listening;
-  final VoidCallback onResume;
   final VoidCallback onPlay;
 
   @override
@@ -190,14 +178,7 @@ class _PopulatedHome extends StatelessWidget {
                 const SizedBox(height: AppSpacing.xxl),
                 const _TrendingSection(),
                 const _CategorySection(),
-                if (continueReading != null) ...[
-                  _ContinueReadingCard(
-                    book: continueReading!,
-                    onResume: onResume,
-                  ),
-                  const SizedBox(height: AppSpacing.xxl),
-                ],
-                _ContinueRow(excludeId: continueReading?.id),
+                const _ContinueRow(),
                 const _TopAuthorsSection(),
                 const _RecommendedSection(),
                 if (passage != null) ...[
@@ -541,14 +522,10 @@ class _Card extends StatelessWidget {
 
 // ────────────────────────────────────────────────── Continue-reading row ──
 
-/// Horizontal carousel of the OTHER in-progress books (the hero card above
-/// already features the most recent one): small cover · title · author ·
-/// progress bar + %. Hidden while loading, on error, or when there's nothing
-/// beyond the hero — never a broken block.
+/// Horizontal carousel of every in-progress book: small cover · title · author
+/// · progress bar + %. Hidden while loading, on error, or when empty.
 class _ContinueRow extends ConsumerWidget {
-  const _ContinueRow({this.excludeId});
-
-  final String? excludeId;
+  const _ContinueRow();
 
   static const double _cardW = 272;
   static const double _rowH = 92;
@@ -561,7 +538,7 @@ class _ContinueRow extends ConsumerWidget {
     final reading =
         [
           for (final b in books)
-            if (b.status == 'reading' && b.id != excludeId) b,
+            if (b.status == 'reading') b,
         ]..sort(
           (a, b) => (b.lastOpenedAt ?? b.updatedAt ?? '').compareTo(
             a.lastOpenedAt ?? a.updatedAt ?? '',
@@ -1065,82 +1042,6 @@ class _CoverPlaceholder extends StatelessWidget {
       decoration: BoxDecoration(
         color: colors.surface2,
         borderRadius: AppRadii.brSm,
-      ),
-    );
-  }
-}
-
-class _ContinueReadingCard extends StatelessWidget {
-  const _ContinueReadingCard({required this.book, required this.onResume});
-
-  final ContinueReading book;
-  final VoidCallback onResume;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return _Card(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          BookCover(
-            title: book.title,
-            author: book.author,
-            bg: book.coverBg,
-            fg: book.coverFg,
-            width: 84,
-            bookmarked: true,
-          ),
-          const SizedBox(width: AppSpacing.lg),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  'CONTINUE READING',
-                  style: AppTypography.overline(colors.text3),
-                ),
-                const SizedBox(height: AppSpacing.xs),
-                Text(book.title, style: AppTypography.title2(colors.text)),
-                Text(book.author, style: AppTypography.subtitle(colors.text2)),
-                const SizedBox(height: AppSpacing.md),
-                Row(
-                  children: [
-                    Expanded(
-                      child: ClipRRect(
-                        borderRadius: AppRadii.brFull,
-                        child: LinearProgressIndicator(
-                          value: (book.progress / 100).clamp(0.0, 1.0),
-                          minHeight: 4,
-                          backgroundColor: colors.border,
-                          color: colors.accent,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
-                    Text(
-                      '${book.progress.round()}%',
-                      style: AppTypography.label(colors.text2),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.md),
-                FilledButton(
-                  onPressed: onResume,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Text('Resume'),
-                      const SizedBox(width: AppSpacing.xs),
-                      Icon(Icons.arrow_forward, size: 16, color: colors.bg),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }

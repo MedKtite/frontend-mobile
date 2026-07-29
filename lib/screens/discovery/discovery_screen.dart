@@ -839,6 +839,9 @@ class _AdvancedPanel extends StatelessWidget {
                   value: freeOnly,
                   onChanged: (value) => onFreeOnly(value ?? false),
                   visualDensity: VisualDensity.compact,
+                  side: BorderSide(color: colors.border),
+                  activeColor: colors.accent,
+                  checkColor: colors.bg,
                 ),
                 Expanded(
                   child: Text(
@@ -852,15 +855,16 @@ class _AdvancedPanel extends StatelessWidget {
           const SizedBox(height: AppSpacing.md),
           Row(
             children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: onReset,
-                  child: Text(
-                    'Reset',
-                    style: AppTypography.label(colors.text2),
-                  ),
-                ),
-              ),
+              // Expanded(
+              //   child: OutlinedButton(
+                  
+              //     onPressed: onReset,
+              //     child: Text(
+              //       'Reset',
+              //       style: AppTypography.label(colors.text2),
+              //     ),
+              //   ),
+              // ),
               const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: FilledButton(
@@ -868,6 +872,7 @@ class _AdvancedPanel extends StatelessWidget {
                   style: FilledButton.styleFrom(
                     backgroundColor: colors.accent,
                     foregroundColor: colors.bg,
+                    padding: EdgeInsets.zero,
                   ),
                   child: Text(
                     'Search',
