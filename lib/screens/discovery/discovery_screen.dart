@@ -211,6 +211,7 @@ class _DiscoveryScreenState extends ConsumerState<DiscoveryScreen> {
               status: shelf,
               author: book.author,
               googleId: book.googleId,
+              gutenbergId: book.gutenbergId,
               isbn13: book.isbn13,
               pageCount: book.pageCount,
               publishedYear: book.publishedYear,

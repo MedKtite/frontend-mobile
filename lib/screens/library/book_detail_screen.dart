@@ -331,7 +331,8 @@ class _AmbientBookHeader extends StatelessWidget {
                             book.title,
                             maxLines: 4,
                             overflow: TextOverflow.ellipsis,
-                            style: AppTypography.title1(colors.text),
+                            style: AppTypography.body(colors.text)
+                                .copyWith(fontWeight: FontWeight.w700),
                           ),
                           if (book.author != null &&
                               book.author!.isNotEmpty) ...[

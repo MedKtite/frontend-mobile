@@ -16,7 +16,8 @@ class Book with _$Book {
     String? publisher,
     int? publishedYear,
     String? isbn13,
-    String? googleId, // Google Books volume id — enables free public-domain reading
+    String? googleId,
+    int? gutenbergId, // Google Books volume id — enables free public-domain reading
     int? pageCount,
     int? durationSec,
     String? language,

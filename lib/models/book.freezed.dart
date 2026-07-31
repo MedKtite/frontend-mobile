@@ -28,7 +28,8 @@ mixin _$Book {
   String? get publisher => throw _privateConstructorUsedError;
   int? get publishedYear => throw _privateConstructorUsedError;
   String? get isbn13 => throw _privateConstructorUsedError;
-  String? get googleId =>
+  String? get googleId => throw _privateConstructorUsedError;
+  int? get gutenbergId =>
       throw _privateConstructorUsedError; // Google Books volume id — enables free public-domain reading
   int? get pageCount => throw _privateConstructorUsedError;
   int? get durationSec => throw _privateConstructorUsedError;
@@ -77,6 +78,7 @@ abstract class $BookCopyWith<$Res> {
     int? publishedYear,
     String? isbn13,
     String? googleId,
+    int? gutenbergId,
     int? pageCount,
     int? durationSec,
     String? language,
@@ -121,6 +123,7 @@ class _$BookCopyWithImpl<$Res, $Val extends Book>
     Object? publishedYear = freezed,
     Object? isbn13 = freezed,
     Object? googleId = freezed,
+    Object? gutenbergId = freezed,
     Object? pageCount = freezed,
     Object? durationSec = freezed,
     Object? language = freezed,
@@ -174,6 +177,10 @@ class _$BookCopyWithImpl<$Res, $Val extends Book>
                 ? _value.googleId
                 : googleId // ignore: cast_nullable_to_non_nullable
                       as String?,
+            gutenbergId: freezed == gutenbergId
+                ? _value.gutenbergId
+                : gutenbergId // ignore: cast_nullable_to_non_nullable
+                      as int?,
             pageCount: freezed == pageCount
                 ? _value.pageCount
                 : pageCount // ignore: cast_nullable_to_non_nullable
@@ -269,6 +276,7 @@ abstract class _$$BookImplCopyWith<$Res> implements $BookCopyWith<$Res> {
     int? publishedYear,
     String? isbn13,
     String? googleId,
+    int? gutenbergId,
     int? pageCount,
     int? durationSec,
     String? language,
@@ -310,6 +318,7 @@ class __$$BookImplCopyWithImpl<$Res>
     Object? publishedYear = freezed,
     Object? isbn13 = freezed,
     Object? googleId = freezed,
+    Object? gutenbergId = freezed,
     Object? pageCount = freezed,
     Object? durationSec = freezed,
     Object? language = freezed,
@@ -363,6 +372,10 @@ class __$$BookImplCopyWithImpl<$Res>
             ? _value.googleId
             : googleId // ignore: cast_nullable_to_non_nullable
                   as String?,
+        gutenbergId: freezed == gutenbergId
+            ? _value.gutenbergId
+            : gutenbergId // ignore: cast_nullable_to_non_nullable
+                  as int?,
         pageCount: freezed == pageCount
             ? _value.pageCount
             : pageCount // ignore: cast_nullable_to_non_nullable
@@ -452,6 +465,7 @@ class _$BookImpl implements _Book {
     this.publishedYear,
     this.isbn13,
     this.googleId,
+    this.gutenbergId,
     this.pageCount,
     this.durationSec,
     this.language,
@@ -491,6 +505,8 @@ class _$BookImpl implements _Book {
   final String? isbn13;
   @override
   final String? googleId;
+  @override
+  final int? gutenbergId;
   // Google Books volume id — enables free public-domain reading
   @override
   final int? pageCount;
@@ -537,7 +553,7 @@ class _$BookImpl implements _Book {
 
   @override
   String toString() {
-    return 'Book(id: $id, title: $title, author: $author, narrator: $narrator, publisher: $publisher, publishedYear: $publishedYear, isbn13: $isbn13, googleId: $googleId, pageCount: $pageCount, durationSec: $durationSec, language: $language, format: $format, coverUrl: $coverUrl, coverDominantColor: $coverDominantColor, description: $description, processingStatus: $processingStatus, processingError: $processingError, readingFileKey: $readingFileKey, processingVersion: $processingVersion, status: $status, progressPct: $progressPct, cursor: $cursor, lastOpenedAt: $lastOpenedAt, finishedAt: $finishedAt, createdAt: $createdAt, updatedAt: $updatedAt)';
+    return 'Book(id: $id, title: $title, author: $author, narrator: $narrator, publisher: $publisher, publishedYear: $publishedYear, isbn13: $isbn13, googleId: $googleId, gutenbergId: $gutenbergId, pageCount: $pageCount, durationSec: $durationSec, language: $language, format: $format, coverUrl: $coverUrl, coverDominantColor: $coverDominantColor, description: $description, processingStatus: $processingStatus, processingError: $processingError, readingFileKey: $readingFileKey, processingVersion: $processingVersion, status: $status, progressPct: $progressPct, cursor: $cursor, lastOpenedAt: $lastOpenedAt, finishedAt: $finishedAt, createdAt: $createdAt, updatedAt: $updatedAt)';
   }
 
   @override
@@ -557,6 +573,8 @@ class _$BookImpl implements _Book {
             (identical(other.isbn13, isbn13) || other.isbn13 == isbn13) &&
             (identical(other.googleId, googleId) ||
                 other.googleId == googleId) &&
+            (identical(other.gutenbergId, gutenbergId) ||
+                other.gutenbergId == gutenbergId) &&
             (identical(other.pageCount, pageCount) ||
                 other.pageCount == pageCount) &&
             (identical(other.durationSec, durationSec) ||
@@ -604,6 +622,7 @@ class _$BookImpl implements _Book {
     publishedYear,
     isbn13,
     googleId,
+    gutenbergId,
     pageCount,
     durationSec,
     language,
@@ -648,6 +667,7 @@ abstract class _Book implements Book {
     final int? publishedYear,
     final String? isbn13,
     final String? googleId,
+    final int? gutenbergId,
     final int? pageCount,
     final int? durationSec,
     final String? language,
@@ -685,7 +705,9 @@ abstract class _Book implements Book {
   @override
   String? get isbn13;
   @override
-  String? get googleId; // Google Books volume id — enables free public-domain reading
+  String? get googleId;
+  @override
+  int? get gutenbergId; // Google Books volume id — enables free public-domain reading
   @override
   int? get pageCount;
   @override

@@ -2,12 +2,10 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdfx/pdfx.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 import '../../app/theme/tokens/colors.dart';
@@ -24,7 +22,6 @@ import '../../models/reader_package.dart';
 import '../../providers/book_file_provider.dart';
 import '../../providers/book_highlights_provider.dart';
 import '../../providers/book_provider.dart';
-import '../../providers/gutenberg_provider.dart';
 import '../../providers/home_provider.dart';
 import '../../providers/library_provider.dart';
 import '../../providers/reading_mini_provider.dart';
@@ -37,10 +34,11 @@ import '../../widgets/note_sheet.dart';
 import '../../widgets/tag_picker_sheet.dart';
 import 'reader_shared.dart';
 
-/// Reader. Keeps the designed chrome (back · title · Aa, and the bottom progress
-/// bar) and drops the real uploaded file into the body: a [_PdfReader] or
-/// [_EpubReader] depending on `book.format`. Catalog/physical books have no file
-/// to read, so they get a [_NoReadableFile] state instead of fake passage text.
+/// Reader screen. Keeps the chrome (back · title · Aa, and the bottom progress
+/// bar) and routes the book body to the right reader widget:
+/// • reader-v1 package (uploaded EPUB/PDF or Gutenberg pipeline) → [_NativeReader]
+/// • PDF original → [_PdfReader]
+/// • Google Books free sample → [_GoogleBooksSampleReader]
 class ReadingScreen extends ConsumerStatefulWidget {
   const ReadingScreen({
     super.key,
@@ -183,11 +181,11 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
       return const _TextLoading();
     }
 
-    final fmt = book.format;
-    if ((fmt == 'epub' || fmt == 'pdf') &&
-        book.processingStatus != null &&
-        book.processingStatus != 'ready') {
-      final status = book.processingStatus;
+    // Show preparing screen whenever processing is in flight or failed,
+    // regardless of format (covers both uploaded EPUB/PDF and Gutenberg
+    // catalog books that the Python pipeline is still working on).
+    final status = book.processingStatus;
+    if (status != null && status != 'ready') {
       return ReaderError(
         message: status == 'failed'
             ? (book.processingError ?? 'Book processing failed.')
@@ -195,26 +193,12 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
         onRetry: () => ref.invalidate(bookByIdProvider(book.id)),
       );
     }
-    if (fmt != 'epub' && fmt != 'pdf') {
-      // Catalog/physical book → fetch the clean full text from Project Gutenberg
-      // (public-domain) and render it exactly like an uploaded EPUB.
-      final gref = (id: book.id, title: book.title, author: book.author);
-      return ref
-          .watch(gutenbergEpubProvider(gref))
-          .when(
-            loading: () => const _TextLoading(),
-            error: (e, _) => e is GutenbergNotFound
-                ? _NoReadableFile(book: book)
-                : ReaderError(
-                    message: 'Could not load this book.',
-                    onRetry: () => ref.invalidate(gutenbergEpubProvider(gref)),
-                  ),
-            data: (file) =>
-                _EpubReader(file: file, book: book, progress: _progress),
-          );
-    }
 
-    final fileRef = (id: book.id, format: fmt!);
+    // All readable formats — uploaded EPUB/PDF and Gutenberg catalog books
+    // that have been processed into a reader-v1 package — go through the
+    // backend reading-download-url endpoint, which returns the best available
+    // format (reader-v1 > epub > pdf).
+    final fileRef = (id: book.id, format: book.format ?? 'reader-v1');
     return ref
         .watch(bookFileProvider(fileRef))
         .when(
@@ -702,525 +686,6 @@ class _NativeReaderState extends ConsumerState<_NativeReader> {
   }
 }
 
-/// Vertically scrolling EPUB reader (epub.js in a WebView), resuming from an
-/// `{"type":"epubjs","cfi":"…"}` cursor and reporting reading progress.
-class _EpubReader extends ConsumerStatefulWidget {
-  const _EpubReader({
-    required this.file,
-    required this.book,
-    required this.progress,
-  });
-
-  final File file;
-  final Book book;
-  final ValueNotifier<ReaderProgress> progress;
-
-  @override
-  ConsumerState<_EpubReader> createState() => _EpubReaderState();
-}
-
-class _EpubReaderState extends ConsumerState<_EpubReader> {
-  late final WebViewController _web;
-  late final BookService _books;
-  Timer? _saveTimer;
-
-  bool _ready = false; // epub.js finished its first scrolling render
-  bool _booted = false; // loadBook() was injected once
-  Brightness? _lastAppBrightness;
-  int _page = 0;
-  int _total = 0;
-  int _chapter = 0;
-  int _chapters = 0;
-  double _pct = 0;
-  String? _cfi;
-  String? _loadError; // set if epub.js can't load/parse the book
-
-  // Active in-book text selection (epub.js `selected` event) → the floating
-  // highlight palette (Figma 237:17), anchored to the selection's rect.
-  String? _selCfi;
-  String? _selText;
-  Rect? _selRect;
-
-  @override
-  void initState() {
-    super.initState();
-    _books = ref.read(bookServiceProvider);
-    _pct = (widget.book.progressPct ?? 0).clamp(0.0, 100.0);
-    _web = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setBackgroundColor(const Color(0x00000000))
-      ..addJavaScriptChannel('ReaderChannel', onMessageReceived: _onMessage)
-      ..setNavigationDelegate(
-        NavigationDelegate(onPageFinished: (_) => _boot()),
-      );
-    // Load separately from the cascade so a missing-asset failure (hot restart
-    // after adding assets/) becomes a visible message, not an unhandled
-    // exception + endless spinner.
-    unawaited(
-      _web.loadFlutterAsset('assets/reader/reader.html').catchError((Object _) {
-        if (mounted) {
-          setState(
-            () => _loadError =
-                'Could not open this book right now. Please try again.',
-          );
-        }
-      }),
-    );
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final brightness = Theme.of(context).brightness;
-    if (_lastAppBrightness != null &&
-        _lastAppBrightness != brightness &&
-        _ready) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _applyTheme();
-      });
-    }
-    _lastAppBrightness = brightness;
-  }
-
-  /// epub.js "locations" (page-count index) cached beside the EPUB — generating
-  /// it parses the whole book, so it should only ever happen once per file.
-  File get _locationsCache => File('${widget.file.path}.locations.json');
-
-  String get _localCursorKey => 'reader.cursor.${widget.book.id}';
-
-  Future<String?> _resumeCfi() async {
-    final serverCfi = cursorCfi(widget.book.cursor);
-    try {
-      final raw = (await SharedPreferences.getInstance()).getString(
-        _localCursorKey,
-      );
-      if (raw == null) return serverCfi;
-      final local = jsonDecode(raw);
-      if (local is! Map) return serverCfi;
-      final localCfi = local['cfi'];
-      final savedAt = DateTime.tryParse(local['savedAt'] as String? ?? '');
-      final serverUpdatedAt = DateTime.tryParse(widget.book.updatedAt ?? '');
-      if (localCfi is String &&
-          localCfi.isNotEmpty &&
-          (serverUpdatedAt == null ||
-              (savedAt != null && savedAt.isAfter(serverUpdatedAt)))) {
-        return localCfi;
-      }
-    } catch (_) {
-      // A corrupt local fallback must never prevent the server cursor loading.
-    }
-    return serverCfi;
-  }
-
-  /// Once the shell page loads, hand epub.js the EPUB bytes plus the saved CFI
-  /// to resume from. Guarded — onPageFinished can fire more than once.
-  Future<void> _boot() async {
-    if (_booted) return;
-    _booted = true;
-    final bytes = await widget.file.readAsBytes();
-    // Encoding a multi-MB file is UI-thread jank (skipped frames on open) —
-    // do it in a background isolate.
-    final b64 = await compute(base64Encode, bytes);
-    // One giant runJavaScript string is slow and can silently truncate on
-    // Android — hand the book over in chunks instead. (base64 is quote-safe.)
-    const chunk = 512 * 1024;
-    for (var i = 0; i < b64.length; i += chunk) {
-      final end = (i + chunk < b64.length) ? i + chunk : b64.length;
-      await _web.runJavaScript(
-        "window.appendChunk('${b64.substring(i, end)}')",
-      );
-    }
-    final cfi = await _resumeCfi();
-    final cfiArg = cfi == null ? 'null' : jsonEncode(cfi);
-    var locArg = 'null';
-    try {
-      if (await _locationsCache.exists()) {
-        locArg = jsonEncode(await _locationsCache.readAsString());
-      }
-    } catch (_) {
-      /* no cache — epub.js regenerates */
-    }
-    _applyTheme();
-    await _web.runJavaScript('window.loadBook($cfiArg, $locArg)');
-  }
-
-  /// Push current typography + palette into epub.js (bg, ink, family, size,
-  /// line-height). Called on boot and whenever the "Aa" settings change. Real
-  /// font files aren't in the WebView, so the family maps to a CSS generic.
-  void _applyTheme() {
-    final s = ref.read(readingSettingsProvider);
-    final p = s.paletteFor(Theme.of(context).brightness);
-    final family = s.font == ReaderFont.serif
-        ? 'Georgia, serif'
-        : 'system-ui, sans-serif';
-    _web.runJavaScript(
-      'window.setTheme("${cssHex(p.bg)}","${cssHex(p.text)}",'
-      '"$family",${s.fontSize.round()},${s.lineHeight},'
-      '"${cssHex(p.accent)}")',
-    );
-  }
-
-  void _onMessage(JavaScriptMessage m) {
-    final data = jsonDecode(m.message);
-    if (data is! Map) return;
-    switch (data['type']) {
-      case 'ready':
-        if (data['mode'] != 'scrolled') {
-          if (mounted) {
-            setState(
-              () => _loadError =
-                  'Could not open this book right now. Please try again.',
-            );
-          }
-          return;
-        }
-        if (mounted) {
-          setState(() {
-            _ready = true;
-            _loadError = null;
-          });
-        }
-        unawaited(_applySavedMarks());
-      case 'total':
-        final t = (data['total'] as num?)?.toInt() ?? 0;
-        if (t > 0 && mounted) setState(() => _total = t);
-      case 'location':
-        _cfi = data['cfi'] as String?;
-        final pct = (data['percent'] as num?)?.toDouble() ?? (_pct / 100);
-        final page = (data['page'] as num?)?.toInt() ?? 0;
-        final total = (data['total'] as num?)?.toInt() ?? 0;
-        final chapter = (data['chapter'] as num?)?.toInt() ?? 0;
-        final chapters = (data['chapters'] as num?)?.toInt() ?? 0;
-        if (mounted) {
-          setState(() {
-            _pct = (pct * 100).clamp(0, 100).toDouble();
-            if (page > 0) _page = page;
-            if (total > 0) _total = total;
-            if (chapter > 0) _chapter = chapter;
-            if (chapters > 0) _chapters = chapters;
-          });
-        }
-        widget.progress.value = ReaderProgress(_pct, _label);
-        _scheduleSave();
-      case 'selected':
-        final selCfi = data['cfiRange'] as String?;
-        final selText = (data['text'] as String?)?.trim();
-        if (selCfi != null &&
-            selText != null &&
-            selText.isNotEmpty &&
-            mounted) {
-          final rm = data['rect'];
-          setState(() {
-            _selCfi = selCfi;
-            _selText = selText;
-            _selRect = rm is Map
-                ? Rect.fromLTWH(
-                    (rm['x'] as num?)?.toDouble() ?? 0,
-                    (rm['y'] as num?)?.toDouble() ?? 0,
-                    (rm['w'] as num?)?.toDouble() ?? 0,
-                    (rm['h'] as num?)?.toDouble() ?? 0,
-                  )
-                : null;
-          });
-        }
-      case 'selcleared':
-        if (mounted) {
-          setState(() {
-            _selCfi = null;
-            _selText = null;
-            _selRect = null;
-          });
-        }
-      case 'locations':
-        // Freshly generated page index — cache it so the next open skips the
-        // full-book parse. Best-effort; a failed write just means regenerating.
-        final json = data['json'] as String?;
-        if (json != null && json.isNotEmpty) {
-          unawaited(() async {
-            try {
-              await _locationsCache.writeAsString(json);
-            } catch (_) {}
-          }());
-        }
-      case 'error':
-        // Surface a load/parse failure instead of spinning forever.
-        if (mounted) {
-          setState(() {
-            _loadError =
-                (data['message'] as String?) ?? 'Could not open this book.';
-          });
-        }
-      case 'jserror':
-        // Uncaught JS inside epub.js: fatal if the book never rendered,
-        // harmless noise once it has.
-        if (!_ready) {
-          if (mounted) {
-            setState(
-              () =>
-                  _loadError = 'Could not open this book. (${data['message']})',
-            );
-          }
-        }
-    }
-  }
-
-  String get _label => _chapters > 0
-      ? 'Chapter $_chapter/$_chapters'
-      : _total > 0
-      ? 'Page $_page of $_total'
-      : 'Reading';
-
-  void _scheduleSave() {
-    _saveTimer?.cancel();
-    _saveTimer = Timer(const Duration(seconds: 2), _saveNow);
-  }
-
-  void _saveNow() {
-    final cfi = _cfi;
-    if (cfi == null) return;
-    unawaited(_saveLocalCursor(cfi));
-    unawaited(
-      _books
-          .update(
-            widget.book.id,
-            BookUpdateRequest(
-              progressPct: _pct,
-              cursor: jsonEncode({'type': 'epubjs', 'cfi': cfi}),
-            ),
-          )
-          .then((_) {
-            if (mounted) ref.invalidate(libraryBooksProvider);
-          })
-          .catchError((Object error) {
-            debugPrint('[Reader] Cursor sync failed: $error');
-          }),
-    );
-  }
-
-  Future<void> _saveLocalCursor(String cfi) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(
-        _localCursorKey,
-        jsonEncode({
-          'cfi': cfi,
-          'savedAt': DateTime.now().toUtc().toIso8601String(),
-        }),
-      );
-    } catch (error) {
-      debugPrint('[Reader] Local cursor save failed: $error');
-    }
-  }
-
-  // ── Selection → Tag / Note ────────────────────────────────────────────
-
-  /// Paint one highlight into the book text, tag-colored.
-  void _mark(String cfiRange, String tag) {
-    _web.runJavaScript(
-      'window.applyMark(${jsonEncode(cfiRange)}, '
-      '"${cssHex(AppColors.forTag(tag))}")',
-    );
-  }
-
-  void _clearSelection() {
-    _web.runJavaScript('window.clearSelection()');
-    if (mounted) {
-      setState(() {
-        _selCfi = null;
-        _selText = null;
-        _selRect = null;
-      });
-    }
-  }
-
-  /// Palette color dot: one tap = highlight with that tag, no sheet.
-  Future<void> _quickTag(String tag) async {
-    final cfiRange = _selCfi;
-    final passage = _selText;
-    if (cfiRange == null || passage == null || passage.isEmpty) return;
-    final messenger = ScaffoldMessenger.of(context);
-    try {
-      await ref
-          .read(highlightServiceProvider)
-          .create(
-            HighlightCreateRequest(
-              bookId: widget.book.id,
-              colorTag: tag,
-              passageText: passage,
-              textChapterRef: cfiRange,
-            ),
-          );
-      if (!mounted) return;
-      _mark(cfiRange, tag);
-      ref.invalidate(bookHighlightsProvider(widget.book.id));
-      _clearSelection();
-      messenger
-        ..hideCurrentSnackBar()
-        ..showSnackBar(appSnackBar('Tagged “$tag”', SnackType.success));
-    } on ApiError catch (e) {
-      messenger
-        ..hideCurrentSnackBar()
-        ..showSnackBar(appSnackBar(e.message, SnackType.error));
-    }
-  }
-
-  void _copySelection() {
-    final text = _selText;
-    if (text == null || text.isEmpty) return;
-    Clipboard.setData(ClipboardData(text: text));
-    _clearSelection();
-    showAppSnack(context, 'Copied', type: SnackType.success);
-  }
-
-  /// Re-paint saved highlights: any whose textChapterRef is an epub.js CFI
-  /// range (that's where we store the anchor) renders inline on open.
-  Future<void> _applySavedMarks() async {
-    try {
-      final hs = await ref.read(bookHighlightsProvider(widget.book.id).future);
-      for (final h in hs) {
-        final cfi = h.textChapterRef;
-        if (cfi != null && cfi.startsWith('epubcfi(')) {
-          _mark(cfi, h.colorTag ?? 'revisit');
-        }
-      }
-    } catch (_) {
-      /* marks are decoration — never block reading */
-    }
-  }
-
-  /// Selection → highlight (Tag) or highlight + note (Note). The CFI range is
-  /// stored in textChapterRef so the inline mark survives reopen + devices.
-  Future<void> _annotate({required bool asNote}) async {
-    final cfiRange = _selCfi;
-    final passage = _selText;
-    if (cfiRange == null || passage == null || passage.isEmpty) return;
-    final messenger = ScaffoldMessenger.of(context);
-
-    try {
-      if (!asNote) {
-        final tag = await showTagPickerSheet(context, passage: passage);
-        if (tag == null || !mounted) return;
-        await ref
-            .read(highlightServiceProvider)
-            .create(
-              HighlightCreateRequest(
-                bookId: widget.book.id,
-                colorTag: tag,
-                passageText: passage,
-                textChapterRef: cfiRange,
-              ),
-            );
-        if (!mounted) return;
-        _mark(cfiRange, tag);
-        messenger
-          ..hideCurrentSnackBar()
-          ..showSnackBar(appSnackBar('Tagged “$tag”', SnackType.success));
-      } else {
-        final reference = 'FROM ${widget.book.title.toUpperCase()}';
-        final body = await showNoteSheet(
-          context,
-          passage: passage,
-          reference: reference,
-        );
-        if (body == null || !mounted) return;
-        // A note anchors to a highlight; mint a neutral 'revisit' one for it.
-        final highlight = await ref
-            .read(highlightServiceProvider)
-            .create(
-              HighlightCreateRequest(
-                bookId: widget.book.id,
-                colorTag: 'revisit',
-                passageText: passage,
-                textChapterRef: cfiRange,
-              ),
-            );
-        await ref
-            .read(noteServiceProvider)
-            .create(
-              NoteCreateRequest(
-                bookId: widget.book.id,
-                highlightId: highlight.id,
-                bodyMd: body,
-              ),
-            );
-        if (!mounted) return;
-        _mark(cfiRange, 'revisit');
-        messenger
-          ..hideCurrentSnackBar()
-          ..showSnackBar(appSnackBar('Note saved', SnackType.success));
-      }
-      ref.invalidate(bookHighlightsProvider(widget.book.id));
-      _clearSelection();
-    } on ApiError catch (e) {
-      messenger
-        ..hideCurrentSnackBar()
-        ..showSnackBar(appSnackBar(e.message, SnackType.error));
-    }
-  }
-
-  /// Palette anchor: 12px above the selection, flipped below it when there's
-  /// no room, and always clamped inside the reader area. No rect → bottom.
-  double _paletteTop(double maxHeight) {
-    const palH = HighlightPalette.height;
-    final r = _selRect;
-    if (r == null) return maxHeight - palH - AppSpacing.md;
-    var top = r.top - palH - AppSpacing.md;
-    if (top < AppSpacing.sm) top = r.bottom + AppSpacing.md;
-    return top.clamp(AppSpacing.sm, maxHeight - palH - AppSpacing.sm);
-  }
-
-  @override
-  void dispose() {
-    _saveTimer?.cancel();
-    _saveNow();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    if (_loadError != null) {
-      return ReaderMessage(icon: Icons.menu_book_outlined, text: _loadError!);
-    }
-    // Re-theme epub.js live when the "Aa" sheet changes font/size/theme.
-    ref.listen(readingSettingsProvider, (_, __) {
-      if (_ready) _applyTheme();
-    });
-
-    return Column(
-      children: [
-        Expanded(
-          child: LayoutBuilder(
-            builder: (context, box) => Stack(
-              children: [
-                Positioned.fill(child: ColoredBox(color: colors.bg)),
-                WebViewWidget(controller: _web),
-                if (!_ready) const Positioned.fill(child: _TextLoading()),
-                // Floating highlight palette (Figma 237:17), anchored just
-                // above the selection; flips below it near the screen top.
-                if (_selText != null)
-                  Positioned(
-                    left: AppSpacing.md,
-                    right: AppSpacing.md,
-                    top: _paletteTop(box.maxHeight),
-                    child: Center(
-                      child: HighlightPalette(
-                        onQuickTag: _quickTag,
-                        onNote: () => _annotate(asNote: true),
-                        onTag: () => _annotate(asNote: false),
-                        onCopy: _copySelection,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ),
-        ReaderProgressBar(pct: _pct, label: _label),
-      ],
-    );
-  }
-}
 
 class _GoogleBooksSampleReader extends StatefulWidget {
   const _GoogleBooksSampleReader({required this.identifier});

@@ -87,6 +87,7 @@ class _CatalogBookScreenState extends ConsumerState<CatalogBookScreen> {
               status: status,
               author: book.author,
               googleId: book.googleId,
+              gutenbergId: book.gutenbergId,
               isbn13: book.isbn13,
               pageCount: book.pageCount,
               publishedYear: book.publishedYear,
@@ -195,7 +196,7 @@ class _CatalogBookScreenState extends ConsumerState<CatalogBookScreen> {
                 bookExtrasProvider((
                   gutenbergId: book.gutenbergId,
                   googleId: book.googleId,
-                  title: book.title,
+              title: book.title,
                   author: book.author,
                 )),
               )

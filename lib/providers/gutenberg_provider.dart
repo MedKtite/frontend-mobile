@@ -32,7 +32,7 @@ final gutenbergEpubProvider =
   final dir = Directory('${docs.path}/books');
   if (!dir.existsSync()) dir.createSync(recursive: true);
 
-  final file = File('${dir.path}/${key.id}.gutenberg.epub');
+  final file = File('${dir.path}/${key.id}.gutenberg-v2.epub');
   if (file.existsSync() && file.lengthSync() > 0) return file;
 
   void reportProgress(double v) =>

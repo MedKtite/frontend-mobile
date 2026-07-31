@@ -17,6 +17,7 @@ class BookCreateRequest with _$BookCreateRequest {
     int? publishedYear,
     String? fileKey,
     String? googleId,
+    int? gutenbergId,
     String? isbn13,
     int? pageCount,
     int? durationSec,

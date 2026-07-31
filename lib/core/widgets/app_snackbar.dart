@@ -1,18 +1,11 @@
 import 'package:flutter/material.dart';
-
 import '../../app/theme/tokens/colors.dart';
 import '../../app/theme/tokens/radii.dart';
 import '../../app/theme/tokens/spacing.dart';
 import '../../app/theme/tokens/typography.dart';
 
-/// Semantic snackbar variants: leading icon + tone from the status tokens.
 enum SnackType { success, error, warning, info }
 
-/// The app-styled floating snackbar. Two entry points:
-/// - [showAppSnack] when a BuildContext is at hand (hides any current one);
-/// - [appSnackBar] to hand to a ScaffoldMessenger captured before an await:
-///     messenger..hideCurrentSnackBar()
-///              ..showSnackBar(appSnackBar('Saved', SnackType.success));
 SnackBar appSnackBar(String message, SnackType type) => SnackBar(
       elevation: 0,
       backgroundColor: Colors.transparent,
@@ -35,8 +28,6 @@ void showAppSnack(BuildContext context, String message,
     ..showSnackBar(appSnackBar(message, type));
 }
 
-/// Filled status toast with semantic color, icon, message, and dismiss action. Builds
-/// under the messenger's context, so tokens resolve to the active theme.
 class _SnackContent extends StatelessWidget {
   const _SnackContent({required this.message, required this.type});
 
@@ -49,8 +40,8 @@ class _SnackContent extends StatelessWidget {
     final (icon, background, foreground) = switch (type) {
       SnackType.success => (
           Icons.check_circle_outline_rounded,
+          colors.surface,
           colors.success,
-          Colors.white,
         ),
       SnackType.error => (Icons.error_outline_rounded, colors.danger, Colors.white),
       SnackType.warning => (

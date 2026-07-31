@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 
+import '../core/dio_client.dart';
 import '../services/backend/book_service.dart';
 
 /// Identifies a downloadable book file: its id and format (reader-v1|epub|pdf|m4b|mp3).
@@ -44,12 +45,24 @@ final bookFileProvider = FutureProvider.autoDispose
       final booksDir = Directory('${docs.path}/books');
       if (!booksDir.existsSync()) booksDir.createSync(recursive: true);
 
-      final dl = await ref
-          .watch(bookServiceProvider)
-          .readingDownloadUrl(key.id);
-      final readableFormat = dl.format;
+      // A first open can enqueue Python Gutenberg processing. Keep polling the
+      // backend while that shared reader-v1 package is being prepared.
+      ({String downloadUrl, String format})? dl;
+      for (var attempt = 0; attempt < 15; attempt++) {
+        try {
+          dl = await ref.watch(bookServiceProvider).readingDownloadUrl(key.id);
+          break;
+        } on ApiError catch (error) {
+          if (error.status != 404 || attempt == 14) rethrow;
+          await Future<void>.delayed(
+            Duration(milliseconds: 750 + (attempt * 100)),
+          );
+        }
+      }
+      final download = dl!;
+      final readableFormat = download.format;
       final file = File(
-        '${booksDir.path}/${key.id}.reading-v4.$readableFormat',
+        '${booksDir.path}/${key.id}.reading-v5.$readableFormat',
       );
       if (file.existsSync() && file.lengthSync() > 0) {
         return (file: file, format: readableFormat);
@@ -58,7 +71,7 @@ final bookFileProvider = FutureProvider.autoDispose
       final raw = Dio();
       try {
         final res = await raw.get<List<int>>(
-          dl.downloadUrl,
+          download.downloadUrl,
           options: Options(responseType: ResponseType.bytes),
         );
         await file.writeAsBytes(res.data ?? const [], flush: true);

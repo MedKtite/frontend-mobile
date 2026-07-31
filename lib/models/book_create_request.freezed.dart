@@ -30,6 +30,7 @@ mixin _$BookCreateRequest {
   int? get publishedYear => throw _privateConstructorUsedError;
   String? get fileKey => throw _privateConstructorUsedError;
   String? get googleId => throw _privateConstructorUsedError;
+  int? get gutenbergId => throw _privateConstructorUsedError;
   String? get isbn13 => throw _privateConstructorUsedError;
   int? get pageCount => throw _privateConstructorUsedError;
   int? get durationSec => throw _privateConstructorUsedError;
@@ -64,6 +65,7 @@ abstract class $BookCreateRequestCopyWith<$Res> {
     int? publishedYear,
     String? fileKey,
     String? googleId,
+    int? gutenbergId,
     String? isbn13,
     int? pageCount,
     int? durationSec,
@@ -97,6 +99,7 @@ class _$BookCreateRequestCopyWithImpl<$Res, $Val extends BookCreateRequest>
     Object? publishedYear = freezed,
     Object? fileKey = freezed,
     Object? googleId = freezed,
+    Object? gutenbergId = freezed,
     Object? isbn13 = freezed,
     Object? pageCount = freezed,
     Object? durationSec = freezed,
@@ -139,6 +142,10 @@ class _$BookCreateRequestCopyWithImpl<$Res, $Val extends BookCreateRequest>
                 ? _value.googleId
                 : googleId // ignore: cast_nullable_to_non_nullable
                       as String?,
+            gutenbergId: freezed == gutenbergId
+                ? _value.gutenbergId
+                : gutenbergId // ignore: cast_nullable_to_non_nullable
+                      as int?,
             isbn13: freezed == isbn13
                 ? _value.isbn13
                 : isbn13 // ignore: cast_nullable_to_non_nullable
@@ -191,6 +198,7 @@ abstract class _$$BookCreateRequestImplCopyWith<$Res>
     int? publishedYear,
     String? fileKey,
     String? googleId,
+    int? gutenbergId,
     String? isbn13,
     int? pageCount,
     int? durationSec,
@@ -223,6 +231,7 @@ class __$$BookCreateRequestImplCopyWithImpl<$Res>
     Object? publishedYear = freezed,
     Object? fileKey = freezed,
     Object? googleId = freezed,
+    Object? gutenbergId = freezed,
     Object? isbn13 = freezed,
     Object? pageCount = freezed,
     Object? durationSec = freezed,
@@ -265,6 +274,10 @@ class __$$BookCreateRequestImplCopyWithImpl<$Res>
             ? _value.googleId
             : googleId // ignore: cast_nullable_to_non_nullable
                   as String?,
+        gutenbergId: freezed == gutenbergId
+            ? _value.gutenbergId
+            : gutenbergId // ignore: cast_nullable_to_non_nullable
+                  as int?,
         isbn13: freezed == isbn13
             ? _value.isbn13
             : isbn13 // ignore: cast_nullable_to_non_nullable
@@ -310,6 +323,7 @@ class _$BookCreateRequestImpl implements _BookCreateRequest {
     this.publishedYear,
     this.fileKey,
     this.googleId,
+    this.gutenbergId,
     this.isbn13,
     this.pageCount,
     this.durationSec,
@@ -340,6 +354,8 @@ class _$BookCreateRequestImpl implements _BookCreateRequest {
   @override
   final String? googleId;
   @override
+  final int? gutenbergId;
+  @override
   final String? isbn13;
   @override
   final int? pageCount;
@@ -356,7 +372,7 @@ class _$BookCreateRequestImpl implements _BookCreateRequest {
 
   @override
   String toString() {
-    return 'BookCreateRequest(title: $title, format: $format, author: $author, narrator: $narrator, publisher: $publisher, publishedYear: $publishedYear, fileKey: $fileKey, googleId: $googleId, isbn13: $isbn13, pageCount: $pageCount, durationSec: $durationSec, language: $language, coverUrl: $coverUrl, coverDominantColor: $coverDominantColor, status: $status)';
+    return 'BookCreateRequest(title: $title, format: $format, author: $author, narrator: $narrator, publisher: $publisher, publishedYear: $publishedYear, fileKey: $fileKey, googleId: $googleId, gutenbergId: $gutenbergId, isbn13: $isbn13, pageCount: $pageCount, durationSec: $durationSec, language: $language, coverUrl: $coverUrl, coverDominantColor: $coverDominantColor, status: $status)';
   }
 
   @override
@@ -376,6 +392,8 @@ class _$BookCreateRequestImpl implements _BookCreateRequest {
             (identical(other.fileKey, fileKey) || other.fileKey == fileKey) &&
             (identical(other.googleId, googleId) ||
                 other.googleId == googleId) &&
+            (identical(other.gutenbergId, gutenbergId) ||
+                other.gutenbergId == gutenbergId) &&
             (identical(other.isbn13, isbn13) || other.isbn13 == isbn13) &&
             (identical(other.pageCount, pageCount) ||
                 other.pageCount == pageCount) &&
@@ -402,6 +420,7 @@ class _$BookCreateRequestImpl implements _BookCreateRequest {
     publishedYear,
     fileKey,
     googleId,
+    gutenbergId,
     isbn13,
     pageCount,
     durationSec,
@@ -438,6 +457,7 @@ abstract class _BookCreateRequest implements BookCreateRequest {
     final int? publishedYear,
     final String? fileKey,
     final String? googleId,
+    final int? gutenbergId,
     final String? isbn13,
     final int? pageCount,
     final int? durationSec,
@@ -466,6 +486,8 @@ abstract class _BookCreateRequest implements BookCreateRequest {
   String? get fileKey;
   @override
   String? get googleId;
+  @override
+  int? get gutenbergId;
   @override
   String? get isbn13;
   @override

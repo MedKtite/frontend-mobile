@@ -3,12 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/catalog_book.dart';
 import '../services/backend/catalog_service.dart';
-import 'trending_provider.dart';
 
-/// Author surfaces, no backend/DB required:
-/// - Top authors: aggregated from Gutendex's most-downloaded books.
-/// - Portrait / tagline / bio: Wikipedia's public summary API.
-/// - An author's books: Gutendex search (all readable in-app).
+/// Author surfaces:
+/// - Top authors + portraits: nightly snapshot served from our backend/DB.
+/// - Author profile enrichment: Wikipedia, loaded only after opening a profile.
+/// - An author's books: our backend catalog search.
 
 typedef TopAuthor = ({String name, String? imageUrl, int downloads});
 
@@ -18,12 +17,6 @@ typedef AuthorDetails = ({
   String? imageUrl,
   List<CatalogBook> books,
 });
-
-/// Gutendex lists authors as "Last, First" — flip to display order.
-String _displayAuthor(String raw) {
-  final parts = raw.split(', ');
-  return parts.length == 2 ? '${parts[1]} ${parts[0]}' : raw;
-}
 
 Future<Map<String, dynamic>?> _wikiSummary(Dio dio, String name) async {
   try {
@@ -37,42 +30,18 @@ Future<Map<String, dynamic>?> _wikiSummary(Dio dio, String name) async {
   }
 }
 
-/// Most-downloaded Gutenberg authors, with Wikipedia portraits. One fetch per
-/// session (non-autoDispose) — the ranking barely moves.
+/// One fast DB-backed request; external enrichment happens in the nightly
+/// Python batch, never while Home is loading.
 final topAuthorsProvider = FutureProvider<List<TopAuthor>>((ref) async {
-  final results = await ref.watch(popularGutenbergResultsProvider.future);
-  final dio = Dio();
-  try {
-    final downloadsByAuthor = <String, int>{};
-    for (final r in results) {
-      final authors = r['authors'];
-      if (authors is! List || authors.isEmpty) continue;
-      final name = (authors.first as Map?)?['name'] as String?;
-      if (name == null || name.isEmpty) continue;
-      final display = _displayAuthor(name);
-      downloadsByAuthor[display] =
-          (downloadsByAuthor[display] ?? 0) +
-          ((r['download_count'] as num?)?.toInt() ?? 0);
-    }
-    final ranked = downloadsByAuthor.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
-    final top = ranked.take(8).toList();
-
-    // Portraits in parallel, best-effort — a missing photo becomes initials.
-    final portraits = await Future.wait(
-      top.map((e) async {
-        final s = await _wikiSummary(dio, e.key);
-        return (s?['thumbnail'] as Map?)?['source'] as String?;
-      }),
-    );
-
-    return [
-      for (var i = 0; i < top.length; i++)
-        (name: top[i].key, imageUrl: portraits[i], downloads: top[i].value),
-    ];
-  } finally {
-    dio.close();
-  }
+  final authors = await ref.watch(catalogServiceProvider).topAuthors(limit: 8);
+  return [
+    for (final author in authors)
+      (
+        name: author.name,
+        imageUrl: author.imageUrl,
+        downloads: author.downloadCount,
+      ),
+  ];
 });
 
 /// Profile + bibliography for one author (keyed by display name).
