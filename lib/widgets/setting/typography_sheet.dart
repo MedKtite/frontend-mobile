@@ -5,17 +5,16 @@ import '../../app/theme/tokens/colors.dart';
 import '../../app/theme/tokens/radii.dart';
 import '../../app/theme/tokens/spacing.dart';
 import '../../app/theme/tokens/typography.dart';
-import '../../core/widgets/adaptive_modal.dart';
 import '../../providers/reading_settings_provider.dart';
-import '../glass_panel.dart';
 
 /// The "Aa" typography sheet (Figma 297:2). Each control writes
 /// [readingSettingsProvider] immediately, so the reader behind it live-previews.
 /// Styled with the *app* tokens (not the reader palette) — it's a settings UI.
 Future<void> showTypographySheet(BuildContext context) {
-  return showAdaptiveModal<void>(
+  return showModalBottomSheet<void>(
     context: context,
-    backgroundColor: Colors.transparent,
+    backgroundColor: context.appColors.surface,
+    barrierColor: Colors.black.withValues(alpha: 0.35),
     builder: (_) => const _TypographySheet(),
   );
 }
@@ -29,26 +28,45 @@ class _TypographySheet extends ConsumerWidget {
     final s = ref.watch(readingSettingsProvider);
     final ctrl = ref.read(readingSettingsProvider.notifier);
 
-    return GlassPanel(
-      radius: AppRadii.xl,
-      borderRadius: adaptiveModalBorderRadius(context),
+    return Container(
+      decoration: BoxDecoration(
+        color: colors.bg,
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(AppRadii.xl),
+        ),
+      ),
       child: SafeArea(
         top: false,
         child: Padding(
           padding: const EdgeInsets.fromLTRB(
-            AppSpacing.pageHorizontal,
+            AppSpacing.readingHorizontal,
             AppSpacing.sm,
-            AppSpacing.pageHorizontal,
-            AppSpacing.lg,
+            AppSpacing.readingHorizontal,
+            AppSpacing.xl,
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Center(child: AdaptiveModalHandle(color: colors.border)),
               Center(
-                child: Text('Typography',
-                    style: AppTypography.title2(colors.text)),
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  margin: const EdgeInsets.only(
+                    top: AppSpacing.xs,
+                    bottom: AppSpacing.lg,
+                  ),
+                  decoration: BoxDecoration(
+                    color: colors.text3,
+                    borderRadius: AppRadii.brFull,
+                  ),
+                ),
+              ),
+              Center(
+                child: Text(
+                  'Typography',
+                  style: AppTypography.title2(colors.text),
+                ),
               ),
               const SizedBox(height: AppSpacing.xl),
               const _SectionLabel('TYPEFACE'),
@@ -117,7 +135,9 @@ class _TypefaceToggle extends StatelessWidget {
                 : null,
             child: Text(
               label,
-              style: style.copyWith(color: selected ? colors.text : colors.text2),
+              style: style.copyWith(
+                color: selected ? colors.text : colors.text2,
+              ),
             ),
           ),
         ),
@@ -127,13 +147,16 @@ class _TypefaceToggle extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(2),
       decoration: BoxDecoration(
-        color: colors.surface,
+        color: colors.surface2,
         borderRadius: AppRadii.brXl,
       ),
       child: Row(
         children: [
-          seg('Serif', ReaderFont.serif,
-              AppTypography.title3(colors.text).copyWith(fontSize: 16)),
+          seg(
+            'Serif',
+            ReaderFont.serif,
+            AppTypography.title3(colors.text).copyWith(fontSize: 16),
+          ),
           seg('Sans', ReaderFont.sans, AppTypography.label(colors.text)),
         ],
       ),
@@ -170,15 +193,18 @@ class _SizeRow extends StatelessWidget {
                 height: 56,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: value == size ? colors.text : colors.surface,
+                  color: value == size ? colors.text : colors.surface2,
                   borderRadius: AppRadii.brMd,
                 ),
                 child: Text(
                   'Aa',
-                  style: AppTypography.title3(
-                          value == size ? colors.bg : colors.text)
-                      .copyWith(
-                          fontSize: _preview[size], fontWeight: FontWeight.w400),
+                  style:
+                      AppTypography.title3(
+                        value == size ? colors.bg : colors.text,
+                      ).copyWith(
+                        fontSize: _preview[size],
+                        fontWeight: FontWeight.w400,
+                      ),
                 ),
               ),
             ),
@@ -209,7 +235,13 @@ class _SpacingRow extends StatelessWidget {
       Widget rule() => Container(width: 28, height: 1.5, color: color);
       return Column(
         mainAxisSize: MainAxisSize.min,
-        children: [rule(), SizedBox(height: gap), rule(), SizedBox(height: gap), rule()],
+        children: [
+          rule(),
+          SizedBox(height: gap),
+          rule(),
+          SizedBox(height: gap),
+          rule(),
+        ],
       );
     }
 
@@ -226,7 +258,7 @@ class _SpacingRow extends StatelessWidget {
                 height: 48,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: value == sp ? colors.text : colors.surface,
+                  color: value == sp ? colors.text : colors.surface2,
                   borderRadius: AppRadii.brMd,
                 ),
                 child: rules(value == sp ? colors.bg : colors.text2, _gap[sp]!),
@@ -274,7 +306,9 @@ class _ThemeRow extends StatelessWidget {
                     ),
                     child: Text(
                       'Aa',
-                      style: AppTypography.title3(pal.text).copyWith(fontSize: 16),
+                      style: AppTypography.title3(
+                        pal.text,
+                      ).copyWith(fontSize: 16),
                     ),
                   );
                 },

@@ -19,11 +19,13 @@ const kTagNames = <String>[
 
 /// "Tag this passage" sheet (Figma 291:2). Returns the chosen tag name (the
 /// highlight's `colorTag`), or null if dismissed without choosing.
-Future<String?> showTagPickerSheet(BuildContext context,
-    {required String passage}) {
+Future<String?> showTagPickerSheet(
+  BuildContext context, {
+  required String passage,
+}) {
   return showAdaptiveModal<String>(
     context: context,
-    backgroundColor: Colors.transparent,
+    backgroundColor: context.appColors.surface,
     barrierColor: Colors.black.withValues(alpha: 0.35),
     isScrollControlled: true,
     builder: (_) => _TagPickerSheet(passage: passage),
@@ -46,7 +48,7 @@ class _TagPickerSheetState extends State<_TagPickerSheet> {
     final colors = context.appColors;
     return Container(
       decoration: BoxDecoration(
-        color: colors.bg,
+        color: colors.surface,
         borderRadius: adaptiveModalBorderRadius(context),
       ),
       child: SafeArea(
@@ -64,13 +66,17 @@ class _TagPickerSheetState extends State<_TagPickerSheet> {
             children: [
               const _Grabber(),
               Center(
-                child:
-                    Text('Tag this passage', style: AppTypography.title2(colors.text)),
+                child: Text(
+                  'Tag this passage',
+                  style: AppTypography.title2(colors.text),
+                ),
               ),
               const SizedBox(height: AppSpacing.xs),
               Center(
-                child: Text('How does this make you feel?',
-                    style: AppTypography.subtitle(colors.text2)),
+                child: Text(
+                  'How does this make you feel?',
+                  style: AppTypography.subtitle(colors.text2),
+                ),
               ),
               const SizedBox(height: AppSpacing.lg),
               _PassageReference(passage: widget.passage),
@@ -144,8 +150,9 @@ class _TagChip extends StatelessWidget {
             const SizedBox(width: AppSpacing.sm),
             Text(
               tag,
-              style: AppTypography.label(selected ? colors.bg : colors.text)
-                  .copyWith(fontWeight: FontWeight.w500),
+              style: AppTypography.label(
+                selected ? colors.bg : colors.text,
+              ).copyWith(fontWeight: FontWeight.w500),
             ),
           ],
         ),
@@ -176,7 +183,9 @@ class _PassageReference extends StatelessWidget {
             Container(
               width: 3,
               margin: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.md, vertical: AppSpacing.md),
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.md,
+              ),
               decoration: BoxDecoration(
                 color: colors.accent,
                 borderRadius: AppRadii.brXs,
@@ -185,7 +194,11 @@ class _PassageReference extends StatelessWidget {
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(
-                    0, AppSpacing.md, AppSpacing.md, AppSpacing.md),
+                  0,
+                  AppSpacing.md,
+                  AppSpacing.md,
+                  AppSpacing.md,
+                ),
                 child: Text(
                   '“$passage”',
                   maxLines: 2,
@@ -206,10 +219,6 @@ class _Grabber extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: AdaptiveModalHandle(
-        color: context.appColors.text3,
-      ),
-    );
+    return Center(child: AdaptiveModalHandle(color: context.appColors.text3));
   }
 }

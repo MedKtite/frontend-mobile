@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../app/theme/tokens/colors.dart';
 import '../../app/theme/tokens/radii.dart';
 import '../../app/theme/tokens/spacing.dart';
 
@@ -13,6 +14,10 @@ Future<T?> showAdaptiveModal<T>({
   Color? barrierColor,
   bool isScrollControlled = false,
 }) {
+  final modalBackgroundColor =
+      backgroundColor == null || backgroundColor == Colors.transparent
+      ? context.appColors.surface
+      : backgroundColor;
   final isTablet =
       MediaQuery.sizeOf(context).shortestSide >= AppSpacing.tabletBreakpoint;
 
@@ -20,20 +25,18 @@ Future<T?> showAdaptiveModal<T>({
     return showModalBottomSheet<T>(
       context: context,
       useRootNavigator: true,
-      backgroundColor: backgroundColor,
+      backgroundColor: modalBackgroundColor,
       barrierColor: barrierColor,
       isScrollControlled: isScrollControlled,
-      shape: backgroundColor == Colors.transparent
+      shape: modalBackgroundColor == Colors.transparent
           ? null
           : const RoundedRectangleBorder(
               borderRadius: BorderRadius.vertical(
                 top: Radius.circular(AppRadii.xl),
               ),
             ),
-      builder: (modalContext) => AdaptiveModalScope(
-        isPopup: false,
-        child: builder(modalContext),
-      ),
+      builder: (modalContext) =>
+          AdaptiveModalScope(isPopup: false, child: builder(modalContext)),
     );
   }
 
@@ -42,10 +45,10 @@ Future<T?> showAdaptiveModal<T>({
     useRootNavigator: true,
     barrierColor: barrierColor,
     builder: (modalContext) {
-      final availableHeight = MediaQuery.sizeOf(modalContext).height -
-          AppSpacing.xxxl * 2;
+      final availableHeight =
+          MediaQuery.sizeOf(modalContext).height - AppSpacing.xxxl * 2;
       return Dialog(
-        backgroundColor: backgroundColor,
+        backgroundColor: modalBackgroundColor,
         clipBehavior: Clip.antiAlias,
         insetPadding: const EdgeInsets.all(AppSpacing.xxl),
         shape: const RoundedRectangleBorder(borderRadius: AppRadii.brXl),
@@ -76,7 +79,8 @@ class AdaptiveModalScope extends InheritedWidget {
   final bool isPopup;
 
   static bool isPopupOf(BuildContext context) =>
-      context.dependOnInheritedWidgetOfExactType<AdaptiveModalScope>()
+      context
+          .dependOnInheritedWidgetOfExactType<AdaptiveModalScope>()
           ?.isPopup ??
       false;
 
@@ -104,14 +108,8 @@ class AdaptiveModalHandle extends StatelessWidget {
     return Container(
       width: 36,
       height: AppSpacing.xs,
-      margin: const EdgeInsets.only(
-        top: AppSpacing.sm,
-        bottom: AppSpacing.xl,
-      ),
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: AppRadii.brFull,
-      ),
+      margin: const EdgeInsets.only(top: AppSpacing.sm, bottom: AppSpacing.xl),
+      decoration: BoxDecoration(color: color, borderRadius: AppRadii.brFull),
     );
   }
 }

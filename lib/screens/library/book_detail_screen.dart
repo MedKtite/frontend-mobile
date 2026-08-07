@@ -96,7 +96,7 @@ class BookDetailScreen extends ConsumerWidget {
     }
 
     final extrasKey = (
-      gutenbergId: null,
+      gutenbergId: displayBook.gutenbergId,
       googleId: displayBook.googleId,
       title: displayBook.title,
       author: displayBook.author,

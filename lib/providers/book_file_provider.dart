@@ -62,7 +62,7 @@ final bookFileProvider = FutureProvider.autoDispose
       final download = dl!;
       final readableFormat = download.format;
       final file = File(
-        '${booksDir.path}/${key.id}.reading-v5.$readableFormat',
+        '${booksDir.path}/${key.id}.reading-v6.$readableFormat',
       );
       if (file.existsSync() && file.lengthSync() > 0) {
         return (file: file, format: readableFormat);

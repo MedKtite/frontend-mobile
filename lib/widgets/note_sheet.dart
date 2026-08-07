@@ -14,7 +14,7 @@ Future<String?> showNoteSheet(
 }) {
   return showAdaptiveModal<String>(
     context: context,
-    backgroundColor: Colors.transparent,
+    backgroundColor: context.appColors.surface,
     barrierColor: Colors.black.withValues(alpha: 0.35),
     isScrollControlled: true,
     builder: (_) => _NoteSheet(passage: passage, reference: reference),
@@ -56,7 +56,7 @@ class _NoteSheetState extends State<_NoteSheet> {
       ),
       child: Container(
         decoration: BoxDecoration(
-          color: colors.bg,
+          color: colors.surface,
           borderRadius: adaptiveModalBorderRadius(context),
         ),
         child: SafeArea(
@@ -74,16 +74,23 @@ class _NoteSheetState extends State<_NoteSheet> {
               children: [
                 Center(child: AdaptiveModalHandle(color: colors.text3)),
                 Center(
-                  child: Text('Add a note',
-                      style: AppTypography.title2(colors.text)),
+                  child: Text(
+                    'Add a note',
+                    style: AppTypography.title2(colors.text),
+                  ),
                 ),
                 const SizedBox(height: AppSpacing.xs),
                 Center(
-                  child: Text('to your highlight',
-                      style: AppTypography.subtitle(colors.text2)),
+                  child: Text(
+                    'to your highlight',
+                    style: AppTypography.subtitle(colors.text2),
+                  ),
                 ),
                 const SizedBox(height: AppSpacing.lg),
-                _Reference(reference: widget.reference, passage: widget.passage),
+                _Reference(
+                  reference: widget.reference,
+                  passage: widget.passage,
+                ),
                 const SizedBox(height: AppSpacing.lg),
                 Container(
                   decoration: BoxDecoration(
@@ -115,8 +122,10 @@ class _NoteSheetState extends State<_NoteSheet> {
                   children: [
                     TextButton(
                       onPressed: () => Navigator.of(context).pop(),
-                      child: Text('Cancel',
-                          style: AppTypography.label(colors.text2)),
+                      child: Text(
+                        'Cancel',
+                        style: AppTypography.label(colors.text2),
+                      ),
                     ),
                     SizedBox(
                       width: 152,
@@ -157,7 +166,9 @@ class _Reference extends StatelessWidget {
             Container(
               width: 3,
               margin: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.md, vertical: AppSpacing.md),
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.md,
+              ),
               decoration: BoxDecoration(
                 color: colors.accent,
                 borderRadius: AppRadii.brXs,
@@ -166,12 +177,19 @@ class _Reference extends StatelessWidget {
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(
-                    0, AppSpacing.md, AppSpacing.md, AppSpacing.md),
+                  0,
+                  AppSpacing.md,
+                  AppSpacing.md,
+                  AppSpacing.md,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(reference, style: AppTypography.overline(colors.text3)),
+                    Text(
+                      reference,
+                      style: AppTypography.overline(colors.text3),
+                    ),
                     const SizedBox(height: AppSpacing.xs),
                     Text(
                       '“$passage”',

@@ -17,10 +17,14 @@ class AuthErrorMessages {
     if (message.contains('incorrect email or password') ||
         message.contains('invalid credentials') ||
         message.contains('bad credentials') ||
-        message.contains('unauthorized')) return invalidCredentials;
+        message.contains('unauthorized')) {
+      return invalidCredentials;
+    }
     if (message.contains('already exists') ||
         message.contains('already registered') ||
-        message.contains('duplicate email')) return accountAlreadyExists;
+        message.contains('duplicate email')) {
+      return accountAlreadyExists;
+    }
     return switch (context) {
       AuthErrorContext.recovery => recoveryUnavailable,
       AuthErrorContext.resetPassword => resetUnavailable,

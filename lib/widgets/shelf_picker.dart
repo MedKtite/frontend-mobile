@@ -4,16 +4,13 @@ import '../app/theme/tokens/colors.dart';
 import '../app/theme/tokens/radii.dart';
 import '../app/theme/tokens/spacing.dart';
 import '../app/theme/tokens/typography.dart';
-import '../core/widgets/adaptive_modal.dart';
-import 'glass_panel.dart';
 
-/// Asks which shelf a book goes on. Returns `'archived'`, `'reading'`, or
-/// `'listening'`; returns null if dismissed. The backend's archived status is
-/// presented as the friendlier "Saved" shelf in the UI.
+/// Asks which shelf a book goes on. Returns `'reading'` / `'listening'`, or null
+/// if dismissed. Used both to re-shelf an owned book and to add a catalog result.
 Future<String?> showShelfPicker(BuildContext context) {
-  return showAdaptiveModal<String>(
+  return showModalBottomSheet<String>(
     context: context,
-    backgroundColor: Colors.transparent,
+    backgroundColor: context.appColors.surface,
     builder: (_) => const _ShelfPicker(),
   );
 }
@@ -24,9 +21,11 @@ class _ShelfPicker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    return GlassPanel(
-      radius: AppRadii.xl,
-      borderRadius: adaptiveModalBorderRadius(context),
+    return Container(
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(AppRadii.xl)),
+      ),
       child: SafeArea(
         top: false,
         child: Padding(
@@ -39,15 +38,20 @@ class _ShelfPicker extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              AdaptiveModalHandle(color: colors.border),
+              Container(
+                width: 36,
+                height: 4,
+                margin: const EdgeInsets.only(
+                  top: AppSpacing.sm,
+                  bottom: AppSpacing.xl,
+                ),
+                decoration: BoxDecoration(
+                  color: colors.border,
+                  borderRadius: AppRadii.brFull,
+                ),
+              ),
               Text('Add to shelf', style: AppTypography.title2(colors.text)),
               const SizedBox(height: AppSpacing.xl),
-              _ShelfOption(
-                icon: Icons.bookmark_outline_rounded,
-                label: 'Saved',
-                onTap: () => Navigator.of(context).pop('archived'),
-              ),
-              const SizedBox(height: AppSpacing.md),
               _ShelfOption(
                 icon: Icons.menu_book_outlined,
                 label: 'Reading',
@@ -58,6 +62,11 @@ class _ShelfPicker extends StatelessWidget {
                 icon: Icons.headphones_outlined,
                 label: 'Listening',
                 onTap: () => Navigator.of(context).pop('listening'),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: Text('Cancel', style: AppTypography.label(colors.text2)),
               ),
             ],
           ),
@@ -78,35 +87,35 @@ class _ShelfOption extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     return Material(
-      color: Colors.transparent,
+      color: colors.surface,
       borderRadius: AppRadii.brLg,
       child: InkWell(
         onTap: onTap,
         borderRadius: AppRadii.brLg,
         child: Container(
           padding: const EdgeInsets.all(AppSpacing.md),
-          decoration: BoxDecoration(borderRadius: AppRadii.brLg),
+          decoration: BoxDecoration(
+            borderRadius: AppRadii.brLg,
+            border: Border.all(color: colors.border),
+          ),
           child: Row(
             children: [
               Container(
-                width: 48,
-                height: 48,
+                width: 44,
+                height: 44,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: colors.accentSoft,
+                  color: colors.surface2,
                   borderRadius: AppRadii.brMd,
                 ),
-                child: Icon(icon, size: 22, color: colors.accent),
+                child: Icon(icon, size: 22, color: colors.text2),
               ),
               const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: Text(
-                  label,
-                  style: AppTypography.body(colors.text)
-                      .copyWith(fontWeight: FontWeight.w600),
-                ),
+              Text(
+                label,
+                style: AppTypography.body(colors.text)
+                    .copyWith(fontWeight: FontWeight.w600),
               ),
-              Icon(Icons.chevron_right, size: 20, color: colors.text3),
             ],
           ),
         ),

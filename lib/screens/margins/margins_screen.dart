@@ -217,16 +217,16 @@ class _MarginsScreenState extends ConsumerState<MarginsScreen> {
                   padding: const EdgeInsets.only(bottom: AppSpacing.lg),
                   child: e.highlight != null
                       ? e.highlight!.audioStartSec != null
-                          ? _AudioMomentCard(
-                              highlight: e.highlight!,
-                              notes: e.notes,
-                              book: bookById[e.highlight!.bookId],
-                            )
-                          : _PassageCard(
-                              highlight: e.highlight!,
-                              notes: e.notes,
-                              book: bookById[e.highlight!.bookId],
-                            )
+                            ? _AudioMomentCard(
+                                highlight: e.highlight!,
+                                notes: e.notes,
+                                book: bookById[e.highlight!.bookId],
+                              )
+                            : _PassageCard(
+                                highlight: e.highlight!,
+                                notes: e.notes,
+                                book: bookById[e.highlight!.bookId],
+                              )
                       : _NoteCard(
                           note: e.notes.first,
                           book: bookById[e.notes.first.bookId],
@@ -447,8 +447,9 @@ class _TagChip extends StatelessWidget {
             ],
             Text(
               count == null ? name : '$name $count',
-              style: AppTypography.label(active ? colors.bg : colors.text2)
-                  .copyWith(fontWeight: FontWeight.w500),
+              style: AppTypography.label(
+                active ? colors.bg : colors.text2,
+              ).copyWith(fontWeight: FontWeight.w500),
             ),
           ],
         ),
@@ -459,7 +460,11 @@ class _TagChip extends StatelessWidget {
 
 /// Type filter: plain text, active gets an ink underline.
 class _TypeTab extends StatelessWidget {
-  const _TypeTab({required this.label, required this.active, required this.onTap});
+  const _TypeTab({
+    required this.label,
+    required this.active,
+    required this.onTap,
+  });
 
   final String label;
   final bool active;
@@ -482,8 +487,9 @@ class _TypeTab extends StatelessWidget {
         ),
         child: Text(
           label,
-          style: AppTypography.label(active ? colors.text : colors.text3)
-              .copyWith(fontWeight: active ? FontWeight.w600 : FontWeight.w500),
+          style: AppTypography.label(
+            active ? colors.text : colors.text3,
+          ).copyWith(fontWeight: active ? FontWeight.w600 : FontWeight.w500),
         ),
       ),
     );
@@ -511,15 +517,11 @@ class _AudioMomentCard extends ConsumerWidget {
     final tag = highlight.colorTag ?? 'revisit';
     final start = _audioTime(highlight.audioStartSec);
     final endSeconds = highlight.audioEndSec;
-    final time = endSeconds != null && endSeconds > (highlight.audioStartSec ?? 0)
+    final time =
+        endSeconds != null && endSeconds > (highlight.audioStartSec ?? 0)
         ? '$start – ${_audioTime(endSeconds)}'
         : start;
-    void open() => _openBook(
-          context,
-          ref,
-          highlight.bookId,
-          listening: true,
-        );
+    void open() => _openBook(context, ref, highlight.bookId, listening: true);
 
     return _Card(
       onTap: open,
@@ -544,8 +546,10 @@ class _AudioMomentCard extends ConsumerWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('AUDIO MOMENT',
-                      style: AppTypography.overline(colors.accent)),
+                  Text(
+                    'AUDIO MOMENT',
+                    style: AppTypography.overline(colors.accent),
+                  ),
                   const SizedBox(height: AppSpacing.xs),
                   Row(
                     children: [
@@ -558,22 +562,28 @@ class _AudioMomentCard extends ConsumerWidget {
                         ),
                       ),
                       const SizedBox(width: AppSpacing.sm),
-                      Text(_capitalize(tag),
-                          style: AppTypography.caption(colors.text2)),
+                      Text(
+                        _capitalize(tag),
+                        style: AppTypography.caption(colors.text2),
+                      ),
                     ],
                   ),
                 ],
               ),
               const Spacer(),
-              Text(_shortDate(highlight.createdAt),
-                  style: AppTypography.caption(colors.text3)),
+              Text(
+                _shortDate(highlight.createdAt),
+                style: AppTypography.caption(colors.text3),
+              ),
             ],
           ),
           const SizedBox(height: AppSpacing.lg),
           Text(time, style: AppTypography.title1(colors.text)),
           const SizedBox(height: AppSpacing.xs),
-          Text('Listening bookmark',
-              style: AppTypography.subtitle(colors.text2)),
+          Text(
+            'Listening bookmark',
+            style: AppTypography.subtitle(colors.text2),
+          ),
           for (final note in notes) ...[
             const SizedBox(height: AppSpacing.md),
             _NoteBox(note: note),
@@ -586,8 +596,7 @@ class _AudioMomentCard extends ConsumerWidget {
             locationRef: null,
             saved: highlight.isSaved,
             onOpenBook: open,
-            onToggleSave: (saved) =>
-                _toggleHighlightSave(context, ref, saved),
+            onToggleSave: (saved) => _toggleHighlightSave(context, ref, saved),
           ),
         ],
       ),
@@ -600,9 +609,7 @@ class _AudioMomentCard extends ConsumerWidget {
     bool saved,
   ) async {
     try {
-      await ref
-          .read(highlightServiceProvider)
-          .setSaved(highlight.id, saved);
+      await ref.read(highlightServiceProvider).setSaved(highlight.id, saved);
       refreshAnnotations(ref);
     } on ApiError catch (error) {
       if (context.mounted) {
@@ -641,15 +648,21 @@ class _PassageCard extends ConsumerWidget {
               Container(
                 width: 8,
                 height: 8,
-                decoration:
-                    BoxDecoration(color: tagTone, shape: BoxShape.circle),
+                decoration: BoxDecoration(
+                  color: tagTone,
+                  shape: BoxShape.circle,
+                ),
               ),
               const SizedBox(width: AppSpacing.sm),
-              Text(tag.toUpperCase(),
-                  style: AppTypography.overline(colors.text3)),
+              Text(
+                tag.toUpperCase(),
+                style: AppTypography.overline(colors.text3),
+              ),
               const Spacer(),
-              Text(_shortDate(highlight.createdAt),
-                  style: AppTypography.caption(colors.text3)),
+              Text(
+                _shortDate(highlight.createdAt),
+                style: AppTypography.caption(colors.text3),
+              ),
             ],
           ),
           const SizedBox(height: AppSpacing.md),
@@ -657,12 +670,14 @@ class _PassageCard extends ConsumerWidget {
             highlight.passageText ?? '',
             maxLines: 5,
             overflow: TextOverflow.ellipsis,
-            style: AppTypography.serif(TextStyle(
-              color: colors.text,
-              fontSize: 16,
-              height: 1.45,
-              fontStyle: FontStyle.italic,
-            )),
+            style: AppTypography.serif(
+              TextStyle(
+                color: colors.text,
+                fontSize: 16,
+                height: 1.45,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
           ),
           for (final n in notes) ...[
             const SizedBox(height: AppSpacing.md),
@@ -684,7 +699,10 @@ class _PassageCard extends ConsumerWidget {
   }
 
   Future<void> _toggleHighlightSave(
-      BuildContext context, WidgetRef ref, bool v) async {
+    BuildContext context,
+    WidgetRef ref,
+    bool v,
+  ) async {
     try {
       await ref.read(highlightServiceProvider).setSaved(highlight.id, v);
       refreshAnnotations(ref);
@@ -717,8 +735,10 @@ class _NoteCard extends ConsumerWidget {
               const SizedBox(width: AppSpacing.sm),
               Text('NOTE', style: AppTypography.overline(colors.text3)),
               const Spacer(),
-              Text(_shortDate(note.createdAt),
-                  style: AppTypography.caption(colors.text3)),
+              Text(
+                _shortDate(note.createdAt),
+                style: AppTypography.caption(colors.text3),
+              ),
             ],
           ),
           const SizedBox(height: AppSpacing.md),
@@ -744,7 +764,10 @@ class _NoteCard extends ConsumerWidget {
   }
 
   Future<void> _toggleNoteSave(
-      BuildContext context, WidgetRef ref, bool v) async {
+    BuildContext context,
+    WidgetRef ref,
+    bool v,
+  ) async {
     try {
       await ref.read(noteServiceProvider).setSaved(note.id, v);
       refreshAnnotations(ref);
@@ -782,15 +805,21 @@ class _NoteBox extends StatelessWidget {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(Icons.sticky_note_2_outlined,
-                          size: 14, color: colors.text2),
+                      Icon(
+                        Icons.sticky_note_2_outlined,
+                        size: 14,
+                        color: colors.text2,
+                      ),
                       const SizedBox(width: AppSpacing.sm),
                       Expanded(
-                        child: Text(note.bodyMd,
-                            maxLines: 5,
-                            overflow: TextOverflow.ellipsis,
-                            style: AppTypography.caption(colors.text)
-                                .copyWith(fontSize: 13, height: 1.4)),
+                        child: Text(
+                          note.bodyMd,
+                          maxLines: 5,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTypography.caption(
+                            colors.text,
+                          ).copyWith(fontSize: 13, height: 1.4),
+                        ),
                       ),
                     ],
                   ),
@@ -841,8 +870,10 @@ class _BookFooter extends StatelessWidget {
         // "In book" cluster floating off the right edge.
         Expanded(
           child: book == null
-              ? Text('Removed from library',
-                  style: AppTypography.caption(colors.text3))
+              ? Text(
+                  'Removed from library',
+                  style: AppTypography.caption(colors.text3),
+                )
               : Row(
                   children: [
                     Flexible(
@@ -853,15 +884,18 @@ class _BookFooter extends StatelessWidget {
                           book!.title,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: AppTypography.label(colors.text).copyWith(
-                              fontWeight: FontWeight.w600, fontSize: 13),
+                          style: AppTypography.label(
+                            colors.text,
+                          ).copyWith(fontWeight: FontWeight.w600, fontSize: 13),
                         ),
                       ),
                     ),
                     if (locationRef != null) ...[
                       const SizedBox(width: AppSpacing.sm),
-                      Text(locationRef!,
-                          style: AppTypography.caption(colors.text3)),
+                      Text(
+                        locationRef!,
+                        style: AppTypography.caption(colors.text3),
+                      ),
                     ],
                   ],
                 ),
@@ -897,11 +931,6 @@ void _openBook(
   final book = (ref.read(libraryBooksProvider).valueOrNull ?? const <Book>[])
       .where((b) => b.id == bookId)
       .firstOrNull;
-  if (book == null) {
-    showAppSnack(context, 'That book is no longer in your library.',
-        type: SnackType.warning);
-    return;
-  }
   context.push(
     listening ? Routes.listeningPath(bookId) : Routes.readingPath(bookId),
     extra: book,
@@ -960,13 +989,17 @@ class _Message extends StatelessWidget {
         children: [
           Icon(icon, size: 36, color: colors.text3),
           const SizedBox(height: AppSpacing.lg),
-          Text(title,
-              textAlign: TextAlign.center,
-              style: AppTypography.title3(colors.text)),
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: AppTypography.title3(colors.text),
+          ),
           const SizedBox(height: AppSpacing.sm),
-          Text(hint,
-              textAlign: TextAlign.center,
-              style: AppTypography.subtitle(colors.text2)),
+          Text(
+            hint,
+            textAlign: TextAlign.center,
+            style: AppTypography.subtitle(colors.text2),
+          ),
           if (action != null) ...[
             const SizedBox(height: AppSpacing.lg),
             action!,

@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -12,23 +10,18 @@ import '../app/theme/tokens/radii.dart';
 import '../app/theme/tokens/spacing.dart';
 import '../app/theme/tokens/typography.dart';
 import '../core/dio_client.dart';
-import '../core/widgets/adaptive_modal.dart';
-import '../core/widgets/app_snackbar.dart';
 import '../models/book_create_request.dart';
 import '../models/presign_upload_request.dart';
 import '../providers/library_provider.dart';
 import '../services/backend/book_service.dart';
 import '../services/backend/upload_service.dart';
-import 'glass_panel.dart';
+import 'log_physical_book_sheet.dart';
 
 /// Presents the "Add to library" modal sheet (frames 287:2 / 287:181).
 Future<void> showAddToLibrarySheet(BuildContext context) {
-  return showAdaptiveModal<void>(
+  return showModalBottomSheet<void>(
     context: context,
-    backgroundColor: Colors.transparent,
-    // Light scrim: the sheet is frosted GLASS — it needs bright content
-    // behind it to transmit. The default black54 turns the frost muddy.
-    barrierColor: Colors.black.withValues(alpha: 0.18),
+    backgroundColor: context.appColors.surface,
     isScrollControlled:
         true, // size to content, not the default half-screen cap
     builder: (_) => const _AddToLibrarySheet(),
@@ -44,13 +37,10 @@ class _AddToLibrarySheet extends ConsumerStatefulWidget {
 
 class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
   bool _busy = false;
-  String _busyMessage = 'Preparing your book…';
 
   static String? _contentTypeFor(String ext) => switch (ext) {
     'epub' => 'application/epub+zip',
     'pdf' => 'application/pdf',
-    'm4b' => 'audio/mp4',
-    'mp3' => 'audio/mpeg',
     _ => null,
   };
 
@@ -62,177 +52,95 @@ class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
   }
 
   Future<void> _pickAndUpload() async {
-    debugPrint('[AddBook] Opening file picker');
     final result = await FilePicker.pickFiles(
       type: FileType.custom,
-      allowedExtensions: const ['epub', 'pdf', 'm4b', 'mp3'],
-      withData: true,
+      allowedExtensions: const ['epub', 'pdf'],
+      withData: true, // we PUT the bytes straight to S3
     );
-    if (result == null || result.files.isEmpty) {
-      debugPrint('[AddBook] File picker cancelled');
-      _toast('No file selected.');
-      return;
-    }
+    if (result == null || result.files.isEmpty) return; // cancelled
 
     final picked = result.files.single;
-    final ext = (picked.extension ?? '').toLowerCase();
-    debugPrint(
-      '[AddBook] Selected name=${picked.name}, extension=$ext, '
-      'path=${picked.path != null}, bytes=${picked.bytes?.length ?? 0}',
-    );
-    final contentType = _contentTypeFor(ext);
-    if (contentType == null) {
-      _toast('Unsupported file — pick an EPUB, PDF, M4B or MP3.');
-      return;
-    }
     final bytes = picked.bytes;
-    final path = picked.path;
-    if ((bytes == null || bytes.isEmpty) && path == null) {
-      _toast('Could not read that file. Try downloading it locally first.');
+    final ext = (picked.extension ?? '').toLowerCase();
+    final contentType = _contentTypeFor(ext);
+    if (bytes == null || contentType == null) {
+      _toast('Unsupported file — pick an EPUB or PDF.');
       return;
     }
     if (!mounted) return; // the OS picker is an async gap
 
-    final title = _titleFrom(picked.name);
-    setState(() {
-      _busy = true;
-      _busyMessage = 'Preparing “$title”…';
-    });
+    setState(() => _busy = true);
     final messenger = ScaffoldMessenger.of(context);
     final router = GoRouter.of(context);
     final navigator = Navigator.of(context);
+    final title = _titleFrom(picked.name);
 
     try {
-      final file = path == null ? null : File(path);
-      final contentLength = file != null
-          ? await file.length()
-          : bytes!.length;
-      debugPrint(
-        '[AddBook] Upload source=${file != null ? 'file' : 'memory'}, '
-        'length=$contentLength, contentType=$contentType',
-      );
-      final body = file != null
-          ? file.openRead()
-          : Stream<List<int>>.fromIterable([bytes!]);
       final upload = ref.read(uploadServiceProvider);
-      debugPrint('[AddBook] Requesting presigned upload');
-      if (mounted) {
-        setState(() => _busyMessage = 'Reserving upload space…');
-      }
       final presigned = await upload.presign(
         PresignUploadRequest(
           format: ext,
           contentType: contentType,
-          contentLength: contentLength,
+          contentLength: bytes.length,
         ),
       );
-      debugPrint(
-        '[AddBook] Presign succeeded, fileKey=${presigned.fileKey}, '
-        'method=${presigned.method}',
-      );
-      if (mounted) {
-        setState(() => _busyMessage = 'Uploading “$title”…');
-      }
       await upload.putToStorage(
         uploadUrl: presigned.uploadUrl,
-        body: body,
-        contentLength: contentLength,
+        body: Stream<List<int>>.fromIterable([bytes]),
+        contentLength: bytes.length,
         contentType: contentType,
-        onSendProgress: (sent, total) {
-          if (!mounted || total <= 0) return;
-          final percent = (sent / total * 100).round();
-          if (percent == 1 || percent % 10 == 0) {
-            debugPrint('[AddBook] Storage upload progress=$percent%');
-          }
-          setState(() => _busyMessage = 'Uploading “$title”… $percent%');
-        },
       );
-      debugPrint('[AddBook] Storage upload completed');
-      if (mounted) {
-        setState(() => _busyMessage = 'Saving “$title” to your library…');
-      }
-      final request = BookCreateRequest(
-        title: title,
-        format: ext,
-        // Audio files land straight on the Listening shelf.
-        status: (ext == 'm4b' || ext == 'mp3') ? 'listening' : null,
-        fileKey: presigned.fileKey,
-      );
-      final books = ref.read(bookServiceProvider);
-      var createAttempt = 0;
-      while (true) {
-        try {
-          await books.create(request);
-          break;
-        } on ApiError catch (e) {
-          final uploadNotVisible = e.message.toLowerCase().contains(
-            'upload not found',
+      await ref
+          .read(bookServiceProvider)
+          .create(
+            BookCreateRequest(
+              title: title,
+              format: ext,
+              fileKey: presigned.fileKey,
+            ),
           );
-          if (!uploadNotVisible || createAttempt >= 2) rethrow;
-          createAttempt++;
-          debugPrint(
-            '[AddBook] Uploaded object not visible yet; retrying book '
-            'creation ($createAttempt/2)',
-          );
-          await Future<void>.delayed(
-            Duration(milliseconds: 500 * createAttempt),
-          );
-        }
-      }
-      debugPrint('[AddBook] Book creation completed');
       ref.invalidate(libraryBooksProvider);
       if (!mounted) return;
       navigator.pop(); // close the sheet
       router.go(Routes.library);
       messenger
         ..hideCurrentSnackBar()
-        ..showSnackBar(appSnackBar('Added “$title”', SnackType.success));
+        ..showSnackBar(SnackBar(content: Text('Added “$title”')));
     } on ApiError catch (e) {
-      debugPrint('[AddBook] API error: ${e.message}');
       if (!mounted) return;
       setState(() => _busy = false);
       messenger
         ..hideCurrentSnackBar()
-        ..showSnackBar(appSnackBar(e.message, SnackType.error));
-    } on DioException catch (e) {
-      debugPrint(
-        '[AddBook] Dio error: type=${e.type}, status=${e.response?.statusCode}, '
-        'message=${e.message}',
-      );
-      if (!mounted) return;
-      setState(() => _busy = false);
-      messenger
-        ..hideCurrentSnackBar()
-        ..showSnackBar(appSnackBar(_uploadErrorMessage(e), SnackType.error));
-    } catch (e) {
-      debugPrint('[AddBook] Unexpected error: $e');
+        ..showSnackBar(SnackBar(content: Text(e.message)));
+    } on DioException catch (_) {
       if (!mounted) return;
       setState(() => _busy = false);
       messenger
         ..hideCurrentSnackBar()
         ..showSnackBar(
-          appSnackBar('Upload failed — ${e.toString()}', SnackType.error),
+          const SnackBar(
+            content: Text('Upload failed — check your connection.'),
+          ),
         );
     }
   }
 
-  String _uploadErrorMessage(DioException error) {
-    final status = error.response?.statusCode;
-    if (status != null) return 'Upload failed — storage returned HTTP $status.';
-    return 'Upload failed — check your connection.';
+  void _toast(String message) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
   }
-
-  void _toast(String message) =>
-      showAppSnack(context, message, type: SnackType.warning);
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    // Same glass material as the nav pill and auth cards; top-only rounding
-    // since the sheet is flush with the screen bottom.
-    return GlassPanel(
-      radius: AppRadii.xl,
-      borderRadius: adaptiveModalBorderRadius(context),
+    return Container(
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(AppRadii.xl),
+        ),
+      ),
       child: SafeArea(
         top: false,
         child: Padding(
@@ -245,7 +153,18 @@ class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              AdaptiveModalHandle(color: colors.border),
+              Container(
+                width: 36,
+                height: 4,
+                margin: const EdgeInsets.only(
+                  top: AppSpacing.sm,
+                  bottom: AppSpacing.xl,
+                ),
+                decoration: BoxDecoration(
+                  color: colors.border,
+                  borderRadius: AppRadii.brFull,
+                ),
+              ),
               if (_busy) ..._uploading(colors) else ..._options(colors),
             ],
           ),
@@ -259,11 +178,7 @@ class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
     const SizedBox(height: AppSpacing.xxxl),
     CircularProgressIndicator(color: colors.accent),
     const SizedBox(height: AppSpacing.lg),
-    Text(
-      _busyMessage,
-      textAlign: TextAlign.center,
-      style: AppTypography.subtitle(colors.text2),
-    ),
+    Text('Uploading your book…', style: AppTypography.subtitle(colors.text2)),
     const SizedBox(height: AppSpacing.xxxl),
   ];
 
@@ -272,11 +187,24 @@ class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
     const SizedBox(height: AppSpacing.xs),
     Text('Bring your own books.', style: AppTypography.subtitle(colors.text2)),
     const SizedBox(height: AppSpacing.xl),
-
+    _AddOption(
+      icon: Icons.search,
+      title: 'Search the catalog',
+      subtitle: 'Find by title or author',
+      highlighted: true,
+      onTap: () {
+        final router = GoRouter.of(context);
+        Navigator.of(context).pop();
+        // Catalog search lives in the Discovery tab — land there with
+        // the search field focused (extra → autofocusSearch).
+        router.go(Routes.discovery, extra: true);
+      },
+    ),
+    const SizedBox(height: AppSpacing.md),
     _AddOption(
       icon: Icons.file_upload_outlined,
       title: 'Upload a file',
-      subtitle: 'EPUB · PDF · M4B · MP3',
+      subtitle: 'EPUB · PDF',
       onTap: _pickAndUpload,
     ),
     const SizedBox(height: AppSpacing.md),
@@ -288,18 +216,17 @@ class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
     ),
     const SizedBox(height: AppSpacing.md),
     _AddOption(
-      icon: Icons.search,
-      title: 'Search for a book',
-      subtitle: 'Find titles from Google Books and Gutenberg',
-      onTap: _openDiscovery,
+      icon: Icons.menu_book_outlined,
+      title: 'Log a physical book',
+      subtitle: 'Track a book you read on paper',
+      onTap: () {
+        Navigator.of(context).pop();
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (context.mounted) showLogPhysicalBookSheet(context);
+        });
+      },
     ),
   ];
-
-  void _openDiscovery() {
-    final router = GoRouter.of(context);
-    Navigator.of(context).pop();
-    router.go(Routes.discovery);
-  }
 
   // The remaining add flows aren't built yet — close the sheet and acknowledge.
   void _stub(String what) {
@@ -307,7 +234,7 @@ class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
     Navigator.of(context).pop();
     messenger
       ..hideCurrentSnackBar()
-      ..showSnackBar(appSnackBar('$what — coming soon', SnackType.info));
+      ..showSnackBar(SnackBar(content: Text('$what — coming soon')));
   }
 }
 
@@ -317,40 +244,44 @@ class _AddOption extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.onTap,
+    this.highlighted = false,
   });
 
   final IconData icon;
   final String title;
   final String subtitle;
   final VoidCallback onTap;
+  final bool highlighted;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    // Transparent row — an opaque card would punch a hole in the glass sheet.
     return Material(
-      color: Colors.transparent,
+      color: colors.surface,
       borderRadius: AppRadii.brLg,
       child: InkWell(
         onTap: onTap,
         borderRadius: AppRadii.brLg,
         child: Container(
           padding: const EdgeInsets.all(AppSpacing.md),
-          decoration: BoxDecoration(borderRadius: AppRadii.brLg),
+          decoration: BoxDecoration(
+            borderRadius: AppRadii.brLg,
+            border: Border.all(
+              color: highlighted ? colors.accent : colors.border,
+              width: highlighted ? 1.5 : 1,
+            ),
+          ),
           child: Row(
             children: [
-              // Translucent accent tint, not an opaque surface — the glass
-              // continues through the chip (same vocabulary as the nav bar's
-              // active-tab pill: soft accent wash = tappable).
               Container(
                 width: 48,
                 height: 48,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: colors.accentSoft,
+                  color: colors.surface2,
                   borderRadius: AppRadii.brMd,
                 ),
-                child: Icon(icon, size: 22, color: colors.accent),
+                child: Icon(icon, size: 22, color: colors.text2),
               ),
               const SizedBox(width: AppSpacing.md),
               Expanded(

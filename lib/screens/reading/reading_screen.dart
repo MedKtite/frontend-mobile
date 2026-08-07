@@ -16,6 +16,7 @@ import '../../core/dio_client.dart';
 import '../../core/widgets/app_snackbar.dart';
 import '../../models/book.dart';
 import '../../models/book_update_request.dart';
+import '../../models/highlight.dart';
 import '../../models/highlight_create_request.dart';
 import '../../models/note_create_request.dart';
 import '../../models/reader_package.dart';
@@ -369,18 +370,28 @@ class _NativeReaderState extends ConsumerState<_NativeReader> {
   String? _selectedText;
   Timer? _saveTimer;
   late final BookService _books;
+  late final ScrollController _scrollController;
+  double _lastProgressPct = 0;
+  bool _restoringPosition = false;
+  bool _hasProgressToSave = false;
 
   @override
   void initState() {
     super.initState();
     _books = ref.read(bookServiceProvider);
+    _scrollController = ScrollController();
+    _lastProgressPct =
+        readerV1ProgressPct(widget.book.cursor) ?? widget.book.progressPct ?? 0;
     unawaited(_load());
   }
 
   Future<void> _load() async {
     try {
       final package = ReaderPackage.fromBytes(await widget.file.readAsBytes());
-      if (mounted) setState(() => _package = package);
+      if (mounted) {
+        setState(() => _package = package);
+        WidgetsBinding.instance.addPostFrameCallback((_) => _restorePosition());
+      }
     } catch (_) {
       if (mounted) {
         setState(() => _error = 'Could not open this book right now.');
@@ -389,42 +400,70 @@ class _NativeReaderState extends ConsumerState<_NativeReader> {
   }
 
   void _onScroll(ScrollNotification notification) {
-    if (notification.metrics.maxScrollExtent <= 0 || _package == null) return;
+    if (_restoringPosition ||
+        notification.metrics.maxScrollExtent <= 0 ||
+        _package == null) {
+      return;
+    }
     final pct =
         (notification.metrics.pixels /
                 notification.metrics.maxScrollExtent *
                 100)
             .clamp(0, 100)
             .toDouble();
+    _lastProgressPct = pct;
+    _hasProgressToSave = true;
     widget.progress.value = ReaderProgress(pct, 'Reading');
     _scheduleSave(pct);
   }
 
-  void _scheduleSave(double pct) {
+  void _restorePosition() {
+    if (!mounted || !_scrollController.hasClients || _lastProgressPct <= 0) {
+      return;
+    }
+    final maxExtent = _scrollController.position.maxScrollExtent;
+    if (maxExtent <= 0) return;
+    _restoringPosition = true;
+    _scrollController.jumpTo(
+      (maxExtent * (_lastProgressPct / 100)).clamp(0, maxExtent).toDouble(),
+    );
+    _restoringPosition = false;
+    widget.progress.value = ReaderProgress(_lastProgressPct, 'Reading');
+  }
+
+  void _scheduleSave(double _) {
     _saveTimer?.cancel();
-    _saveTimer = Timer(const Duration(seconds: 2), () {
-      unawaited(
-        _books
-            .update(
-              widget.book.id,
-              BookUpdateRequest(
-                progressPct: pct,
-                cursor: jsonEncode({'type': 'reader-v1', 'progressPct': pct}),
-              ),
-            )
-            .then<void>(
-              (_) {},
-              onError: (Object error, StackTrace stack) {
-                debugPrint('[Reader] Cursor sync failed: $error');
-              },
+    _saveTimer = Timer(const Duration(seconds: 2), _saveNow);
+  }
+
+  void _saveNow() {
+    if (!_hasProgressToSave) return;
+    unawaited(
+      _books
+          .update(
+            widget.book.id,
+            BookUpdateRequest(
+              progressPct: _lastProgressPct,
+              cursor: jsonEncode({
+                'type': 'reader-v1',
+                'progressPct': _lastProgressPct,
+              }),
             ),
-      );
-    });
+          )
+          .then<void>(
+            (_) {},
+            onError: (Object error, StackTrace stack) {
+              debugPrint('[Reader] Cursor sync failed: $error');
+            },
+          ),
+    );
   }
 
   @override
   void dispose() {
     _saveTimer?.cancel();
+    _saveNow();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -475,6 +514,14 @@ class _NativeReaderState extends ConsumerState<_NativeReader> {
       return;
     }
     try {
+      final body = asNote
+          ? await showNoteSheet(
+              context,
+              passage: passage,
+              reference: 'FROM ${widget.book.title.toUpperCase()}',
+            )
+          : null;
+      if (asNote && body == null) return;
       final tag = asNote
           ? 'revisit'
           : await showTagPickerSheet(context, passage: passage);
@@ -491,23 +538,14 @@ class _NativeReaderState extends ConsumerState<_NativeReader> {
               passageText: passage,
             ),
           );
-      if (asNote) {
-        final body = await showNoteSheet(
-          context,
-          passage: passage,
-          reference: 'FROM ${widget.book.title.toUpperCase()}',
-        );
-        if (body != null && mounted) {
-          await ref
-              .read(noteServiceProvider)
-              .create(
-                NoteCreateRequest(
-                  bookId: widget.book.id,
-                  highlightId: highlight.id,
-                  bodyMd: body,
-                ),
-              );
-        }
+      if (asNote && mounted) {
+        await ref.read(noteServiceProvider).create(
+              NoteCreateRequest(
+                bookId: widget.book.id,
+                highlightId: highlight.id,
+                bodyMd: body!,
+              ),
+            );
       }
       if (!mounted) return;
       ref.invalidate(bookHighlightsProvider(widget.book.id));
@@ -545,18 +583,19 @@ class _NativeReaderState extends ConsumerState<_NativeReader> {
     String chapterId,
     ReaderBlock block,
     TextSelection selection,
+    int prefixLength,
   ) {
-    if (selection.isCollapsed ||
-        selection.start < 0 ||
-        selection.end > block.text.length) {
+    final start = (selection.start - prefixLength).clamp(0, block.text.length);
+    final end = (selection.end - prefixLength).clamp(0, block.text.length);
+    if (selection.isCollapsed || start >= end) {
       _clearSelection();
       return;
     }
     setState(() {
       _selectedChapter = chapterId;
       _selectedBlock = block;
-      _selection = selection;
-      _selectedText = block.text.substring(selection.start, selection.end);
+      _selection = TextSelection(baseOffset: start, extentOffset: end);
+      _selectedText = block.text.substring(start, end);
     });
   }
 
@@ -584,21 +623,27 @@ class _NativeReaderState extends ConsumerState<_NativeReader> {
             );
     }
     if (block.type == 'table') {
+      final columnCount = block.rows.fold<int>(
+        0,
+        (count, row) => row.length > count ? row.length : count,
+      );
+      if (columnCount == 0) return const SizedBox.shrink();
       return SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
         child: DataTable(
           columns: [
-            for (
-              var i = 0;
-              i < (block.rows.isEmpty ? 0 : block.rows.first.length);
-              i++
-            )
-              DataColumn(label: Text('')),
+            for (var i = 0; i < columnCount; i++)
+              const DataColumn(label: SizedBox.shrink()),
           ],
           rows: [
             for (final row in block.rows)
-              DataRow(cells: [for (final cell in row) DataCell(Text(cell))]),
+              DataRow(
+                cells: [
+                  for (var i = 0; i < columnCount; i++)
+                    DataCell(Text(i < row.length ? row[i] : '')),
+                ],
+              ),
           ],
         ),
       );
@@ -609,7 +654,7 @@ class _NativeReaderState extends ConsumerState<_NativeReader> {
       child: SelectableText.rich(
         TextSpan(text: text, style: _styleFor(context, block)),
         onSelectionChanged: (selection, _) =>
-            _onSelection(chapterId, block, selection),
+            _onSelection(chapterId, block, selection, 0),
       ),
     );
   }
@@ -646,6 +691,7 @@ class _NativeReaderState extends ConsumerState<_NativeReader> {
                   return false;
                 },
                 child: ListView.builder(
+                  controller: _scrollController,
                   padding: const EdgeInsets.symmetric(
                     horizontal: AppSpacing.readingHorizontal,
                     vertical: AppSpacing.lg,
@@ -685,7 +731,6 @@ class _NativeReaderState extends ConsumerState<_NativeReader> {
     );
   }
 }
-
 
 class _GoogleBooksSampleReader extends StatefulWidget {
   const _GoogleBooksSampleReader({required this.identifier});

@@ -5,16 +5,7 @@ import '../../app/theme/tokens/radii.dart';
 import '../../app/theme/tokens/spacing.dart';
 import '../../app/theme/tokens/typography.dart';
 
-/// The one text input for the whole app — auth forms, search bars, filter
-/// panels. One shape (brMd), two flavors:
-///   • form (default) — 14px label text, bg fill (forms sit on glass)
-///   • search         — 16px body text, surface fill (search bars sit on the
-///                      page bg, so the fill must contrast the other way)
-///
-/// Shared behavior: compact height (~42–46px vs Material's 56), hairline
-/// border with accent focus ring, danger error ring, validate-on-unfocus,
-/// built-in password eye (obscure) and an auto clear button (onClear shows
-/// a ✕ only while there is text).
+
 class AppTextField extends StatefulWidget {
   const AppTextField({
     super.key,
@@ -77,9 +68,9 @@ class _AppTextFieldState extends State<AppTextField> {
   late bool _hidden = widget.obscure;
   late bool _hasText = widget.controller.text.isNotEmpty;
 
-  // sm(8)+2 vertical — ~42px (form) / ~46px (pill) tall: visibly tighter than
-  // Material's 56 while staying a comfortable touch target.
+ 
   static const double _vPad = AppSpacing.sm + 2;
+  static const double _fieldHeight = 48;
 
   @override
   void initState() {
@@ -120,6 +111,10 @@ class _AppTextFieldState extends State<AppTextField> {
       return IconButton(
         onPressed: () => setState(() => _hidden = !_hidden),
         padding: EdgeInsets.zero,
+        constraints: const BoxConstraints.tightFor(
+          width: AppSpacing.xxxl,
+          height: _fieldHeight,
+        ),
         icon: Icon(
           _hidden ? Icons.visibility_off_outlined : Icons.visibility_outlined,
           size: 18,
@@ -131,6 +126,10 @@ class _AppTextFieldState extends State<AppTextField> {
       return IconButton(
         onPressed: widget.onClear,
         padding: EdgeInsets.zero,
+        constraints: const BoxConstraints.tightFor(
+          width: AppSpacing.xxxl,
+          height: _fieldHeight,
+        ),
         icon: Icon(Icons.close, size: 18, color: colors.text3),
       );
     }
@@ -147,12 +146,15 @@ class _AppTextFieldState extends State<AppTextField> {
         ? AppTypography.body(colors.text3)
         : AppTypography.label(colors.text3);
 
-    return TextFormField(
+    return SizedBox(
+      height: _fieldHeight,
+      child: TextFormField(
       controller: widget.controller,
       focusNode: widget.focusNode,
       validator: widget.validator,
       keyboardType: widget.keyboardType,
       obscureText: _hidden,
+      textAlignVertical: TextAlignVertical.center,
       textInputAction: widget.textInputAction,
       onFieldSubmitted: widget.onSubmitted,
       onChanged: widget.onChanged,
@@ -166,6 +168,7 @@ class _AppTextFieldState extends State<AppTextField> {
       style: style,
       decoration: InputDecoration(
         isDense: true,
+        constraints: const BoxConstraints.tightFor(height: _fieldHeight),
         filled: true,
         fillColor:
             widget.fillColor ?? (widget.search ? colors.surface : colors.bg),
@@ -174,11 +177,15 @@ class _AppTextFieldState extends State<AppTextField> {
         prefixIcon: widget.prefixIcon == null
             ? null
             : Icon(widget.prefixIcon, size: 20, color: colors.text3),
-        prefixIconConstraints:
-            const BoxConstraints(minWidth: AppSpacing.xxxl, minHeight: 36),
+        prefixIconConstraints: const BoxConstraints.tightFor(
+          width: AppSpacing.xxxl,
+          height: _fieldHeight,
+        ),
         suffixIcon: _suffix(colors),
-        suffixIconConstraints:
-            const BoxConstraints(minWidth: AppSpacing.xxxl, minHeight: 36),
+        suffixIconConstraints: const BoxConstraints(
+          maxHeight: _fieldHeight,
+          minHeight: 0,
+        ),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.lg,
           vertical: _vPad,
@@ -188,7 +195,11 @@ class _AppTextFieldState extends State<AppTextField> {
         focusedBorder: _border(colors.accent, width: 1.5),
         errorBorder: _border(colors.danger),
         focusedErrorBorder: _border(colors.danger, width: 1.5),
-        errorStyle: AppTypography.caption(colors.danger),
+        errorStyle: AppTypography.caption(
+          colors.danger,
+        ).copyWith(fontSize: 12, height: 1.1),
+        errorMaxLines: 1,
+      ),
       ),
     );
   }

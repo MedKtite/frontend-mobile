@@ -5,7 +5,6 @@ import '../../app/theme/tokens/radii.dart';
 import '../../app/theme/tokens/spacing.dart';
 import '../../app/theme/tokens/typography.dart';
 import '../../core/widgets/adaptive_modal.dart';
-import '../glass_panel.dart';
 
 Future<ThemeMode?> showThemePickerSheet(
   BuildContext context, {
@@ -13,28 +12,29 @@ Future<ThemeMode?> showThemePickerSheet(
 }) {
   return showAdaptiveModal<ThemeMode>(
     context: context,
-    backgroundColor: Colors.transparent,
+    backgroundColor: context.appColors.surface,
     builder: (_) => _ThemePickerSheet(selected: selected),
   );
 }
 
 String themeModeLabel(ThemeMode mode) => switch (mode) {
-      ThemeMode.light => 'Light',
-      ThemeMode.dark => 'Dark',
-      ThemeMode.system => 'System',
-    };
+  ThemeMode.light => 'Light',
+  ThemeMode.dark => 'Dark',
+  ThemeMode.system => 'System',
+};
 
 class _ThemePickerSheet extends StatelessWidget {
   const _ThemePickerSheet({required this.selected});
-
   final ThemeMode selected;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    return GlassPanel(
-      radius: AppRadii.xl,
-      borderRadius: adaptiveModalBorderRadius(context),
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: adaptiveModalBorderRadius(context),
+      ),
       child: SafeArea(
         top: false,
         child: Padding(
@@ -78,7 +78,6 @@ class _ThemeOption extends StatelessWidget {
     required this.selected,
     required this.onTap,
   });
-
   final ThemeMode mode;
   final bool selected;
   final VoidCallback onTap;
@@ -89,19 +88,19 @@ class _ThemeOption extends StatelessWidget {
     final (icon, subtitle) = switch (mode) {
       ThemeMode.light => (Icons.light_mode_outlined, 'Always use light mode'),
       ThemeMode.dark => (Icons.dark_mode_outlined, 'Always use dark mode'),
-      ThemeMode.system =>
-        (Icons.brightness_auto_outlined, 'Match your device setting'),
+      ThemeMode.system => (
+        Icons.brightness_auto_outlined,
+        'Match your device setting',
+      ),
     };
-
     return Material(
       color: Colors.transparent,
       borderRadius: AppRadii.brLg,
       child: InkWell(
         onTap: onTap,
         borderRadius: AppRadii.brLg,
-        child: Container(
+        child: Padding(
           padding: const EdgeInsets.all(AppSpacing.md),
-          decoration: BoxDecoration(borderRadius: AppRadii.brLg),
           child: Row(
             children: [
               Container(
@@ -118,12 +117,12 @@ class _ThemeOption extends StatelessWidget {
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
                       themeModeLabel(mode),
-                      style: AppTypography.body(colors.text)
-                          .copyWith(fontWeight: FontWeight.w600),
+                      style: AppTypography.body(
+                        colors.text,
+                      ).copyWith(fontWeight: FontWeight.w600),
                     ),
                     const SizedBox(height: AppSpacing.xs),
                     Text(subtitle, style: AppTypography.caption(colors.text2)),

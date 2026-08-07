@@ -396,3 +396,11 @@ String? cursorCfi(String? cursor) {
   final c = m?['cfi'];
   return (c is String && c.isNotEmpty) ? c : null;
 }
+
+double? readerV1ProgressPct(String? cursor) {
+  final m = decodeCursor(cursor);
+  if (m?['type'] != 'reader-v1') return null;
+  final progress = m?['progressPct'];
+  if (progress is! num) return null;
+  return progress.clamp(0, 100).toDouble();
+}
