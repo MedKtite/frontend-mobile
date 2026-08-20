@@ -9,9 +9,20 @@ import 'package:dio/dio.dart';
 HttpClientAdapter createHttpClientAdapter() =>
     BrowserHttpClientAdapter(withCredentials: true);
 
-/// Same-origin relative — the web build is served by the Spring backend.
-/// --dart-define=API_BASE_URL still overrides (see DioFactory).
-String platformDefaultBaseUrl() => '';
+/// Default base URL on web:
+/// - If served on localhost on a dev port (e.g. Flutter Web dev server on port 50417),
+///   points to the Spring Boot backend on http://localhost:8080.
+/// - Otherwise (production same-origin), uses relative paths ''.
+/// - Can be overridden with --dart-define=API_BASE_URL.
+String platformDefaultBaseUrl() {
+  final uri = Uri.base;
+  if (uri.host == 'localhost' || uri.host == '127.0.0.1') {
+    if (uri.port != 8080) {
+      return 'http://localhost:8080';
+    }
+  }
+  return '';
+}
 
 /// No-op: browsers manage cookie storage themselves.
 Future<void> attachCookieManager(Dio dio) async {}

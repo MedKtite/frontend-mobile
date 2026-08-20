@@ -72,6 +72,36 @@ class AppTheme {
         labelStyle: AppTypography.label(ext.text2),
       ),
       dividerColor: ext.border,
+      dialogTheme: DialogThemeData(
+        backgroundColor: ext.surface,
+        shape: const RoundedRectangleBorder(borderRadius: AppRadii.brXl),
+        titleTextStyle: AppTypography.title2(ext.text),
+        contentTextStyle: AppTypography.body(ext.text2),
+      ),
+      timePickerTheme: TimePickerThemeData(
+        backgroundColor: ext.surface,
+        shape: const RoundedRectangleBorder(borderRadius: AppRadii.brXl),
+        hourMinuteShape: const RoundedRectangleBorder(borderRadius: AppRadii.brMd),
+        hourMinuteColor: WidgetStateColor.resolveWith((states) =>
+            states.contains(WidgetState.selected)
+                ? ext.gilt.withValues(alpha: 0.18)
+                : ext.bg),
+        hourMinuteTextColor: WidgetStateColor.resolveWith((states) =>
+            states.contains(WidgetState.selected) ? ext.gilt : ext.text),
+        dayPeriodShape: const RoundedRectangleBorder(borderRadius: AppRadii.brSm),
+        dayPeriodColor: WidgetStateColor.resolveWith((states) =>
+            states.contains(WidgetState.selected) ? ext.gilt : ext.surface2),
+        dayPeriodTextColor: WidgetStateColor.resolveWith((states) =>
+            states.contains(WidgetState.selected)
+                ? (isLight ? Colors.white : ext.text)
+                : ext.text2),
+        dialHandColor: ext.gilt,
+        dialBackgroundColor: ext.bg,
+        dialTextColor: WidgetStateColor.resolveWith((states) =>
+            states.contains(WidgetState.selected) ? Colors.white : ext.text),
+        entryModeIconColor: ext.gilt,
+        helpTextStyle: AppTypography.overline(ext.text3),
+      ),
       // Android's zoom page transition snapshots the outgoing screen with
       // toImageSync — liquid_glass_renderer's transform tracker then calls
       // markNeedsPaint mid-paint and asserts. Rendering the transition live

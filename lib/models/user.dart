@@ -12,6 +12,7 @@ class User with _$User {
     required String displayName,
     String? shortName,
     String? avatarInitial,
+    String? avatarUrl,
     String? authProvider, // "password" | "google" | "x" | …
     @Default('UTC') String timezone,
     @Default(false) bool emailVerified,

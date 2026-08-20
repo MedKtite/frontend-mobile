@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:marginalia/app/routes.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -21,7 +22,9 @@ import '../../providers/subscription_provider.dart';
 /// Store purchases are handled by RevenueCat; our backend subscription remains
 /// the source of truth after its webhook updates the user's entitlement.
 class PaywallScreen extends ConsumerStatefulWidget {
-  const PaywallScreen({super.key});
+  const PaywallScreen({super.key, this.isOnboarding = false});
+
+  final bool isOnboarding;
 
   @override
   ConsumerState<PaywallScreen> createState() => _PaywallScreenState();
@@ -153,7 +156,12 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            _SubscriptionTopBar(onBack: () => context.pop()),
+            _SubscriptionTopBar(
+              isOnboarding: widget.isOnboarding,
+              onBack: () => widget.isOnboarding
+                  ? context.go(Routes.home)
+                  : context.pop(),
+            ),
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(
@@ -333,9 +341,13 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
 }
 
 class _SubscriptionTopBar extends StatelessWidget {
-  const _SubscriptionTopBar({required this.onBack});
+  const _SubscriptionTopBar({
+    required this.onBack,
+    this.isOnboarding = false,
+  });
 
   final VoidCallback onBack;
+  final bool isOnboarding;
 
   @override
   Widget build(BuildContext context) {
@@ -349,17 +361,24 @@ class _SubscriptionTopBar extends StatelessWidget {
             alignment: Alignment.centerLeft,
             child: Padding(
               padding: const EdgeInsets.only(left: AppSpacing.md),
-              child: IconButton(
-                onPressed: onBack,
-                icon: Icon(
-                  Icons.chevron_left,
-                  size: AppSpacing.xxl,
-                  color: colors.text,
-                ),
-              ),
+              child: isOnboarding
+                  ? TextButton(
+                      onPressed: onBack,
+                      child: Text('Not now',
+                          style: AppTypography.body(colors.text2)),
+                    )
+                  : IconButton(
+                      onPressed: onBack,
+                      icon: Icon(
+                        Icons.chevron_left,
+                        size: AppSpacing.xxl,
+                        color: colors.text,
+                      ),
+                    ),
             ),
           ),
-          Text('Subscription', style: AppTypography.title3(colors.text)),
+          Text(isOnboarding ? 'Choose Plan' : 'Subscription',
+              style: AppTypography.title3(colors.text)),
         ],
       ),
     );

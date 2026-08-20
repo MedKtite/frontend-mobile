@@ -26,6 +26,7 @@ mixin _$User {
   String get displayName => throw _privateConstructorUsedError;
   String? get shortName => throw _privateConstructorUsedError;
   String? get avatarInitial => throw _privateConstructorUsedError;
+  String? get avatarUrl => throw _privateConstructorUsedError;
   String? get authProvider =>
       throw _privateConstructorUsedError; // "password" | "google" | "x" | …
   String get timezone => throw _privateConstructorUsedError;
@@ -52,6 +53,7 @@ abstract class $UserCopyWith<$Res> {
     String displayName,
     String? shortName,
     String? avatarInitial,
+    String? avatarUrl,
     String? authProvider,
     String timezone,
     bool emailVerified,
@@ -79,6 +81,7 @@ class _$UserCopyWithImpl<$Res, $Val extends User>
     Object? displayName = null,
     Object? shortName = freezed,
     Object? avatarInitial = freezed,
+    Object? avatarUrl = freezed,
     Object? authProvider = freezed,
     Object? timezone = null,
     Object? emailVerified = null,
@@ -105,6 +108,10 @@ class _$UserCopyWithImpl<$Res, $Val extends User>
             avatarInitial: freezed == avatarInitial
                 ? _value.avatarInitial
                 : avatarInitial // ignore: cast_nullable_to_non_nullable
+                      as String?,
+            avatarUrl: freezed == avatarUrl
+                ? _value.avatarUrl
+                : avatarUrl // ignore: cast_nullable_to_non_nullable
                       as String?,
             authProvider: freezed == authProvider
                 ? _value.authProvider
@@ -142,6 +149,7 @@ abstract class _$$UserImplCopyWith<$Res> implements $UserCopyWith<$Res> {
     String displayName,
     String? shortName,
     String? avatarInitial,
+    String? avatarUrl,
     String? authProvider,
     String timezone,
     bool emailVerified,
@@ -166,6 +174,7 @@ class __$$UserImplCopyWithImpl<$Res>
     Object? displayName = null,
     Object? shortName = freezed,
     Object? avatarInitial = freezed,
+    Object? avatarUrl = freezed,
     Object? authProvider = freezed,
     Object? timezone = null,
     Object? emailVerified = null,
@@ -192,6 +201,10 @@ class __$$UserImplCopyWithImpl<$Res>
         avatarInitial: freezed == avatarInitial
             ? _value.avatarInitial
             : avatarInitial // ignore: cast_nullable_to_non_nullable
+                  as String?,
+        avatarUrl: freezed == avatarUrl
+            ? _value.avatarUrl
+            : avatarUrl // ignore: cast_nullable_to_non_nullable
                   as String?,
         authProvider: freezed == authProvider
             ? _value.authProvider
@@ -223,6 +236,7 @@ class _$UserImpl implements _User {
     required this.displayName,
     this.shortName,
     this.avatarInitial,
+    this.avatarUrl,
     this.authProvider,
     this.timezone = 'UTC',
     this.emailVerified = false,
@@ -243,6 +257,8 @@ class _$UserImpl implements _User {
   @override
   final String? avatarInitial;
   @override
+  final String? avatarUrl;
+  @override
   final String? authProvider;
   // "password" | "google" | "x" | …
   @override
@@ -256,7 +272,7 @@ class _$UserImpl implements _User {
 
   @override
   String toString() {
-    return 'User(id: $id, email: $email, displayName: $displayName, shortName: $shortName, avatarInitial: $avatarInitial, authProvider: $authProvider, timezone: $timezone, emailVerified: $emailVerified, createdAt: $createdAt)';
+    return 'User(id: $id, email: $email, displayName: $displayName, shortName: $shortName, avatarInitial: $avatarInitial, avatarUrl: $avatarUrl, authProvider: $authProvider, timezone: $timezone, emailVerified: $emailVerified, createdAt: $createdAt)';
   }
 
   @override
@@ -272,6 +288,8 @@ class _$UserImpl implements _User {
                 other.shortName == shortName) &&
             (identical(other.avatarInitial, avatarInitial) ||
                 other.avatarInitial == avatarInitial) &&
+            (identical(other.avatarUrl, avatarUrl) ||
+                other.avatarUrl == avatarUrl) &&
             (identical(other.authProvider, authProvider) ||
                 other.authProvider == authProvider) &&
             (identical(other.timezone, timezone) ||
@@ -291,6 +309,7 @@ class _$UserImpl implements _User {
     displayName,
     shortName,
     avatarInitial,
+    avatarUrl,
     authProvider,
     timezone,
     emailVerified,
@@ -318,6 +337,7 @@ abstract class _User implements User {
     required final String displayName,
     final String? shortName,
     final String? avatarInitial,
+    final String? avatarUrl,
     final String? authProvider,
     final String timezone,
     final bool emailVerified,
@@ -336,6 +356,8 @@ abstract class _User implements User {
   String? get shortName;
   @override
   String? get avatarInitial;
+  @override
+  String? get avatarUrl;
   @override
   String? get authProvider; // "password" | "google" | "x" | …
   @override

@@ -207,13 +207,7 @@ class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
       subtitle: 'EPUB · PDF',
       onTap: _pickAndUpload,
     ),
-    const SizedBox(height: AppSpacing.md),
-    _AddOption(
-      icon: Icons.qr_code_scanner,
-      title: 'Scan an ISBN',
-      subtitle: 'Point your camera at the back cover',
-      onTap: () => _stub('ISBN scan'),
-    ),
+    
     const SizedBox(height: AppSpacing.md),
     _AddOption(
       icon: Icons.menu_book_outlined,
@@ -228,14 +222,7 @@ class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
     ),
   ];
 
-  // The remaining add flows aren't built yet — close the sheet and acknowledge.
-  void _stub(String what) {
-    final messenger = ScaffoldMessenger.of(context);
-    Navigator.of(context).pop();
-    messenger
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text('$what — coming soon')));
-  }
+
 }
 
 class _AddOption extends StatelessWidget {
@@ -267,7 +254,7 @@ class _AddOption extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: AppRadii.brLg,
             border: Border.all(
-              color: highlighted ? colors.accent : colors.border,
+              color: colors.border,
               width: highlighted ? 1.5 : 1,
             ),
           ),

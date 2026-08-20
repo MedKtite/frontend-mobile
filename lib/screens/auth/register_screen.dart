@@ -97,7 +97,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
     ref.listen(authProvider, (_, next) {
       if (next is AuthAuthenticated) {
-        context.go(Routes.home);
+        context.go('${Routes.paywall}?onboarding=true');
       } else if (next is AuthUnauthenticated) {
         showAppSnack(
           context,

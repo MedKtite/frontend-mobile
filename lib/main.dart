@@ -9,10 +9,18 @@ import 'core/dio_client.dart';
 import 'core/widgets/app_background.dart';
 import 'providers/theme_provider.dart';
 import 'services/frontend/launch_service.dart';
+import 'services/frontend/sharing_intent_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+
+  // Initialize system share sheet listener
+  try {
+    SharingIntentService.instance.initialize(rootNavigatorKey);
+  } catch (e) {
+    debugPrint('Sharing intent initialization failed: $e');
+  }
 
   // Safari can deny browser storage (notably in private browsing or with
   // strict content blockers). Startup must still mount the app; otherwise an

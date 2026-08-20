@@ -10,11 +10,20 @@ import '../core/storage/secure_storage.dart';
 /// Reader typography preferences (the "Aa" sheet — Figma 297:2). Persisted so a
 /// reader's font/size/spacing/theme survive across books and launches.
 
-enum ReaderFont { serif, sans }
+enum ReaderFont {
+  serif, // Source Serif 4 (Editorial Display)
+  newsreader, // Newsreader (Long-form Literary)
+  sans, // Inter (Clean modern)
+  dyslexic, // Lexend (Legibility & Accessibility)
+}
 
 enum ReaderSize { small, medium, large, xlarge }
 
 enum ReaderSpacing { tight, normal, loose }
+
+enum ReaderMargin { narrow, normal, wide }
+
+enum ReaderAlignment { left, justify }
 
 enum ReaderThemeMode { light, sepia, dark, black }
 
@@ -89,12 +98,16 @@ class ReadingSettings {
     this.font = ReaderFont.serif,
     this.size = ReaderSize.medium,
     this.spacing = ReaderSpacing.normal,
+    this.margin = ReaderMargin.normal,
+    this.alignment = ReaderAlignment.left,
     this.theme = ReaderThemeMode.light,
   });
 
   final ReaderFont font;
   final ReaderSize size;
   final ReaderSpacing spacing;
+  final ReaderMargin margin;
+  final ReaderAlignment alignment;
   final ReaderThemeMode theme;
 
   static const defaults = ReadingSettings();
@@ -110,6 +123,17 @@ class ReadingSettings {
         ReaderSpacing.tight => 1.4,
         ReaderSpacing.normal => 1.65,
         ReaderSpacing.loose => 1.95,
+      };
+
+  double get horizontalMargin => switch (margin) {
+        ReaderMargin.narrow => 16.0,
+        ReaderMargin.normal => 24.0,
+        ReaderMargin.wide => 36.0,
+      };
+
+  TextAlign get textAlign => switch (alignment) {
+        ReaderAlignment.left => TextAlign.left,
+        ReaderAlignment.justify => TextAlign.justify,
       };
 
   ReaderPalette get palette => ReaderPalette.of(theme);
@@ -128,21 +152,28 @@ class ReadingSettings {
       height: lineHeight,
       color: palette.text,
     );
-    return font == ReaderFont.serif
-        ? GoogleFonts.sourceSerif4(textStyle: base)
-        : GoogleFonts.inter(textStyle: base);
+    return switch (font) {
+      ReaderFont.serif => GoogleFonts.sourceSerif4(textStyle: base),
+      ReaderFont.newsreader => GoogleFonts.newsreader(textStyle: base),
+      ReaderFont.sans => GoogleFonts.inter(textStyle: base),
+      ReaderFont.dyslexic => GoogleFonts.lexend(textStyle: base),
+    };
   }
 
   ReadingSettings copyWith({
     ReaderFont? font,
     ReaderSize? size,
     ReaderSpacing? spacing,
+    ReaderMargin? margin,
+    ReaderAlignment? alignment,
     ReaderThemeMode? theme,
   }) =>
       ReadingSettings(
         font: font ?? this.font,
         size: size ?? this.size,
         spacing: spacing ?? this.spacing,
+        margin: margin ?? this.margin,
+        alignment: alignment ?? this.alignment,
         theme: theme ?? this.theme,
       );
 
@@ -150,14 +181,21 @@ class ReadingSettings {
         'font': font.name,
         'size': size.name,
         'spacing': spacing.name,
+        'margin': margin.name,
+        'alignment': alignment.name,
         'theme': theme.name,
       };
 
   factory ReadingSettings.fromJson(Map<String, dynamic> j) => ReadingSettings(
         font: _byName(ReaderFont.values, j['font'], ReaderFont.serif),
         size: _byName(ReaderSize.values, j['size'], ReaderSize.medium),
-        spacing: _byName(ReaderSpacing.values, j['spacing'], ReaderSpacing.normal),
-        theme: _byName(ReaderThemeMode.values, j['theme'], ReaderThemeMode.light),
+        spacing:
+            _byName(ReaderSpacing.values, j['spacing'], ReaderSpacing.normal),
+        margin: _byName(ReaderMargin.values, j['margin'], ReaderMargin.normal),
+        alignment: _byName(
+            ReaderAlignment.values, j['alignment'], ReaderAlignment.left),
+        theme:
+            _byName(ReaderThemeMode.values, j['theme'], ReaderThemeMode.light),
       );
 
   static T _byName<T extends Enum>(List<T> values, Object? name, T fallback) {
@@ -199,6 +237,16 @@ class ReadingSettingsController extends StateNotifier<ReadingSettings> {
 
   void setSpacing(ReaderSpacing v) {
     state = state.copyWith(spacing: v);
+    _persist();
+  }
+
+  void setMargin(ReaderMargin v) {
+    state = state.copyWith(margin: v);
+    _persist();
+  }
+
+  void setAlignment(ReaderAlignment v) {
+    state = state.copyWith(alignment: v);
     _persist();
   }
 

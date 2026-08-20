@@ -106,9 +106,7 @@ class _CatalogBookScreenState extends ConsumerState<CatalogBookScreen> {
     final messenger = ScaffoldMessenger.of(context)..hideCurrentSnackBar();
     if (error == null) {
       ref.invalidate(libraryBooksProvider);
-      messenger.showSnackBar(
-        appSnackBar(successMessage, SnackType.success),
-      );
+      messenger.showSnackBar(appSnackBar(successMessage, SnackType.success));
     } else {
       messenger.showSnackBar(appSnackBar(error, SnackType.error));
     }
@@ -190,18 +188,18 @@ class _CatalogBookScreenState extends ConsumerState<CatalogBookScreen> {
         !hasReads ||
         book.pageCount == null ||
         book.publishedYear == null;
-    final extras = needExtras
-        ? ref
-              .watch(
-                bookExtrasProvider((
-                  gutenbergId: book.gutenbergId,
-                  googleId: book.googleId,
+    final extrasAsync = needExtras
+        ? ref.watch(
+            bookExtrasProvider((
+              gutenbergId: book.gutenbergId,
+              googleId: book.googleId,
               title: book.title,
-                  author: book.author,
-                )),
-              )
-              .valueOrNull
+              author: book.author,
+            )),
+          )
         : null;
+    final extras = extrasAsync?.valueOrNull;
+    final loadingExtras = extrasAsync?.isLoading ?? false;
     final description = cleanHtml(book.description ?? extras?.description);
     final rating = book.averageRating ?? extras?.rating;
     final reads =
@@ -323,7 +321,18 @@ class _CatalogBookScreenState extends ConsumerState<CatalogBookScreen> {
                         pages: pages,
                         year: year,
                       ),
-                      if (description.isNotEmpty) ...[
+                      if (loadingExtras)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            vertical: AppSpacing.xxl,
+                          ),
+                          child: Center(
+                            child: CircularProgressIndicator(
+                              color: colors.accent,
+                            ),
+                          ),
+                        )
+                      else if (description.isNotEmpty) ...[
                         const SizedBox(height: AppSpacing.xl),
                         Text(
                           'Description',

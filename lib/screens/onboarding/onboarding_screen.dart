@@ -97,7 +97,7 @@ class _BottomChrome extends StatelessWidget {
         AppSpacing.pageHorizontal,
         AppSpacing.md,
         AppSpacing.pageHorizontal,
-        AppSpacing.md,
+        AppSpacing.xxl,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,

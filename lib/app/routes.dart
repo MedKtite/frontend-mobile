@@ -24,7 +24,11 @@ import '../screens/reading/reading_screen_web.dart'
     if (dart.library.io) '../screens/reading/reading_screen.dart';
 import '../screens/listening/listening_screen.dart';
 import '../screens/margins/margins_screen.dart';
+import '../screens/settings/data_sync_screen.dart';
+import '../screens/settings/help_support_screen.dart';
+import '../screens/settings/notification_settings_screen.dart';
 import '../screens/settings/paywall_screen.dart';
+import '../screens/settings/profil_screen.dart';
 import '../screens/settings/settings_screen.dart';
 import '../screens/splash/splash_screen.dart';
 import '../widgets/app_shell.dart';
@@ -44,6 +48,10 @@ abstract final class Routes {
   static const margins = '/margins';
   static const library = '/library';
   static const notifications = '/notifications';
+  static const notificationSettings = '/settings/notifications';
+  static const dataSync = '/settings/data-sync';
+  static const helpSupport = '/settings/help-support';
+  static const profile = '/settings/profile';
   static const settings = '/settings';
   static const insights = '/insights';
 
@@ -66,7 +74,13 @@ abstract final class Routes {
   static const author = '/author';
 }
 
-GoRouter createAppRouter({required bool isFirstLaunch}) => GoRouter(
+final rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
+
+GoRouter createAppRouter({
+  required bool isFirstLaunch,
+  GlobalKey<NavigatorState>? navigatorKey,
+}) => GoRouter(
+  navigatorKey: navigatorKey ?? rootNavigatorKey,
   initialLocation: isFirstLaunch ? Routes.onboarding : Routes.splash,
   routes: [
     GoRoute(
@@ -89,7 +103,10 @@ GoRouter createAppRouter({required bool isFirstLaunch}) => GoRouter(
     ),
     GoRoute(
       path: Routes.register,
-      builder: (context, state) => const _AuthGuard(child: RegisterScreen()),
+      builder: (context, state) => const _AuthGuard(
+        authenticatedRoute: '${Routes.paywall}?onboarding=true',
+        child: RegisterScreen(),
+      ),
     ),
     GoRoute(
       path: Routes.forgotPassword,
@@ -168,8 +185,26 @@ GoRouter createAppRouter({required bool isFirstLaunch}) => GoRouter(
       builder: (context, state) => const NotificationsScreen(),
     ),
     GoRoute(
+      path: Routes.notificationSettings,
+      builder: (context, state) => const NotificationSettingsScreen(),
+    ),
+    GoRoute(
+      path: Routes.dataSync,
+      builder: (context, state) => const DataSyncScreen(),
+    ),
+    GoRoute(
+      path: Routes.helpSupport,
+      builder: (context, state) => const HelpSupportScreen(),
+    ),
+    GoRoute(
+      path: Routes.profile,
+      builder: (context, state) => const ProfilScreen(),
+    ),
+    GoRoute(
       path: Routes.paywall,
-      builder: (context, state) => const PaywallScreen(),
+      builder: (context, state) => PaywallScreen(
+        isOnboarding: state.uri.queryParameters['onboarding'] == 'true',
+      ),
     ),
     GoRoute(
       path: Routes.author,
@@ -245,16 +280,20 @@ class _StartupSplashState extends ConsumerState<_StartupSplash> {
 
 /// Auth pages never flash for a session already restored from its cookies.
 class _AuthGuard extends ConsumerWidget {
-  const _AuthGuard({required this.child});
+  const _AuthGuard({
+    required this.child,
+    this.authenticatedRoute = Routes.home,
+  });
 
   final Widget child;
+  final String authenticatedRoute;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final auth = ref.watch(authProvider);
     if (auth is AuthAuthenticated) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (context.mounted) context.go(Routes.home);
+        if (context.mounted) context.go(authenticatedRoute);
       });
       return const SizedBox.shrink();
     }

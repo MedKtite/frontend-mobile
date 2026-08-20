@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../app/theme/tokens/colors.dart';
 import '../app/theme/tokens/radii.dart';
+import '../app/theme/tokens/spacing.dart';
 import '../app/theme/tokens/typography.dart';
 import '../core/dio_client.dart';
 
@@ -23,6 +24,7 @@ class BookCover extends StatelessWidget {
     this.coverUrl,
     this.width = 88,
     this.bookmarked = false,
+    this.processingStatus,
   });
 
   final String title;
@@ -32,11 +34,15 @@ class BookCover extends StatelessWidget {
   final String? coverUrl;
   final double width;
   final bool bookmarked;
+  final String? processingStatus;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
     final hasUrl = coverUrl != null && coverUrl!.isNotEmpty;
+    final isProcessing =
+        processingStatus == 'pending' || processingStatus == 'processing';
+    final isFailed = processingStatus == 'failed';
 
     final cover = Container(
       width: width,
@@ -53,26 +59,80 @@ class BookCover extends StatelessWidget {
           ),
         ],
       ),
-      child: hasUrl
-          ? Image.network(
-              coverUrl!,
-              width: width,
-              height: width * 1.5,
-              fit: BoxFit.cover,
-              // While downloading: just the quiet bg panel (no text flash);
-              // the real cover fades in on arrival. The type panel is
-              // reserved for covers that genuinely don't exist (error).
-              frameBuilder: (_, child, frame, wasSync) => wasSync
-                  ? child
-                  : AnimatedOpacity(
-                      opacity: frame == null ? 0 : 1,
-                      duration: const Duration(milliseconds: 200),
-                      curve: Curves.easeOut,
-                      child: child,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          hasUrl
+              ? Image.network(
+                  coverUrl!,
+                  width: width,
+                  height: width * 1.5,
+                  fit: BoxFit.cover,
+                  frameBuilder: (_, child, frame, wasSync) => wasSync
+                      ? child
+                      : AnimatedOpacity(
+                          opacity: frame == null ? 0 : 1,
+                          duration: const Duration(milliseconds: 200),
+                          curve: Curves.easeOut,
+                          child: child,
+                        ),
+                  errorBuilder: (_, __, ___) => _typePanel(),
+                )
+              : _typePanel(),
+          if (isProcessing)
+            Container(
+              color: Colors.black.withValues(alpha: 0.62),
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.2,
+                      color: colors.accent,
                     ),
-              errorBuilder: (_, __, ___) => _typePanel(),
-            )
-          : _typePanel(),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  Text(
+                    'Preparing…',
+                    textAlign: TextAlign.center,
+                    style: AppTypography.caption(Colors.white).copyWith(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          if (isFailed)
+            Container(
+              color: Colors.black.withValues(alpha: 0.72),
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.error_outline_rounded,
+                    color: Color(0xFFEF5350),
+                    size: 22,
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    'Failed',
+                    textAlign: TextAlign.center,
+                    style: AppTypography.caption(const Color(0xFFEF5350))
+                        .copyWith(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
     );
 
     if (!bookmarked) return cover;

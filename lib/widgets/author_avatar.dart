@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../app/theme/tokens/colors.dart';
 import '../app/theme/tokens/typography.dart';
+import 'book_cover.dart';
 
 /// Circular author portrait with an initials fallback (missing/broken photo).
 class AuthorAvatar extends StatelessWidget {
@@ -47,11 +48,12 @@ class AuthorAvatar extends StatelessWidget {
       ),
     );
 
-    if (imageUrl == null || imageUrl!.isEmpty) return fallback;
+    final resolvedUrl = proxiedCoverUrl(imageUrl);
+    if (resolvedUrl == null || resolvedUrl.isEmpty) return fallback;
 
     return ClipOval(
       child: Image.network(
-        imageUrl!,
+        resolvedUrl,
         width: size,
         height: size,
         fit: BoxFit.cover,

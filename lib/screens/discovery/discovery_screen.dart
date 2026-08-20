@@ -22,6 +22,7 @@ import '../../providers/trending_provider.dart';
 import '../../services/backend/book_service.dart';
 import '../../widgets/book_card.dart';
 import '../../widgets/book_cover.dart';
+import '../../widgets/add_to_library_sheet.dart';
 import '../../widgets/glass_panel.dart';
 import '../../widgets/shelf_picker.dart';
 
@@ -181,17 +182,6 @@ class _DiscoveryScreenState extends ConsumerState<DiscoveryScreen> {
     });
   }
 
-  void _searchGenre(String genre) {
-    _debounce?.cancel();
-    _searchController.text = genre;
-    _searchFocus.unfocus();
-    setState(() {
-      _advanced = true;
-      _query = genre;
-      _catalogQuery = 'subject:"$genre"';
-    });
-  }
-
   String _key(CatalogBook book) => book.googleId ?? book.title;
 
   Future<void> _add(CatalogBook book) async {
@@ -334,7 +324,7 @@ class _DiscoveryScreenState extends ConsumerState<DiscoveryScreen> {
                   )
                 else if (featured.isLoading || recommended.isLoading)
                   const _RecommendationLoading(),
-                _genrePrompt(colors),
+                _addToLibraryPrompt(colors),
               ],
             ],
           ),
@@ -357,42 +347,51 @@ class _DiscoveryScreenState extends ConsumerState<DiscoveryScreen> {
     });
   }
 
-  Widget _genrePrompt(AppColorsExtension colors) {
-    const genres = <(String, Color, Color)>[
-      ('Essays', AppColors.genreEssays, AppColors.lightBg),
-      ('Fiction', AppColors.genreFiction, AppColors.lightBg),
-      ('Poetry', AppColors.genrePoetry, AppColors.lightText),
-      ('Philosophy', AppColors.genrePhilosophy, AppColors.lightBg),
-      ('Nature', AppColors.genreNature, AppColors.lightBg),
-      ('Biography', AppColors.genreBiography, AppColors.lightText),
-    ];
-
+  Widget _addToLibraryPrompt(AppColorsExtension colors) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('BROWSE BY GENRE', style: AppTypography.overline(colors.text3)),
+        Text('ADD TO YOUR LIBRARY', style: AppTypography.overline(colors.text3)),
         const SizedBox(height: AppSpacing.md),
-        LayoutBuilder(
-          builder: (context, constraints) {
-            const gap = AppSpacing.md;
-            final itemWidth = (constraints.maxWidth - gap * 2) / 3;
-            return Wrap(
-              spacing: gap,
-              runSpacing: gap,
-              children: [
-                for (final (genre, background, foreground) in genres)
-                  SizedBox(
-                    width: itemWidth,
-                    child: _GenreCard(
-                      label: genre,
-                      background: background,
-                      foreground: foreground,
-                      onTap: () => _searchGenre(genre),
+        GlassPanel(
+          padding: const EdgeInsets.all(AppSpacing.xl),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: AppSpacing.xxl,
+                height: AppSpacing.xxl,
+                decoration: BoxDecoration(
+                  color: colors.accentSoft,
+                  borderRadius: AppRadii.brMd,
+                ),
+                child: Icon(Icons.file_upload_outlined, color: colors.accent, size: AppSpacing.xl),
+              ),
+              const SizedBox(width: AppSpacing.lg),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Bring a book with you.', style: AppTypography.title3(colors.text)),
+                    const SizedBox(height: AppSpacing.xs),
+                    Text('Upload an EPUB or PDF and make it part of your reading life.', style: AppTypography.label(colors.text2)),
+                    const SizedBox(height: AppSpacing.lg),
+                    FilledButton.icon(
+                      onPressed: () => showAddToLibrarySheet(context),
+                      icon: const Icon(Icons.file_upload_outlined, size: AppSpacing.lg),
+                      label: const Text('Upload a book'),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: colors.text,
+                        foregroundColor: colors.bg,
+                        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
+                        shape: RoundedRectangleBorder(borderRadius: AppRadii.brFull),
+                      ),
                     ),
-                  ),
-              ],
-            );
-          },
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ],
     );
@@ -886,52 +885,6 @@ class _AdvancedPanel extends StatelessWidget {
             ],
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _GenreCard extends StatelessWidget {
-  const _GenreCard({
-    required this.label,
-    required this.background,
-    required this.foreground,
-    required this.onTap,
-  });
-
-  final String label;
-  final Color background;
-  final Color foreground;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: background,
-      borderRadius: AppRadii.brMd,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: AppRadii.brMd,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.md,
-            vertical: AppSpacing.xxl,
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTypography.title3(
-                    foreground,
-                  ).copyWith(fontStyle: FontStyle.italic),
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

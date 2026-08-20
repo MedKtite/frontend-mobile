@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:pdfx/pdfx.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
@@ -16,7 +17,7 @@ import '../../core/dio_client.dart';
 import '../../core/widgets/app_snackbar.dart';
 import '../../models/book.dart';
 import '../../models/book_update_request.dart';
-import '../../models/highlight.dart';
+import '../../models/highlight.dart' as highlight_model;
 import '../../models/highlight_create_request.dart';
 import '../../models/note_create_request.dart';
 import '../../models/reader_package.dart';
@@ -32,6 +33,7 @@ import '../../services/backend/book_service.dart';
 import '../../services/backend/highlight_service.dart';
 import '../../services/backend/note_service.dart';
 import '../../widgets/note_sheet.dart';
+import '../../widgets/table_of_contents_sheet.dart';
 import '../../widgets/tag_picker_sheet.dart';
 import 'reader_shared.dart';
 
@@ -64,6 +66,11 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
   late final ValueNotifier<ReaderProgress> _progress = ValueNotifier(
     ReaderProgress(widget.initialBook?.progressPct ?? 0, ''),
   );
+  late final ValueNotifier<List<ReaderChapter>> _chapters =
+      ValueNotifier(const []);
+  late final ValueNotifier<int?> _currentChapterIndex = ValueNotifier(null);
+  void Function(int)? _jumpToChapterCallback;
+
   late final HomeController _homeController;
   late final StateController<ReadingMiniSession?> _miniController;
 
@@ -98,6 +105,8 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
       );
     }
     _progress.dispose();
+    _chapters.dispose();
+    _currentChapterIndex.dispose();
     super.dispose();
   }
 
@@ -162,7 +171,25 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
             body: SafeArea(
               child: Column(
                 children: [
-                  ReaderTopBar(title: displayBook?.title ?? 'Reading'),
+                  ValueListenableBuilder<List<ReaderChapter>>(
+                    valueListenable: _chapters,
+                    builder: (context, chapterList, _) {
+                      return ReaderTopBar(
+                        title: displayBook?.title ?? 'Reading',
+                        onOpenToc: chapterList.isNotEmpty
+                            ? () => showTableOfContentsSheet(
+                                  context: context,
+                                  bookTitle: displayBook?.title ?? 'Reading',
+                                  chapters: chapterList,
+                                  currentChapterIndex:
+                                      _currentChapterIndex.value,
+                                  onSelectChapter: (idx) =>
+                                      _jumpToChapterCallback?.call(idx),
+                                )
+                            : null,
+                      );
+                    },
+                  ),
                   Expanded(
                     child: readerBook != null
                         ? _body(context, readerBook)
@@ -218,6 +245,9 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
               file: readable.file,
               book: book,
               progress: _progress,
+              chaptersNotifier: _chapters,
+              currentChapterNotifier: _currentChapterIndex,
+              onRegisterJump: (fn) => _jumpToChapterCallback = fn,
             ),
             _ => ReaderError(
               message: 'This book is still being prepared for reading.',
@@ -270,7 +300,7 @@ class _PdfReaderState extends ConsumerState<_PdfReader> {
         : 0.0;
     widget.progress.value = ReaderProgress(
       pct,
-      'Page $_page of ${_total == 0 ? '—' : _total}',
+      'Page $_page of ${_total == 0 ? "—" : _total}',
     );
   }
 
@@ -351,11 +381,17 @@ class _NativeReader extends ConsumerStatefulWidget {
     required this.file,
     required this.book,
     required this.progress,
+    this.chaptersNotifier,
+    this.currentChapterNotifier,
+    this.onRegisterJump,
   });
 
   final File file;
   final Book book;
   final ValueNotifier<ReaderProgress> progress;
+  final ValueNotifier<List<ReaderChapter>>? chaptersNotifier;
+  final ValueNotifier<int?>? currentChapterNotifier;
+  final ValueChanged<void Function(int)>? onRegisterJump;
 
   @override
   ConsumerState<_NativeReader> createState() => _NativeReaderState();
@@ -390,6 +426,8 @@ class _NativeReaderState extends ConsumerState<_NativeReader> {
       final package = ReaderPackage.fromBytes(await widget.file.readAsBytes());
       if (mounted) {
         setState(() => _package = package);
+        widget.chaptersNotifier?.value = package.chapters;
+        widget.onRegisterJump?.call(_jumpToChapter);
         WidgetsBinding.instance.addPostFrameCallback((_) => _restorePosition());
       }
     } catch (_) {
@@ -397,6 +435,35 @@ class _NativeReaderState extends ConsumerState<_NativeReader> {
         setState(() => _error = 'Could not open this book right now.');
       }
     }
+  }
+
+  void _jumpToChapter(int chapterIndex) {
+    if (_package == null || !_scrollController.hasClients) return;
+    final chapters = _package!.chapters;
+    if (chapterIndex < 0 || chapterIndex >= chapters.length) return;
+
+    var targetBlockIndex = 0;
+    for (var i = 0; i < chapterIndex; i++) {
+      targetBlockIndex += 1 + chapters[i].blocks.length;
+    }
+
+    final totalBlocks = chapters.fold<int>(
+      0,
+      (sum, ch) => sum + 1 + ch.blocks.length,
+    );
+    if (totalBlocks <= 0) return;
+
+    final maxExtent = _scrollController.position.maxScrollExtent;
+    final targetOffset =
+        (maxExtent * (targetBlockIndex / totalBlocks)).clamp(0.0, maxExtent);
+
+    _scrollController.animateTo(
+      targetOffset,
+      duration: const Duration(milliseconds: 450),
+      curve: Curves.easeInOutCubic,
+    );
+
+    widget.currentChapterNotifier?.value = chapterIndex;
   }
 
   void _onScroll(ScrollNotification notification) {
@@ -413,6 +480,23 @@ class _NativeReaderState extends ConsumerState<_NativeReader> {
             .toDouble();
     _lastProgressPct = pct;
     _hasProgressToSave = true;
+
+    // Track active chapter in Table of Contents
+    final chapters = _package!.chapters;
+    final totalBlocks =
+        chapters.fold<int>(0, (sum, ch) => sum + 1 + ch.blocks.length);
+    if (totalBlocks > 0) {
+      final approxBlockIndex = (totalBlocks * (pct / 100)).round();
+      var count = 0;
+      for (var i = 0; i < chapters.length; i++) {
+        count += 1 + chapters[i].blocks.length;
+        if (count >= approxBlockIndex) {
+          widget.currentChapterNotifier?.value = i;
+          break;
+        }
+      }
+    }
+
     widget.progress.value = ReaderProgress(pct, 'Reading');
     _scheduleSave(pct);
   }
@@ -513,19 +597,13 @@ class _NativeReaderState extends ConsumerState<_NativeReader> {
         passage == null) {
       return;
     }
+    final start = selection.start;
+    final end = selection.end;
+    final tag = asNote
+        ? 'revisit'
+        : await showTagPickerSheet(context, passage: passage);
+    if (tag == null || !mounted) return;
     try {
-      final body = asNote
-          ? await showNoteSheet(
-              context,
-              passage: passage,
-              reference: 'FROM ${widget.book.title.toUpperCase()}',
-            )
-          : null;
-      if (asNote && body == null) return;
-      final tag = asNote
-          ? 'revisit'
-          : await showTagPickerSheet(context, passage: passage);
-      if (tag == null || !mounted) return;
       final highlight = await ref
           .read(highlightServiceProvider)
           .create(
@@ -533,19 +611,29 @@ class _NativeReaderState extends ConsumerState<_NativeReader> {
               bookId: widget.book.id,
               colorTag: tag,
               textChapterRef: '$chapter:${block.id}',
-              textStartOffset: selection.start,
-              textEndOffset: selection.end,
+              textStartOffset: start,
+              textEndOffset: end,
               passageText: passage,
             ),
           );
-      if (asNote && mounted) {
-        await ref.read(noteServiceProvider).create(
-              NoteCreateRequest(
-                bookId: widget.book.id,
-                highlightId: highlight.id,
-                bodyMd: body!,
-              ),
-            );
+      if (!mounted) return;
+      if (asNote) {
+        final noteBody = await showNoteSheet(
+          context,
+          passage: passage,
+          reference: 'FROM ${widget.book.title.toUpperCase()}',
+        );
+        if (noteBody != null && noteBody.trim().isNotEmpty && mounted) {
+          await ref
+              .read(noteServiceProvider)
+              .create(
+                NoteCreateRequest(
+                  bookId: widget.book.id,
+                  bodyMd: noteBody.trim(),
+                  highlightId: highlight.id,
+                ),
+              );
+        }
       }
       if (!mounted) return;
       ref.invalidate(bookHighlightsProvider(widget.book.id));
@@ -601,15 +689,80 @@ class _NativeReaderState extends ConsumerState<_NativeReader> {
 
   TextStyle _styleFor(BuildContext context, ReaderBlock block) {
     final colors = context.appColors;
+    final settings = ref.watch(readingSettingsProvider);
+    final baseStyle = settings.bodyTextStyle();
+
     return switch (block.type) {
-      'heading' => AppTypography.title3(colors.text),
-      'quote' => AppTypography.subtitle(colors.text2),
-      'listItem' => AppTypography.bodySerif(colors.text),
-      _ => AppTypography.bodySerif(colors.text),
+      'heading' => settings.font == ReaderFont.sans
+          ? AppTypography.title2(colors.text).copyWith(
+              fontSize: settings.fontSize * 1.35,
+            )
+          : GoogleFonts.sourceSerif4(
+              fontSize: settings.fontSize * 1.35,
+              fontWeight: FontWeight.w600,
+              color: colors.text,
+            ),
+      'quote' => baseStyle.copyWith(
+          fontStyle: FontStyle.italic,
+          color: colors.text2,
+        ),
+      'listItem' => baseStyle,
+      _ => baseStyle,
     };
   }
 
-  Widget _block(BuildContext context, String chapterId, ReaderBlock block) {
+  TextSpan _textWithHighlights(
+    BuildContext context,
+    String chapterId,
+    ReaderBlock block,
+    List<highlight_model.Highlight> highlights,
+  ) {
+    final matches = highlights
+        .where(
+          (item) =>
+              item.textChapterRef == '$chapterId:${block.id}' &&
+              item.textStartOffset != null &&
+              item.textEndOffset != null,
+        )
+        .toList()
+      ..sort((a, b) => a.textStartOffset!.compareTo(b.textStartOffset!));
+    final spans = <InlineSpan>[];
+    var cursor = 0;
+    for (final item in matches) {
+      final start = item.textStartOffset!.clamp(0, block.text.length).toInt();
+      final end = item.textEndOffset!.clamp(0, block.text.length).toInt();
+      if (end <= cursor || start >= end) continue;
+      final visibleStart = start < cursor ? cursor : start;
+      if (visibleStart > cursor) {
+        spans.add(TextSpan(text: block.text.substring(cursor, visibleStart)));
+      }
+      spans.add(
+        TextSpan(
+          text: block.text.substring(visibleStart, end),
+          style: TextStyle(
+            decoration: TextDecoration.underline,
+            decorationStyle: TextDecorationStyle.wavy,
+            decorationThickness: 2,
+            decorationColor: AppColors.forTag(item.colorTag ?? 'revisit'),
+          ),
+        ),
+      );
+      cursor = end;
+    }
+    if (cursor < block.text.length) {
+      spans.add(TextSpan(text: block.text.substring(cursor)));
+    }
+    return TextSpan(style: _styleFor(context, block), children: spans);
+  }
+
+  Widget _block(
+    BuildContext context,
+    String chapterId,
+    ReaderBlock block,
+    List<highlight_model.Highlight> highlights,
+  ) {
+    final settings = ref.watch(readingSettingsProvider);
+
     if (block.type == 'divider') {
       return const Divider(height: AppSpacing.xl);
     }
@@ -648,13 +801,20 @@ class _NativeReaderState extends ConsumerState<_NativeReader> {
         ),
       );
     }
-    final text = block.type == 'listItem' ? '• ${block.text}' : block.text;
+    final prefix = block.type == 'listItem' ? '\u2022 ' : '';
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.md),
       child: SelectableText.rich(
-        TextSpan(text: text, style: _styleFor(context, block)),
+        TextSpan(
+          style: _styleFor(context, block),
+          children: [
+            if (prefix.isNotEmpty) TextSpan(text: prefix),
+            _textWithHighlights(context, chapterId, block, highlights),
+          ],
+        ),
+        textAlign: settings.textAlign,
         onSelectionChanged: (selection, _) =>
-            _onSelection(chapterId, block, selection, 0),
+            _onSelection(chapterId, block, selection, prefix.length),
       ),
     );
   }
@@ -662,6 +822,10 @@ class _NativeReaderState extends ConsumerState<_NativeReader> {
   @override
   Widget build(BuildContext context) {
     final package = _package;
+    final settings = ref.watch(readingSettingsProvider);
+    final highlights =
+        ref.watch(bookHighlightsProvider(widget.book.id)).valueOrNull ??
+            const <highlight_model.Highlight>[];
     if (_error != null) {
       return ReaderMessage(icon: Icons.menu_book_outlined, text: _error!);
     }
@@ -692,14 +856,19 @@ class _NativeReaderState extends ConsumerState<_NativeReader> {
                 },
                 child: ListView.builder(
                   controller: _scrollController,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.readingHorizontal,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: settings.horizontalMargin,
                     vertical: AppSpacing.lg,
                   ),
                   itemCount: blocks.length,
                   itemBuilder: (context, index) {
                     final item = blocks[index];
-                    return _block(context, item.chapterId, item.block);
+                    return _block(
+                      context,
+                      item.chapterId,
+                      item.block,
+                      highlights,
+                    );
                   },
                 ),
               ),
@@ -874,43 +1043,6 @@ class _TextLoading extends StatelessWidget {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Shown when a book has no readable text (not on Gutenberg, no uploaded file).
-class _NoReadableFile extends StatelessWidget {
-  const _NoReadableFile({required this.book});
-  final Book book;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.pageHorizontal,
-      ),
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.menu_book_outlined, size: 40, color: colors.text3),
-            const SizedBox(height: AppSpacing.lg),
-            Text(
-              'Nothing to read yet',
-              textAlign: TextAlign.center,
-              style: AppTypography.title3(colors.text),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              'This is a catalog entry. Upload an EPUB or PDF of '
-              '“${book.title}” to read it here.',
-              textAlign: TextAlign.center,
-              style: AppTypography.subtitle(colors.text2),
-            ),
-          ],
         ),
       ),
     );

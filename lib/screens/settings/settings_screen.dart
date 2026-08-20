@@ -7,24 +7,23 @@ import '../../app/theme/tokens/colors.dart';
 import '../../app/theme/tokens/radii.dart';
 import '../../app/theme/tokens/spacing.dart';
 import '../../app/theme/tokens/typography.dart';
-import '../../core/widgets/app_snackbar.dart';
+import '../../models/user.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/state/auth_state.dart';
-import '../../providers/subscription_provider.dart';
+import '../../providers/annotations_provider.dart';
+import '../../providers/data_sync_provider.dart';
+import '../../providers/library_provider.dart';
+import '../../providers/notification_preferences_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../providers/reading_settings_provider.dart';
 import '../../widgets/auth_scaffold.dart';
 import '../../widgets/setting/theme_picker_sheet.dart';
 import '../../widgets/setting/typography_sheet.dart';
+import '../../widgets/user_avatar.dart';
 
-/// Settings (frames `318:2` / `318:46`). Profile header reads the authenticated
-/// user; the rows are stubs until their sub-screens / preferences land. Sign
-/// out clears the session and returns to Login.
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
-  void _comingSoon(BuildContext context, String what) =>
-      showAppSnack(context, '$what — coming soon');
 
   Future<void> _signOut(BuildContext context, WidgetRef ref) async {
     await ref.read(authProvider.notifier).logout();
@@ -35,15 +34,15 @@ class SettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final auth = ref.watch(authProvider);
     final user = auth is AuthAuthenticated ? auth.user : null;
-    final isPro =
-        ref.watch(subscriptionProvider).valueOrNull?.isPro ?? false;
     final themeMode = ref.watch(themeProvider);
     final readingSettings = ref.watch(readingSettingsProvider);
+    final booksAsync = ref.watch(libraryBooksProvider);
+    final highlightsAsync = ref.watch(allHighlightsProvider);
+    final notesAsync = ref.watch(allNotesProvider);
 
     final name = user?.displayName ?? 'Your account';
     final email = user?.email ?? '';
-    final initial =
-        user?.avatarInitial ?? (name.isEmpty ? '?' : name[0].toUpperCase());
+
 
     return Scaffold(
       body: SafeArea(
@@ -64,55 +63,93 @@ class SettingsScreen extends ConsumerWidget {
                 ),
                 child: Column(
                   children: [
-                    _ProfileCard(
-                        name: name,
-                        email: email,
-                        initial: initial,
-                        isPro: isPro),
+                    _ProfileCard(user: user, name: name, email: email),
+                    const SizedBox(height: AppSpacing.md),
+                    _StatsCard(
+                      books: booksAsync.valueOrNull?.length ?? 0,
+                      highlights: highlightsAsync.valueOrNull?.length ?? 0,
+                      notes: notesAsync.valueOrNull?.length ?? 0,
+                    ),
                     const SizedBox(height: AppSpacing.xl),
-                    _Section(label: 'APPEARANCE', rows: [
-                      _SettingsRow(
-                        label: 'Theme',
-                        value: themeModeLabel(themeMode),
-                        onTap: () => _pickTheme(context, ref, themeMode),
-                      ),
-                      _SettingsRow(
-                        label: 'Typography',
-                        value: _typographyLabel(readingSettings),
-                        onTap: () => showTypographySheet(context),
-                      ),
-                    ]),
+                    _Section(
+                      label: 'APPEARANCE',
+                      rows: [
+                        _SettingsRow(
+                          label: 'Theme',
+                          value: themeModeLabel(themeMode),
+                          onTap: () => _pickTheme(context, ref, themeMode),
+                        ),
+                        _SettingsRow(
+                          label: 'Typography',
+                          value: _typographyLabel(readingSettings),
+                          onTap: () => showTypographySheet(context),
+                        ),
+                      ],
+                    ),
+
                     const SizedBox(height: AppSpacing.xl),
-                    _Section(label: 'READING & LISTENING', rows: [
-                      _SettingsRow(
-                        label: 'Reading defaults',
-                        onTap: () => _comingSoon(context, 'Reading defaults'),
-                      ),
-                    ]),
+                    _Section(
+                      label: 'NOTIFICATIONS',
+                      rows: [
+                        _SettingsRow(
+                          label: 'Notifications & Alerts',
+                          value: (ref.watch(notificationPreferencesProvider).valueOrNull?.enabled ?? true) ? 'On' : 'Off',
+                          onTap: () => context.push(Routes.notificationSettings),
+                        ),
+                      ],
+                    ),
+                   
                     const SizedBox(height: AppSpacing.xl),
-                    _Section(label: 'NOTIFICATIONS', rows: [
-                      _SettingsRow(
-                        label: 'Notifications',
-                        value: 'On',
-                        onTap: () => _comingSoon(context, 'Notifications'),
-                      ),
-                    ]),
+                    _Section(
+                      label: 'DATA & STORAGE',
+                      rows: [
+                        _SettingsRow(
+                          label: 'Data, Sync & Storage',
+                          value: ref.watch(dataSyncProvider).isSyncing ? 'Syncing...' : 'Up to date',
+                          onTap: () => context.push(Routes.dataSync),
+                        ),
+                      ],
+                    ),
+
                     const SizedBox(height: AppSpacing.xl),
-                    _Section(label: 'SUBSCRIPTION', rows: [
-                      _SettingsRow(
-                        label: isPro ? 'Marginalia Pro' : 'Upgrade to Pro',
-                        value: isPro ? 'Active' : 'Free plan',
-                        onTap: () => context.push(Routes.paywall),
-                      ),
-                    ]),
+                    _Section(
+                      label: 'SUPPORT & LEGAL',
+                      rows: [
+                        _SettingsRow(
+                          label: 'Help & feedback',
+                          onTap: () => context.push(Routes.helpSupport),
+                        ),
+                        _SettingsRow(
+                          label: 'Privacy',
+                          onTap: () => _showInfo(
+                            context,
+                            'Privacy',
+                            'Your library, reading progress, highlights, notes, and tags belong to your account.',
+                          ),
+                        ),
+                        _SettingsRow(
+                          label: 'App version',
+                          value: 'v0.1.0',
+                          icon: false,
+                        ),
+                      ],
+                    ),
                     const SizedBox(height: AppSpacing.xl),
-                    _Section(label: 'ACCOUNT', rows: [
-                      _SettingsRow(
-                        label: 'Sign out',
-                        destructive: true,
-                        onTap: () => _signOut(context, ref),
-                      ),
-                    ]),
+                    _Section(
+                      label: 'ACCOUNT',
+                      rows: [
+                        _SettingsRow(
+                          label: 'Account details',
+                          onTap: () => context.push(Routes.profile),
+                        ),
+                        _SettingsRow(
+                          label: 'Sign out',
+                          destructive: true,
+                          onTap: () => _signOut(context, ref),
+                        ),
+                       
+                      ],
+                    ),
                   ],
                 ),
               ),
@@ -123,13 +160,34 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
+  void _showInfo(BuildContext context, String title, String message) {
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title, style: AppTypography.title2(context.appColors.text)),
+        content: Text(
+          message,
+          style: AppTypography.body(context.appColors.text2),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(
+              'Done',
+              style: AppTypography.label(context.appColors.accent),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _pickTheme(
     BuildContext context,
     WidgetRef ref,
     ThemeMode selected,
   ) async {
-    final choice =
-        await showThemePickerSheet(context, selected: selected);
+    final choice = await showThemePickerSheet(context, selected: selected);
     if (choice != null) await ref.read(themeProvider.notifier).setTheme(choice);
   }
 }
@@ -155,7 +213,9 @@ class _TopBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.pageHorizontal),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.pageHorizontal,
+      ),
       child: Row(
         children: [
           AuthBackButton(onPressed: onBack),
@@ -199,60 +259,73 @@ class _Card extends StatelessWidget {
 
 class _ProfileCard extends StatelessWidget {
   const _ProfileCard({
+    required this.user,
     required this.name,
     required this.email,
-    required this.initial,
-    required this.isPro,
   });
 
+  final User? user;
   final String name;
   final String email;
-  final String initial;
-  final bool isPro;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
     return _Card(
+      child: InkWell(
+        onTap: () => context.push(Routes.profile),
+        borderRadius: BorderRadius.circular(AppRadii.lg),
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: Row(
+            children: [
+              UserAvatar(user: user, size: 46),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(name, style: AppTypography.title3(colors.text)),
+                    if (email.isNotEmpty) ...[
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(email, style: AppTypography.label(colors.text2)),
+                    ],
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right_rounded, size: 20, color: colors.text3),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _StatsCard extends StatelessWidget {
+  const _StatsCard({
+    required this.books,
+    required this.highlights,
+    required this.notes,
+  });
+
+  final int books;
+  final int highlights;
+  final int notes;
+
+  @override
+  Widget build(BuildContext context) {
+    return _Card(
       child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.lg),
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
         child: Row(
           children: [
-            Container(
-              width: 44,
-              height: 44,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: colors.accentSoft,
-              ),
-              child: Text(
-                initial,
-                style: AppTypography.serif(TextStyle(
-                  color: colors.accent,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w500,
-                )),
-              ),
-            ),
-            const SizedBox(width: AppSpacing.md),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(name, style: AppTypography.title3(colors.text)),
-                  if (email.isNotEmpty) ...[
-                    const SizedBox(height: AppSpacing.xs),
-                    Text(email, style: AppTypography.label(colors.text2)),
-                  ],
-                ],
-              ),
-            ),
-            if (isPro) ...[
-              const SizedBox(width: AppSpacing.md),
-              const _ProBadge(),
-            ],
+            _Stat(value: books, label: 'Books'),
+            const _StatDivider(),
+            _Stat(value: highlights, label: 'Highlights'),
+            const _StatDivider(),
+            _Stat(value: notes, label: 'Notes'),
           ],
         ),
       ),
@@ -260,24 +333,35 @@ class _ProfileCard extends StatelessWidget {
   }
 }
 
-class _ProBadge extends StatelessWidget {
-  const _ProBadge();
+class _Stat extends StatelessWidget {
+  const _Stat({required this.value, required this.label});
+
+  final int value;
+  final String label;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.sm,
-        vertical: AppSpacing.xs,
+    return Expanded(
+      child: Column(
+        children: [
+          Text('$value', style: AppTypography.title2(colors.text)),
+          const SizedBox(height: AppSpacing.xs),
+          Text(label, style: AppTypography.caption(colors.text2)),
+        ],
       ),
-      decoration: BoxDecoration(
-        color: colors.accent,
-        borderRadius: AppRadii.brFull,
-      ),
-      child: Text('PRO', style: AppTypography.overline(colors.bg)),
     );
   }
+}
+
+class _StatDivider extends StatelessWidget {
+  const _StatDivider();
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    height: 30,
+    child: VerticalDivider(width: 1, color: context.appColors.border),
+  );
 }
 
 class _Section extends StatelessWidget {
@@ -293,7 +377,10 @@ class _Section extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.only(left: AppSpacing.sm, bottom: AppSpacing.sm),
+          padding: const EdgeInsets.only(
+            left: AppSpacing.sm,
+            bottom: AppSpacing.sm,
+          ),
           child: Text(label, style: AppTypography.overline(colors.text3)),
         ),
         _Card(
@@ -301,7 +388,11 @@ class _Section extends StatelessWidget {
             children: [
               for (var i = 0; i < rows.length; i++) ...[
                 if (i > 0)
-                  Divider(height: 1, color: colors.border, indent: AppSpacing.lg),
+                  Divider(
+                    height: 1,
+                    color: colors.border,
+                    indent: AppSpacing.lg,
+                  ),
                 rows[i],
               ],
             ],
@@ -317,13 +408,15 @@ class _SettingsRow extends StatelessWidget {
     required this.label,
     this.value,
     this.destructive = false,
-    required this.onTap,
+    this.onTap,
+    this.icon = true,
   });
 
   final String label;
   final String? value;
   final bool destructive;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
+  final bool icon;
 
   @override
   Widget build(BuildContext context) {
@@ -339,15 +432,18 @@ class _SettingsRow extends StatelessWidget {
           children: [
             Text(
               label,
-              style: AppTypography.body(destructive ? colors.danger : colors.text),
+              style: AppTypography.body(
+                destructive ? colors.danger : colors.text,
+              ),
             ),
             const Spacer(),
             if (value != null)
               Padding(
-                padding: const EdgeInsets.only(right: AppSpacing.sm),
+                padding: EdgeInsets.only(right: icon ? AppSpacing.sm : 0),
                 child: Text(value!, style: AppTypography.label(colors.text2)),
               ),
-            Icon(Icons.chevron_right, size: 20, color: colors.text3),
+            if (icon && onTap != null)
+              Icon(Icons.chevron_right, size: 20, color: colors.text3),
           ],
         ),
       ),

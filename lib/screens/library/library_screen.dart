@@ -142,13 +142,6 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Row(
-          //   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          //   children: [
-          //     Text('MARGINALIA', style: AppTypography.overline(colors.text3)),
-          //     _AddButton(onTap: () => showAddToLibrarySheet(context)),
-          //   ],
-          // ),
           const SizedBox(height: AppSpacing.sm),
           Text('Library', style: AppTypography.display(colors.text)),
           const SizedBox(height: AppSpacing.xs),
@@ -423,6 +416,7 @@ class _GridCell extends StatelessWidget {
       author: book.author,
       coverUrl: proxiedCoverUrl(book.coverUrl),
       width: width,
+      processingStatus: book.processingStatus,
       onTap: () => context.push(Routes.bookDetail, extra: book),
       onLongPress: onDelete,
     );

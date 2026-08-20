@@ -11,6 +11,9 @@ class AppSpacing {
   static const double xxl = 28;
   static const double xxxl = 40;
 
+  /// Standard height for form and search inputs.
+  static const double inputHeight = xxxl + sm;
+
   /// Page horizontal margin on 390px screens — never below 16px.
   static const double pageHorizontal = 22;
 

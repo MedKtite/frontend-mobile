@@ -64,12 +64,16 @@ class ReaderTextLoading extends StatelessWidget {
   }
 }
 
-/// Back · centered book title · "Aa" type control. Title is centered with a
-/// Stack so the asymmetric side controls don't push it off-axis.
+/// Back · Table of Contents · centered book title · "Aa" type control.
 class ReaderTopBar extends StatelessWidget {
-  const ReaderTopBar({super.key, required this.title});
+  const ReaderTopBar({
+    super.key,
+    required this.title,
+    this.onOpenToc,
+  });
 
   final String title;
+  final VoidCallback? onOpenToc;
 
   @override
   Widget build(BuildContext context) {
@@ -89,7 +93,7 @@ class ReaderTopBar extends StatelessWidget {
             Align(
               child: Padding(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.xxxl,
+                  horizontal: 72,
                 ),
                 child: Text(
                   title,
@@ -102,19 +106,39 @@ class ReaderTopBar extends StatelessWidget {
             ),
             Align(
               alignment: Alignment.centerLeft,
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () => context.canPop()
-                    ? context.pop()
-                    : context.go(Routes.library),
-                child: Padding(
-                  padding: const EdgeInsets.all(AppSpacing.xs),
-                  child: Icon(
-                    Icons.arrow_back_ios_new,
-                    size: 18,
-                    color: colors.text,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => context.canPop()
+                        ? context.pop()
+                        : context.go(Routes.library),
+                    child: Padding(
+                      padding: const EdgeInsets.all(AppSpacing.xs),
+                      child: Icon(
+                        Icons.arrow_back_ios_new,
+                        size: 18,
+                        color: colors.text,
+                      ),
+                    ),
                   ),
-                ),
+                  if (onOpenToc != null) ...[
+                    const SizedBox(width: AppSpacing.xs),
+                    GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: onOpenToc,
+                      child: Padding(
+                        padding: const EdgeInsets.all(AppSpacing.xs),
+                        child: Icon(
+                          Icons.format_list_bulleted_rounded,
+                          size: 20,
+                          color: colors.text,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
             Align(

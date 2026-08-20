@@ -17,6 +17,7 @@ import '../../providers/author_provider.dart';
 import '../../providers/home_provider.dart';
 import '../../providers/insights_provider.dart';
 import '../../providers/library_provider.dart';
+import '../../providers/notifications_provider.dart';
 import '../../providers/recommendations_provider.dart';
 import '../../providers/state/auth_state.dart';
 import '../../providers/state/home_state.dart';
@@ -24,7 +25,6 @@ import '../../providers/trending_provider.dart';
 import '../../widgets/author_avatar.dart';
 import '../../widgets/book_card.dart';
 import '../../widgets/book_cover.dart';
-import '../../widgets/glass_panel.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -34,15 +34,11 @@ class HomeScreen extends ConsumerWidget {
     final colors = context.appColors;
     final state = ref.watch(homeProvider);
 
-    // Warm independent sections while the primary Home request is in flight.
-    // Their widgets can then render cached/completed values as soon as the
-    // populated layout appears instead of starting each request afterward.
+
     ref.watch(trendingBooksProvider);
     ref.watch(topAuthorsProvider);
     ref.watch(recommendedBooksProvider);
 
-    // Identity comes from the authenticated user (fetched from the backend by
-    // the auth flow); fall back gracefully when not signed in.
     final auth = ref.watch(authProvider);
     final user = auth is AuthAuthenticated ? auth.user : null;
     final name =
@@ -51,7 +47,6 @@ class HomeScreen extends ConsumerWidget {
         user?.avatarInitial ?? (name.isEmpty ? '?' : name[0].toUpperCase());
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // Nav bar lives in AppShell (persistent across tabs) — not here.
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
@@ -225,62 +220,61 @@ class _HomeHero extends ConsumerWidget {
 
     return Stack(
       children: [
-        Positioned.fill(
-          child: Image.asset(
-            'lib/assets/images/header_bg.png',
-            fit: BoxFit.cover,
-            alignment: Alignment.topRight,
-          ),
-        ),
-        Positioned.fill(
-          child: ColoredBox(
-            color: colors.bg.withValues(
-              alpha: Theme.of(context).brightness == Brightness.dark
-                  ? 0.52
-                  : 0.06,
-            ),
-          ),
-        ),
-        Positioned.fill(
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.centerLeft,
-                end: Alignment.centerRight,
-                colors: [
-                  colors.surface,
-                  colors.surface.withValues(alpha: 0.94),
-                  colors.surface.withValues(alpha: 0),
-                ],
-              ),
-            ),
-          ),
-        ),
-        Positioned(
-          left: 0,
-          right: 0,
-          bottom: 0,
-          height: AppSpacing.xxl,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [colors.bg.withValues(alpha: 0), colors.bg],
-              ),
-            ),
-          ),
-        ),
+        // Positioned.fill(
+        //   child: Image.asset(
+        //     'lib/assets/images/header_bg.png',
+        //     fit: BoxFit.cover,
+        //     alignment: Alignment.topRight,
+        //   ),
+        // ),
+        // Positioned.fill(
+        //   child: ColoredBox(
+        //     color: colors.bg.withValues(
+        //       alpha: Theme.of(context).brightness == Brightness.dark
+        //           ? 0.52
+        //           : 0.06,
+        //     ),
+        //   ),
+        // ),
+        // Positioned.fill(
+        //   child: DecoratedBox(
+        //     decoration: BoxDecoration(
+        //       gradient: LinearGradient(
+        //         begin: Alignment.centerLeft,
+        //         end: Alignment.centerRight,
+        //         colors: [
+        //           colors.surface,
+        //           colors.surface.withValues(alpha: 0.94),
+        //           colors.surface.withValues(alpha: 0),
+        //         ],
+        //       ),
+        //     ),
+        //   ),
+        // ),
+        // Positioned(
+        //   left: 0,
+        //   right: 0,
+        //   bottom: 0,
+        //   height: AppSpacing.xxl,
+        //   child: DecoratedBox(
+        //     decoration: BoxDecoration(
+        //       gradient: LinearGradient(
+        //         begin: Alignment.topCenter,
+        //         end: Alignment.bottomCenter,
+        //         colors: [colors.bg.withValues(alpha: 0), colors.bg],
+        //       ),
+        //     ),
+        //   ),
+        // ),
         Padding(
-          padding: EdgeInsets.fromLTRB(
-            AppSpacing.pageHorizontal,
-            MediaQuery.paddingOf(context).top + AppSpacing.md,
-            AppSpacing.pageHorizontal,
-            AppSpacing.xxxl,
+          padding: EdgeInsets.symmetric(
+            horizontal: AppSpacing.xl,
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              const SizedBox(height: AppSpacing.xxxl),
+              const SizedBox(height: AppSpacing.xl),
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
@@ -298,10 +292,29 @@ class _HomeHero extends ConsumerWidget {
                   const SizedBox(width: AppSpacing.sm),
                   _HeroAction(
                     onTap: () => context.push(Routes.notifications),
-                    child: Icon(
-                      Icons.notifications_outlined,
-                      size: AppSpacing.xl,
-                      color: colors.text,
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        Icon(
+                          Icons.notifications_outlined,
+                          size: AppSpacing.xl,
+                          color: colors.text,
+                        ),
+                        if (ref.watch(notificationsProvider).unreadCount > 0)
+                          Positioned(
+                            top: -2,
+                            right: -2,
+                            child: Container(
+                              width: 8,
+                              height: 8,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: colors.gilt,
+                                border: Border.all(color: colors.surface, width: 1.5),
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                   ),
                 ],
@@ -522,8 +535,6 @@ class _Card extends StatelessWidget {
 
 // ────────────────────────────────────────────────── Continue-reading row ──
 
-/// Horizontal carousel of every in-progress book: small cover · title · author
-/// · progress bar + %. Hidden while loading, on error, or when empty.
 class _ContinueRow extends ConsumerWidget {
   const _ContinueRow();
 
@@ -580,8 +591,18 @@ class _ContinueRowCard extends StatelessWidget {
       onTap: () => context.push(Routes.readingPath(book.id), extra: book),
       child: SizedBox(
         width: _ContinueRow._cardW,
-        child: GlassPanel(
-          radius: AppRadii.lg,
+        child: Container(
+          decoration: BoxDecoration(
+            color: colors.surface,
+            borderRadius: AppRadii.brMd,
+            boxShadow: [
+              BoxShadow(
+                color: colors.text.withValues(alpha: 0.06),
+                blurRadius: AppSpacing.md,
+                offset: const Offset(0, AppSpacing.xs),
+              ),
+            ],
+          ),
           padding: const EdgeInsets.all(AppSpacing.md),
           child: Row(
             children: [

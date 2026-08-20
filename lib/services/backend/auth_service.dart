@@ -20,11 +20,11 @@ class AuthService {
     final user = User.fromJson(res.data!);
 
     try {
-      final preferences = await _dio.get<Map<String, dynamic>>('/me/notifications');
+      final preferences = await _dio.get<Map<String, dynamic>>('/me/notifications/preferences');
       final categories = Map<String, dynamic>.from(
         (preferences.data?['categories'] as Map?) ?? const <String, dynamic>{},
       )..['email_updates'] = emailUpdates;
-      await _dio.patch<void>('/me/notifications', data: {'categories': categories});
+      await _dio.patch<void>('/me/notifications/preferences', data: {'categories': categories});
     } on ApiError {
       // Registration succeeded; preference sync is non-fatal.
     }

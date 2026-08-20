@@ -53,6 +53,15 @@ dependencies:
   # ImageFilter.isShaderFilterSupported and keep a BackdropFilter fallback
   # (CLAUDE.md §11: the fallback is what runs under `flutter test` on Windows).
   liquid_glass_renderer: ^0.2.0-dev.4
+  # Barcode scanner for ISBN lookup & camera / image picker OCR
+  mobile_scanner: ^5.2.3
+  image_picker: ^1.1.2
+  google_mlkit_text_recognition: ^0.13.0
+  receive_sharing_intent: ^1.8.1
+  # Voice memo recording & shake to extend accelerometer
+  record: ^6.2.1
+  sensors_plus: ^6.1.1
+
 
 dev_dependencies:
   flutter_test:

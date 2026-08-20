@@ -132,6 +132,10 @@ class AuthController extends StateNotifier<AuthState> {
       return false;
     }
   }
+
+  void updateUser(User user) {
+    state = AuthState.authenticated(user);
+  }
 }
 
 final authProvider =

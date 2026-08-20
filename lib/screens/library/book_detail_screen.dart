@@ -12,15 +12,17 @@ import '../../app/theme/tokens/typography.dart';
 import '../../core/dio_client.dart';
 import '../../core/widgets/app_snackbar.dart';
 import '../../models/book.dart';
+import '../../models/highlight.dart';
 import '../../providers/book_description_provider.dart';
 import '../../providers/book_file_provider.dart';
+import '../../providers/book_highlights_provider.dart';
 import '../../providers/book_provider.dart';
 import '../../providers/library_provider.dart';
 import '../../services/backend/book_service.dart';
 import '../../widgets/book_cover.dart';
-import 'detail_shared.dart';
 import '../../widgets/delete_book_dialog.dart';
-
+import '../../widgets/quote_camera_scanner_sheet.dart';
+import 'detail_shared.dart';
 
 class BookDetailScreen extends ConsumerWidget {
   const BookDetailScreen({super.key, required this.book});
@@ -118,6 +120,9 @@ class BookDetailScreen extends ConsumerWidget {
     final pages = displayBook.pageCount ?? extras?.pageCount;
     final year = displayBook.publishedYear ?? extras?.year;
     final progress = (displayBook.progressPct ?? 0).clamp(0.0, 100.0);
+    final isPhysical = displayBook.format == 'physical';
+
+    final highlightsAsync = ref.watch(bookHighlightsProvider(displayBook.id));
 
     return Scaffold(
       body: Column(
@@ -145,12 +150,20 @@ class BookDetailScreen extends ConsumerWidget {
                         spacing: AppSpacing.xxl,
                         runSpacing: AppSpacing.md,
                         children: [
-                          StatChip(
-                            icon: Icons.auto_stories_rounded,
-                            tone: colors.accent,
-                            value: '${progress.round()}%',
-                            label: 'Progress',
-                          ),
+                          if (!isPhysical)
+                            StatChip(
+                              icon: Icons.auto_stories_rounded,
+                              tone: colors.accent,
+                              value: '${progress.round()}%',
+                              label: 'Progress',
+                            )
+                          else
+                            StatChip(
+                              icon: Icons.bookmark_added_rounded,
+                              tone: colors.accent,
+                              value: 'Paper',
+                              label: 'Format',
+                            ),
                           if (rating != null)
                             StatChip(
                               icon: Icons.star_rounded,
@@ -174,6 +187,7 @@ class BookDetailScreen extends ConsumerWidget {
                             ),
                         ],
                       ),
+
                       if (description.isNotEmpty) ...[
                         const SizedBox(height: AppSpacing.xl),
                         Text('Description',
@@ -182,13 +196,72 @@ class BookDetailScreen extends ConsumerWidget {
                         Text(description,
                             style: AppTypography.bodySerif(colors.text2)),
                       ],
+
+                      const SizedBox(height: AppSpacing.xxl),
+
+                      // Marginalia & Highlights Section
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Marginalia & Highlights',
+                            style: AppTypography.title3(colors.text),
+                          ),
+                          TextButton.icon(
+                            onPressed: () => showQuoteCameraScannerSheet(
+                              context: context,
+                              book: displayBook,
+                            ),
+                            icon: const Icon(Icons.document_scanner_outlined, size: 18),
+                            label: const Text('Scan Page'),
+                            style: TextButton.styleFrom(
+                              foregroundColor: colors.accent,
+                              textStyle: AppTypography.label(colors.accent),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+
+                      highlightsAsync.when(
+                        data: (highlights) {
+                          if (highlights.isEmpty) {
+                            return Container(
+                              padding: const EdgeInsets.all(AppSpacing.lg),
+                              decoration: BoxDecoration(
+                                color: colors.surface2,
+                                borderRadius: BorderRadius.circular(AppRadii.md),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  'No marginalia yet. Tap "Scan Page" to capture quotes.',
+                                  textAlign: TextAlign.center,
+                                  style: AppTypography.caption(colors.text2),
+                                ),
+                              ),
+                            );
+                          }
+                          return Column(
+                            children: highlights.map((h) {
+                              return _HighlightDetailCard(highlight: h);
+                            }).toList(),
+                          );
+                        },
+                        loading: () => const Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(AppSpacing.md),
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        ),
+                        error: (_, __) => const SizedBox.shrink(),
+                      ),
                     ],
                   ),
                 ),
               ],
             ),
           ),
-          // Pinned CTA: into the reader, resuming where they left off.
+          // Pinned CTA — Primary reading/listening action
           SafeArea(
             top: false,
             child: Padding(
@@ -229,6 +302,63 @@ class BookDetailScreen extends ConsumerWidget {
               }),
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HighlightDetailCard extends StatelessWidget {
+  const _HighlightDetailCard({required this.highlight});
+
+  final Highlight highlight;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final tag = highlight.colorTag ?? 'revisit';
+    final tagColor = AppColors.forTag(tag);
+    final text = highlight.passageText ?? '';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: AppSpacing.md),
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: colors.surface2,
+        borderRadius: BorderRadius.circular(AppRadii.md),
+        border: Border(
+          left: BorderSide(color: tagColor, width: 3.5),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                tag.toUpperCase(),
+                style: AppTypography.caption(tagColor).copyWith(
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1.1,
+                ),
+              ),
+              if (highlight.textChapterRef != null)
+                Text(
+                  highlight.textChapterRef!,
+                  style: AppTypography.caption(colors.text3),
+                ),
+            ],
+          ),
+          if (text.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              '“$text”',
+              style: AppTypography.bodySerif(colors.text).copyWith(
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
         ],
       ),
     );

@@ -10,6 +10,7 @@ import '../../models/book.dart';
 import '../../models/highlight.dart';
 import '../../models/note.dart';
 import '../../providers/annotations_provider.dart';
+import '../../providers/insights_provider.dart';
 import '../../providers/library_provider.dart';
 import '../../widgets/book_cover.dart';
 
@@ -23,9 +24,12 @@ class InsightsScreen extends ConsumerWidget {
     final booksAsync = ref.watch(libraryBooksProvider);
     final highlightsAsync = ref.watch(allHighlightsProvider);
     final notesAsync = ref.watch(allNotesProvider);
+    final summary = ref.watch(insightsProvider).valueOrNull?.summary;
     final colors = context.appColors;
 
-    if (booksAsync.hasError || highlightsAsync.hasError || notesAsync.hasError) {
+    if (booksAsync.hasError ||
+        highlightsAsync.hasError ||
+        notesAsync.hasError) {
       return Scaffold(
         body: Center(
           child: Text(
@@ -62,7 +66,10 @@ class InsightsScreen extends ConsumerWidget {
             const SizedBox(height: AppSpacing.xs),
             Text('Insights', style: AppTypography.display(colors.text)),
             const SizedBox(height: AppSpacing.xl),
-            _WeekCard(insights: insights),
+            _WeekCard(
+              minutesRead: summary?.minutesReadThisWeek,
+              streakDays: summary?.currentStreakDays,
+            ),
             const SizedBox(height: AppSpacing.md),
             _StatRow(insights: insights),
             const SizedBox(height: AppSpacing.xxl),
@@ -89,9 +96,10 @@ class InsightsScreen extends ConsumerWidget {
 }
 
 class _WeekCard extends StatelessWidget {
-  const _WeekCard({required this.insights});
+  const _WeekCard({required this.minutesRead, required this.streakDays});
 
-  final _Insights insights;
+  final int? minutesRead;
+  final int? streakDays;
 
   @override
   Widget build(BuildContext context) {
@@ -112,26 +120,29 @@ class _WeekCard extends StatelessWidget {
                 text: TextSpan(
                   children: [
                     TextSpan(
-                      text: '${insights.finishedBooksThisWeek}',
+                      text: '${minutesRead ?? '—'}',
                       style: AppTypography.statNumber(colors.text),
                     ),
                     TextSpan(
-                      text: ' books',
+                      text: ' min',
                       style: AppTypography.subtitle(colors.text2),
                     ),
                   ],
                 ),
               ),
               const Spacer(),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
+              Row(
                 children: [
-                  Text(
-                    '${_compactNumber(insights.finishedPagesThisWeek)} pages',
-                    style: AppTypography.caption(colors.text2),
+                  Icon(
+                    Icons.local_fire_department_outlined,
+                    size: AppSpacing.lg,
+                    color: colors.accent,
                   ),
+                  const SizedBox(width: AppSpacing.xs),
                   Text(
-                    '${insights.booksPerDayThisWeek.toStringAsFixed(1)} / day',
+                    streakDays == null
+                        ? '— day streak'
+                        : '$streakDays ${streakDays == 1 ? 'day' : 'days'} streak',
                     style: AppTypography.caption(colors.text2),
                   ),
                 ],
@@ -139,59 +150,33 @@ class _WeekCard extends StatelessWidget {
             ],
           ),
           Text(
-            'finished so far this week',
+            'read in the last 7 days',
             style: AppTypography.label(colors.text3),
           ),
           const SizedBox(height: AppSpacing.xl),
-          _WeeklyChart(values: insights.finishedByWeekday),
-        ],
-      ),
-    );
-  }
-}
-
-class _WeeklyChart extends StatelessWidget {
-  const _WeeklyChart({required this.values});
-
-  final List<int> values;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final maxValue = values.fold(1, (max, value) => value > max ? value : max);
-    const labels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-    return SizedBox(
-      height: AppSpacing.xxxl + AppSpacing.xxl,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          for (var index = 0; index < values.length; index++)
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs / 2),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    Expanded(
-                      child: Align(
-                        alignment: Alignment.bottomCenter,
-                        child: Container(
-                          height: (values[index] / maxValue) * AppSpacing.xxxl,
-                          decoration: BoxDecoration(
-                            color: values[index] == 0
-                                ? colors.surface2
-                                : colors.text.withValues(alpha: 0.82),
-                            borderRadius: AppRadii.brXs,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.xs),
-                    Text(labels[index], style: AppTypography.overline(colors.text3)),
-                  ],
-                ),
-              ),
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            decoration: BoxDecoration(
+              color: colors.surface2,
+              borderRadius: AppRadii.brMd,
             ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.schedule_outlined,
+                  size: AppSpacing.xl,
+                  color: colors.text2,
+                ),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: Text(
+                    'Every reading session counts toward this total.',
+                    style: AppTypography.caption(colors.text2),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -205,29 +190,26 @@ class _StatRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Row(
-        children: [
-          Expanded(
-            child: _StatCard(
-              value: '${insights.activeDays}',
-              label: 'active days',
-            ),
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          Expanded(
-            child: _StatCard(
-              value: insights.annotationsPerBook.toStringAsFixed(1),
-              label: 'avg. annotations',
-            ),
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          Expanded(
-            child: _StatCard(
-              value: _compactNumber(insights.highlights),
-              label: 'passages saved',
-            ),
-          ),
-        ],
-      );
+    children: [
+      Expanded(
+        child: _StatCard(value: '${insights.activeDays}', label: 'active days'),
+      ),
+      const SizedBox(width: AppSpacing.sm),
+      Expanded(
+        child: _StatCard(
+          value: insights.annotationsPerBook.toStringAsFixed(1),
+          label: 'avg. annotations',
+        ),
+      ),
+      const SizedBox(width: AppSpacing.sm),
+      Expanded(
+        child: _StatCard(
+          value: _compactNumber(insights.highlights),
+          label: 'passages saved',
+        ),
+      ),
+    ],
+  );
 }
 
 class _StatCard extends StatelessWidget {
@@ -242,7 +224,10 @@ class _StatCard extends StatelessWidget {
     return Container(
       height: AppSpacing.xxxl * 2 + AppSpacing.sm,
       padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(color: colors.surface, borderRadius: AppRadii.brLg),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: AppRadii.brLg,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -274,8 +259,10 @@ class _TagBreakdown extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     if (tags.isEmpty) {
-      return Text('Your tagged passages will appear here.',
-          style: AppTypography.subtitle(colors.text2));
+      return Text(
+        'Your tagged passages will appear here.',
+        style: AppTypography.subtitle(colors.text2),
+      );
     }
     final max = tags.first.count;
     return Column(
@@ -286,13 +273,18 @@ class _TagBreakdown extends StatelessWidget {
               Container(
                 width: AppSpacing.sm,
                 height: AppSpacing.sm,
-                decoration: BoxDecoration(color: tag.color, shape: BoxShape.circle),
+                decoration: BoxDecoration(
+                  color: tag.color,
+                  shape: BoxShape.circle,
+                ),
               ),
               const SizedBox(width: AppSpacing.md),
               SizedBox(
                 width: AppSpacing.xxxl * 2,
-                child: Text(_capitalize(tag.name),
-                    style: AppTypography.label(colors.text2)),
+                child: Text(
+                  _capitalize(tag.name),
+                  style: AppTypography.label(colors.text2),
+                ),
               ),
               Expanded(
                 child: ClipRRect(
@@ -308,9 +300,11 @@ class _TagBreakdown extends StatelessWidget {
               const SizedBox(width: AppSpacing.md),
               SizedBox(
                 width: AppSpacing.lg,
-                child: Text('${tag.count}',
-                    textAlign: TextAlign.end,
-                    style: AppTypography.label(colors.text)),
+                child: Text(
+                  '${tag.count}',
+                  textAlign: TextAlign.end,
+                  style: AppTypography.label(colors.text),
+                ),
               ),
             ],
           ),
@@ -331,12 +325,17 @@ class _ReadingMix extends StatelessWidget {
     final colors = context.appColors;
     final total = mix.print + mix.audio + mix.both;
     if (total == 0) {
-      return Text('Add books to see your reading mix.',
-          style: AppTypography.subtitle(colors.text2));
+      return Text(
+        'Add books to see your reading mix.',
+        style: AppTypography.subtitle(colors.text2),
+      );
     }
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(color: colors.surface, borderRadius: AppRadii.brLg),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: AppRadii.brLg,
+      ),
       child: Column(
         children: [
           ClipRRect(
@@ -346,11 +345,23 @@ class _ReadingMix extends StatelessWidget {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _MixSegment(count: mix.print, total: total, color: colors.text),
+                  _MixSegment(
+                    count: mix.print,
+                    total: total,
+                    color: colors.text,
+                  ),
                   const SizedBox(width: AppSpacing.xs),
-                  _MixSegment(count: mix.audio, total: total, color: colors.accent),
+                  _MixSegment(
+                    count: mix.audio,
+                    total: total,
+                    color: colors.accent,
+                  ),
                   const SizedBox(width: AppSpacing.xs),
-                  _MixSegment(count: mix.both, total: total, color: colors.text3),
+                  _MixSegment(
+                    count: mix.both,
+                    total: total,
+                    color: colors.text3,
+                  ),
                 ],
               ),
             ),
@@ -360,7 +371,11 @@ class _ReadingMix extends StatelessWidget {
             children: [
               _MixLegend(label: 'Print', count: mix.print, color: colors.text),
               const SizedBox(width: AppSpacing.lg),
-              _MixLegend(label: 'Audio', count: mix.audio, color: colors.accent),
+              _MixLegend(
+                label: 'Audio',
+                count: mix.audio,
+                color: colors.accent,
+              ),
               const SizedBox(width: AppSpacing.lg),
               _MixLegend(label: 'Both', count: mix.both, color: colors.text3),
             ],
@@ -372,7 +387,11 @@ class _ReadingMix extends StatelessWidget {
 }
 
 class _MixSegment extends StatelessWidget {
-  const _MixSegment({required this.count, required this.total, required this.color});
+  const _MixSegment({
+    required this.count,
+    required this.total,
+    required this.color,
+  });
 
   final int count;
   final int total;
@@ -381,11 +400,18 @@ class _MixSegment extends StatelessWidget {
   @override
   Widget build(BuildContext context) => count == 0
       ? const SizedBox.shrink()
-      : Expanded(flex: count, child: ColoredBox(color: color));
+      : Expanded(
+          flex: count,
+          child: ColoredBox(color: color),
+        );
 }
 
 class _MixLegend extends StatelessWidget {
-  const _MixLegend({required this.label, required this.count, required this.color});
+  const _MixLegend({
+    required this.label,
+    required this.count,
+    required this.color,
+  });
 
   final String label;
   final int count;
@@ -418,12 +444,17 @@ class _MostAnnotated extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     if (books.isEmpty) {
-      return Text('Highlight passages to build this list.',
-          style: AppTypography.subtitle(colors.text2));
+      return Text(
+        'Highlight passages to build this list.',
+        style: AppTypography.subtitle(colors.text2),
+      );
     }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-      decoration: BoxDecoration(color: colors.surface, borderRadius: AppRadii.brLg),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: AppRadii.brLg,
+      ),
       child: Column(
         children: [
           for (final entry in books) ...[
@@ -461,23 +492,31 @@ class _AnnotatedBookRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(entry.book.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTypography.label(colors.text)
-                        .copyWith(fontWeight: FontWeight.w600)),
+                Text(
+                  entry.book.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTypography.label(
+                    colors.text,
+                  ).copyWith(fontWeight: FontWeight.w600),
+                ),
                 const SizedBox(height: AppSpacing.xs),
-                Text(entry.book.author ?? 'Unknown author',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTypography.caption(colors.text3)),
+                Text(
+                  entry.book.author ?? 'Unknown author',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTypography.caption(colors.text3),
+                ),
               ],
             ),
           ),
           Container(
             width: AppSpacing.xxl,
             height: AppSpacing.xs,
-            decoration: BoxDecoration(color: colors.text, borderRadius: AppRadii.brFull),
+            decoration: BoxDecoration(
+              color: colors.text,
+              borderRadius: AppRadii.brFull,
+            ),
           ),
           const SizedBox(width: AppSpacing.md),
           Text('${entry.count}', style: AppTypography.label(colors.text)),
@@ -503,9 +542,9 @@ class _QuietSuggestion extends StatelessWidget {
     final pagesRemaining = book.pageCount == null
         ? null
         : ((book.pageCount! * (100 - progress)) / 100)
-            .ceil()
-            .clamp(1, book.pageCount!)
-            .toInt();
+              .ceil()
+              .clamp(1, book.pageCount!)
+              .toInt();
     final ending = pagesRemaining == null
         ? 'a few pages from the end.'
         : '$pagesRemaining ${pagesRemaining == 1 ? 'page' : 'pages'} from the end.';
@@ -519,7 +558,10 @@ class _QuietSuggestion extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('A QUIET SUGGESTION', style: AppTypography.overline(colors.accent)),
+          Text(
+            'A QUIET SUGGESTION',
+            style: AppTypography.overline(colors.accent),
+          ),
           const SizedBox(height: AppSpacing.sm),
           Text(
             '${book.title} has been waiting at $progress%$since — $ending',
@@ -534,10 +576,6 @@ class _QuietSuggestion extends StatelessWidget {
 class _Insights {
   const _Insights({
     required this.year,
-    required this.finishedBooksThisWeek,
-    required this.finishedPagesThisWeek,
-    required this.booksPerDayThisWeek,
-    required this.finishedByWeekday,
     required this.activeDays,
     required this.annotationsPerBook,
     required this.highlights,
@@ -548,10 +586,6 @@ class _Insights {
   });
 
   final int year;
-  final int finishedBooksThisWeek;
-  final int finishedPagesThisWeek;
-  final double booksPerDayThisWeek;
-  final List<int> finishedByWeekday;
   final int activeDays;
   final double annotationsPerBook;
   final int highlights;
@@ -566,20 +600,6 @@ class _Insights {
     List<Note> notes,
     DateTime now,
   ) {
-    final today = DateTime(now.year, now.month, now.day);
-    final weekStart = today.subtract(Duration(days: now.weekday - 1));
-    final weekEnd = weekStart.add(const Duration(days: 7));
-    final finishedThisWeek = books.where((book) {
-      final date = DateTime.tryParse(book.finishedAt ?? '');
-      if (date == null) return false;
-      final localDate = date.toLocal();
-      return !localDate.isBefore(weekStart) && localDate.isBefore(weekEnd);
-    }).toList();
-    final finishedByWeekday = List<int>.filled(7, 0);
-    for (final book in finishedThisWeek) {
-      final weekday = DateTime.parse(book.finishedAt!).toLocal().weekday;
-      finishedByWeekday[weekday - 1]++;
-    }
     final tagMap = <String, int>{};
     final bookCount = <String, int>{};
     final activeDates = <String>{};
@@ -588,37 +608,38 @@ class _Insights {
       if (tag != null && tag.isNotEmpty) {
         tagMap.update(tag, (count) => count + 1, ifAbsent: () => 1);
       }
-      bookCount.update(highlight.bookId, (count) => count + 1, ifAbsent: () => 1);
+      bookCount.update(
+        highlight.bookId,
+        (count) => count + 1,
+        ifAbsent: () => 1,
+      );
       final created = DateTime.tryParse(highlight.createdAt ?? '');
-      if (created != null) activeDates.add(DateFormat('yyyy-MM-dd').format(created));
+      if (created != null) {
+        activeDates.add(DateFormat('yyyy-MM-dd').format(created));
+      }
     }
     final booksById = {for (final book in books) book.id: book};
-    final mostAnnotated = bookCount.entries
-        .where((entry) => booksById.containsKey(entry.key))
-        .map((entry) => _AnnotatedBook(booksById[entry.key]!, entry.value))
-        .toList()
-      ..sort((a, b) => b.count.compareTo(a.count));
+    final mostAnnotated =
+        bookCount.entries
+            .where((entry) => booksById.containsKey(entry.key))
+            .map((entry) => _AnnotatedBook(booksById[entry.key]!, entry.value))
+            .toList()
+          ..sort((a, b) => b.count.compareTo(a.count));
     final audio = books.where((book) => _isAudio(book.format)).length;
     final print = books.where((book) => _isPrint(book.format)).length;
     final both = books.length - audio - print;
-    final elapsedDaysThisWeek = now.weekday;
-
     return _Insights(
       year: now.year,
-      finishedBooksThisWeek: finishedThisWeek.length,
-      finishedPagesThisWeek: finishedThisWeek.fold(
-        0,
-        (total, book) => total + (book.pageCount ?? 0),
-      ),
-      booksPerDayThisWeek: finishedThisWeek.length / elapsedDaysThisWeek,
-      finishedByWeekday: finishedByWeekday,
       activeDays: activeDates.length,
-      annotationsPerBook: books.isEmpty ? 0 : (highlights.length + notes.length) / books.length,
+      annotationsPerBook: books.isEmpty
+          ? 0
+          : (highlights.length + notes.length) / books.length,
       highlights: highlights.length,
-      tagCounts: tagMap.entries
-          .map((entry) => _TagTotal(entry.key, entry.value))
-          .toList()
-        ..sort((a, b) => b.count.compareTo(a.count)),
+      tagCounts:
+          tagMap.entries
+              .map((entry) => _TagTotal(entry.key, entry.value))
+              .toList()
+            ..sort((a, b) => b.count.compareTo(a.count)),
       readingMix: _ReadingMixData(print: print, audio: audio, both: both),
       mostAnnotated: mostAnnotated.take(3).toList(),
       quietSuggestion: books.where((book) {
@@ -638,7 +659,11 @@ class _TagTotal {
 }
 
 class _ReadingMixData {
-  const _ReadingMixData({required this.print, required this.audio, required this.both});
+  const _ReadingMixData({
+    required this.print,
+    required this.audio,
+    required this.both,
+  });
 
   final int print;
   final int audio;
