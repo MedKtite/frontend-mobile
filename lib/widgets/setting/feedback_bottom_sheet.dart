@@ -17,6 +17,7 @@ import '../../services/backend/support_service.dart';
 Future<void> showFeedbackBottomSheet(BuildContext context) {
   return showModalBottomSheet<void>(
     context: context,
+    useRootNavigator: true,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
     builder: (ctx) => const _FeedbackBottomSheet(),

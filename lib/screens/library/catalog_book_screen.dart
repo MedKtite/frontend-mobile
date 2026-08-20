@@ -1,3 +1,5 @@
+import 'package:dio/dio.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -15,10 +17,11 @@ import '../../core/utils/store_links.dart';
 import '../../models/book.dart';
 import '../../models/book_create_request.dart';
 import '../../models/catalog_book.dart';
+import '../../models/presign_upload_request.dart';
 import '../../providers/book_description_provider.dart';
 import '../../providers/library_provider.dart';
 import '../../services/backend/book_service.dart';
-import '../../widgets/add_to_library_sheet.dart';
+import '../../services/backend/upload_service.dart';
 import '../../widgets/book_cover.dart';
 import '../../widgets/shelf_picker.dart';
 import 'detail_shared.dart';
@@ -70,20 +73,112 @@ class _CatalogBookScreenState extends ConsumerState<CatalogBookScreen> {
     );
   }
 
+  static String? _contentTypeFor(String ext) => switch (ext) {
+    'epub' => 'application/epub+zip',
+    'pdf' => 'application/pdf',
+    _ => null,
+  };
+
+  /// Directly picks and uploads an EPUB/PDF file and attaches it to this catalog book.
+  Future<void> _pickAndUploadEpub() async {
+    if (_adding) return;
+    final result = await FilePicker.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: const ['epub', 'pdf'],
+      withData: true,
+    );
+    if (result == null || result.files.isEmpty) return;
+
+    final picked = result.files.single;
+    final bytes = picked.bytes;
+    final ext = (picked.extension ?? '').toLowerCase();
+    final contentType = _contentTypeFor(ext);
+    if (bytes == null || contentType == null) {
+      if (mounted) {
+        showAppSnack(context, 'Unsupported file — pick an EPUB or PDF.',
+            type: SnackType.warning);
+      }
+      return;
+    }
+    if (!mounted) return;
+
+    setState(() => _adding = true);
+    final messenger = ScaffoldMessenger.of(context);
+    final router = GoRouter.of(context);
+
+    try {
+      final upload = ref.read(uploadServiceProvider);
+      final presigned = await upload.presign(
+        PresignUploadRequest(
+          format: ext,
+          contentType: contentType,
+          contentLength: bytes.length,
+        ),
+      );
+      await upload.putToStorage(
+        uploadUrl: presigned.uploadUrl,
+        body: Stream<List<int>>.fromIterable([bytes]),
+        contentLength: bytes.length,
+        contentType: contentType,
+      );
+      await ref.read(bookServiceProvider).create(
+            BookCreateRequest(
+              title: book.title,
+              format: ext,
+              status: 'reading',
+              author: book.author,
+              googleId: book.googleId,
+              gutenbergId: book.gutenbergId,
+              isbn13: book.isbn13,
+              pageCount: book.pageCount,
+              publishedYear: book.publishedYear,
+              publisher: book.publisher,
+              coverUrl: book.thumbnailUrl,
+              fileKey: presigned.fileKey,
+            ),
+          );
+      ref.invalidate(libraryBooksProvider);
+      if (!mounted) return;
+      setState(() {
+        _adding = false;
+        _added = true;
+      });
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(appSnackBar(
+            'Added “${book.title}” to your library', SnackType.success));
+      router.go(Routes.library);
+    } on ApiError catch (e) {
+      if (!mounted) return;
+      setState(() => _adding = false);
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(appSnackBar(e.message, SnackType.error));
+    } on DioException catch (_) {
+      if (!mounted) return;
+      setState(() => _adding = false);
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(appSnackBar(
+            'Upload failed — check your connection.', SnackType.error));
+    }
+  }
+
+
   Future<void> _createLibraryBook({
     required String status,
     required String successMessage,
+    String format = 'physical',
+    String? fileKey,
   }) async {
     if (_adding) return;
     setState(() => _adding = true);
     String? error;
     try {
-      await ref
-          .read(bookServiceProvider)
-          .create(
+      await ref.read(bookServiceProvider).create(
             BookCreateRequest(
               title: book.title,
-              format: 'physical',
+              format: format,
               status: status,
               author: book.author,
               googleId: book.googleId,
@@ -93,6 +188,7 @@ class _CatalogBookScreenState extends ConsumerState<CatalogBookScreen> {
               publishedYear: book.publishedYear,
               publisher: book.publisher,
               coverUrl: book.thumbnailUrl,
+              fileKey: fileKey,
             ),
           );
     } on ApiError catch (e) {
@@ -512,6 +608,31 @@ class _CatalogBookScreenState extends ConsumerState<CatalogBookScreen> {
   // ── METADATA_ONLY: buy · upload ───────────────────────────────────────
 
   Widget _storeActions(AppColorsExtension colors) {
+    if (_adding) {
+      return Container(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        decoration: BoxDecoration(
+          color: colors.surface2,
+          borderRadius: AppRadii.brMd,
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SizedBox.square(
+              dimension: 20,
+              child: CircularProgressIndicator(
+                  strokeWidth: 2, color: colors.accent),
+            ),
+            const SizedBox(width: AppSpacing.md),
+            Text(
+              'Uploading and adding to library…',
+              style: AppTypography.caption(colors.text),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -537,10 +658,9 @@ class _CatalogBookScreenState extends ConsumerState<CatalogBookScreen> {
           style: AppTypography.caption(colors.text3),
         ),
         const SizedBox(height: AppSpacing.lg),
-        // Already-own-it path: DRM-free EPUBs (Kobo, eBooks.com, Google Play)
-        // can come home; Kindle files can't (DRM).
+        // Direct upload attached to this book
         InkWell(
-          onTap: () => showAddToLibrarySheet(context),
+          onTap: _pickAndUploadEpub,
           borderRadius: AppRadii.brMd,
           child: Container(
             padding: const EdgeInsets.all(AppSpacing.md),
@@ -561,12 +681,12 @@ class _CatalogBookScreenState extends ConsumerState<CatalogBookScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Already own it?',
+                        'Already own the file?',
                         style: AppTypography.label(colors.text),
                       ),
                       const SizedBox(height: AppSpacing.xs),
                       Text(
-                        'Upload your EPUB to read and listen here.',
+                        'Upload your EPUB or PDF for this book.',
                         style: AppTypography.caption(colors.text2),
                       ),
                     ],

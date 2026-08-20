@@ -152,7 +152,6 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
     final inTrial = _isActiveTrial(subscription);
 
     return Scaffold(
-      backgroundColor: colors.bg,
       body: SafeArea(
         child: Column(
           children: [

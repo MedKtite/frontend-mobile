@@ -16,6 +16,7 @@ Future<TimeOfDay?> showMarginaliaTimePicker(
 }) {
   return showModalBottomSheet<TimeOfDay>(
     context: context,
+    useRootNavigator: true,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
     builder: (ctx) => _MarginaliaTimePickerSheet(

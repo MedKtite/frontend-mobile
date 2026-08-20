@@ -21,6 +21,7 @@ import 'log_physical_book_sheet.dart';
 Future<void> showAddToLibrarySheet(BuildContext context) {
   return showModalBottomSheet<void>(
     context: context,
+    useRootNavigator: true,
     backgroundColor: context.appColors.surface,
     isScrollControlled:
         true, // size to content, not the default half-screen cap

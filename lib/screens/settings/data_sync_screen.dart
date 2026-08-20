@@ -38,7 +38,6 @@ class DataSyncScreen extends ConsumerWidget {
     final notifier = ref.read(dataSyncProvider.notifier);
 
     return Scaffold(
-      backgroundColor: colors.bg,
       body: SafeArea(
         child: Column(
           children: [

@@ -11,6 +11,7 @@ import '../../services/backend/profile_service.dart';
 Future<void> showChangePasswordSheet(BuildContext context) {
   return showModalBottomSheet<void>(
     context: context,
+    useRootNavigator: true,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
     builder: (ctx) => const _ChangePasswordSheet(),

@@ -82,9 +82,8 @@ class ProfilScreen extends ConsumerWidget {
     final user = auth is AuthAuthenticated ? auth.user : null;
 
     if (user == null) {
-      return Scaffold(
-        backgroundColor: colors.bg,
-        body: const Center(child: CircularProgressIndicator()),
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
       );
     }
 
@@ -93,7 +92,6 @@ class ProfilScreen extends ConsumerWidget {
     final isGoogleAuth = user.authProvider == 'google';
 
     return Scaffold(
-      backgroundColor: colors.bg,
       body: SafeArea(
         child: Column(
           children: [

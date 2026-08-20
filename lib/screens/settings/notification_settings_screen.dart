@@ -21,7 +21,6 @@ class NotificationSettingsScreen extends ConsumerWidget {
     final prefsAsync = ref.watch(notificationPreferencesProvider);
 
     return Scaffold(
-      backgroundColor: colors.bg,
       body: SafeArea(
         child: Column(
           children: [

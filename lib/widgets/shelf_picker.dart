@@ -10,6 +10,7 @@ import '../app/theme/tokens/typography.dart';
 Future<String?> showShelfPicker(BuildContext context) {
   return showModalBottomSheet<String>(
     context: context,
+    useRootNavigator: true,
     backgroundColor: context.appColors.surface,
     builder: (_) => const _ShelfPicker(),
   );

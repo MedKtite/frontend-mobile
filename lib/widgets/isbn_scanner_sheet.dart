@@ -16,6 +16,7 @@ import '../services/frontend/isbn_lookup_service.dart';
 Future<dynamic> showIsbnScannerSheet(BuildContext context) {
   return showModalBottomSheet<dynamic>(
     context: context,
+    useRootNavigator: true,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
     builder: (_) => const IsbnScannerSheet(),

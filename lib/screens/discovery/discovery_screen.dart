@@ -246,7 +246,6 @@ class _DiscoveryScreenState extends ConsumerState<DiscoveryScreen> {
         : 'POPULAR WITH READERS';
 
     return Scaffold(
-      backgroundColor: colors.bg,
       body: SafeArea(
         bottom: false,
         child: SingleChildScrollView(

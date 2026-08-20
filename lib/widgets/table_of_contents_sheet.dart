@@ -16,6 +16,7 @@ Future<void> showTableOfContentsSheet({
 }) {
   return showModalBottomSheet<void>(
     context: context,
+    useRootNavigator: true,
     isScrollControlled: true,
     backgroundColor: context.appColors.surface,
     shape: const RoundedRectangleBorder(

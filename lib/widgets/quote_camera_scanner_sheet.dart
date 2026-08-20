@@ -22,6 +22,7 @@ Future<void> showQuoteCameraScannerSheet({
 }) {
   return showModalBottomSheet<void>(
     context: context,
+    useRootNavigator: true,
     isScrollControlled: true,
     backgroundColor: context.appColors.surface,
     shape: const RoundedRectangleBorder(

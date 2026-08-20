@@ -15,6 +15,7 @@ import '../user_avatar.dart';
 Future<void> showEditProfileSheet(BuildContext context, {required User user}) {
   return showModalBottomSheet<void>(
     context: context,
+    useRootNavigator: true,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
     builder: (ctx) => _EditProfileSheet(user: user),

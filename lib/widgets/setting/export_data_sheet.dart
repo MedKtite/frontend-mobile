@@ -16,6 +16,7 @@ import '../../services/backend/data_sync_service.dart';
 Future<void> showExportDataSheet(BuildContext context) {
   return showModalBottomSheet<void>(
     context: context,
+    useRootNavigator: true,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
     builder: (ctx) => const _ExportDataSheet(),

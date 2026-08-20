@@ -33,8 +33,7 @@ Future<void> main() async {
   }
 
   // Dio needs a writable directory for the persistent cookie jar (mobile /
-  // desktop). If that isn't available (e.g. web), boot without it — splash and
-  // onboarding don't touch the network; auth screens do and require mobile.
+
   final overrides = <Override>[];
   try {
     final dio = await DioFactory.create();

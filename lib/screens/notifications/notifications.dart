@@ -21,7 +21,6 @@ class NotificationsScreen extends ConsumerWidget {
     final state = ref.watch(notificationsProvider);
 
     return Scaffold(
-      backgroundColor: colors.bg,
       body: SafeArea(
         bottom: false,
         child: Column(

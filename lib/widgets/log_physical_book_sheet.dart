@@ -16,6 +16,7 @@ import 'isbn_scanner_sheet.dart';
 Future<void> showLogPhysicalBookSheet(BuildContext context) =>
     showModalBottomSheet<void>(
       context: context,
+      useRootNavigator: true,
       isScrollControlled: true,
       backgroundColor: context.appColors.surface,
       shape: const RoundedRectangleBorder(

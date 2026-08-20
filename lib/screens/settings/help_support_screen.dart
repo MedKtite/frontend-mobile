@@ -122,7 +122,6 @@ class _HelpSupportScreenState extends ConsumerState<HelpSupportScreen> {
             .toList();
 
     return Scaffold(
-      backgroundColor: colors.bg,
       body: SafeArea(
         child: Column(
           children: [

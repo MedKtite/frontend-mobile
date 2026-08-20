@@ -31,6 +31,7 @@ Future<void> showSharedFileImportSheet(
 }) {
   return showModalBottomSheet<void>(
     context: context,
+    useRootNavigator: true,
     backgroundColor: context.appColors.surface,
     isScrollControlled: true,
     shape: const RoundedRectangleBorder(
@@ -274,6 +275,7 @@ Future<void> showSharedQuoteSheet(
 }) {
   return showModalBottomSheet<void>(
     context: context,
+    useRootNavigator: true,
     backgroundColor: context.appColors.surface,
     isScrollControlled: true,
     shape: const RoundedRectangleBorder(

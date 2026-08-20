@@ -14,6 +14,7 @@ import '../../providers/reading_settings_provider.dart';
 Future<void> showTypographySheet(BuildContext context) {
   return showModalBottomSheet<void>(
     context: context,
+    useRootNavigator: true,
     isScrollControlled: true,
     backgroundColor: context.appColors.surface,
     barrierColor: Colors.black.withValues(alpha: 0.35),

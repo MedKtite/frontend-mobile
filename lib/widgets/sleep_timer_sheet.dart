@@ -12,6 +12,7 @@ import '../providers/sleep_timer_provider.dart';
 Future<void> showSleepTimerSheet(BuildContext context) {
   return showModalBottomSheet<void>(
     context: context,
+    useRootNavigator: true,
     backgroundColor: context.appColors.surface,
     isScrollControlled: true,
     shape: const RoundedRectangleBorder(

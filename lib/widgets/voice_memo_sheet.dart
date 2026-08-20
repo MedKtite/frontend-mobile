@@ -27,6 +27,7 @@ Future<void> showVoiceMemoSheet(
 }) {
   return showModalBottomSheet<void>(
     context: context,
+    useRootNavigator: true,
     backgroundColor: context.appColors.surface,
     isScrollControlled: true,
     shape: const RoundedRectangleBorder(

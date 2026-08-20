@@ -267,7 +267,7 @@ class _HomeHero extends ConsumerWidget {
         //   ),
         // ),
         Padding(
-          padding: EdgeInsets.symmetric(
+          padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.xl,
           ),
           child: Column(
@@ -342,13 +342,13 @@ class _HomeHero extends ConsumerWidget {
                   ],
                 ),
               ),
-              const SizedBox(height: AppSpacing.sm),
+              const SizedBox(height: AppSpacing.xs),
               ConstrainedBox(
                 constraints: const BoxConstraints(
                   maxWidth: AppSpacing.tabletSidebarExpanded,
                 ),
                 child: Text(
-                  'Welcome to your reading journey.\n'
+                  'Welcome to your reading journey. '
                   "Let's discover something great today.",
                   style: AppTypography.caption(
                     colors.text2,
@@ -360,7 +360,7 @@ class _HomeHero extends ConsumerWidget {
                       summary.minutesReadThisWeek > 0 ||
                       summary.currentStreakDays > 0 ||
                       summary.highlightsCount > 0)) ...[
-                const SizedBox(height: AppSpacing.xl),
+                const SizedBox(height: AppSpacing.lg),
                 _HeroStats(summary: summary),
               ],
               // _pubCard(),
@@ -407,7 +407,10 @@ class _HeroStats extends StatelessWidget {
     final minutes = summary?.minutesReadThisWeek;
     if (minutes == null) return '—';
     if (minutes < 60) return '${minutes}m';
-    return '${minutes ~/ 60}h';
+    final hours = minutes ~/ 60;
+    final remainingMinutes = minutes % 60;
+    if (remainingMinutes == 0) return '${hours}h';
+    return '${hours}h ${remainingMinutes}m';
   }
 
   @override
@@ -415,38 +418,42 @@ class _HeroStats extends StatelessWidget {
     final colors = context.appColors;
     final stats = [
       (
-        icon: Icons.menu_book_outlined,
-        value: '${summary?.booksReadThisYear ?? '—'}',
-        label: 'Books\nRead',
+        icon: Icons.menu_book_rounded,
+        value: '${summary?.booksReadThisYear ?? 0}',
+        label: 'Books',
+        color: const Color(0xFFC07A2B), // Amber / Bronze
       ),
       (
-        icon: Icons.schedule_outlined,
+        icon: Icons.access_time_rounded,
         value: _readingTime,
-        label: 'Reading\nTime',
+        label: 'Time Read',
+        color: const Color(0xFF10B981), // Emerald Green
       ),
       (
-        icon: Icons.local_fire_department_outlined,
-        value: '${summary?.currentStreakDays ?? '—'}',
-        label: 'Day\nStreak',
+        icon: Icons.local_fire_department_rounded,
+        value: '${summary?.currentStreakDays ?? 0}',
+        label: 'Day Streak',
+        color: const Color(0xFFF97316), // Flame Orange
       ),
       (
-        icon: Icons.bookmark_border,
-        value: '${summary?.highlightsCount ?? '—'}',
-        label: 'Quotes\nSaved',
+        icon: Icons.bookmark_border_rounded,
+        value: '${summary?.highlightsCount ?? 0}',
+        label: 'Quotes',
+        color: const Color(0xFF8B5CF6), // Royal Violet
       ),
     ];
 
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+      padding: const EdgeInsets.symmetric(vertical: 18, horizontal: AppSpacing.sm),
       decoration: BoxDecoration(
-        color: colors.surface.withValues(alpha: 0.86),
-        borderRadius: AppRadii.brLg,
+        color: colors.surface.withValues(alpha: 0.9),
+        borderRadius: BorderRadius.circular(24),
         border: Border.all(color: colors.border),
         boxShadow: [
           BoxShadow(
-            color: colors.text.withValues(alpha: 0.06),
-            blurRadius: AppSpacing.md,
-            offset: const Offset(0, AppSpacing.xs),
+            color: colors.text.withValues(alpha: 0.05),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -456,7 +463,13 @@ class _HeroStats extends StatelessWidget {
             for (var index = 0; index < stats.length; index++) ...[
               Expanded(child: _HeroStatCell(stat: stats[index])),
               if (index != stats.length - 1)
-                VerticalDivider(color: colors.border, width: AppSpacing.xs),
+                VerticalDivider(
+                  color: colors.border.withValues(alpha: 0.1),
+                  width: 1,
+                  thickness: 1,
+                  indent: 6,
+                  endIndent: 6,
+                ),
             ],
           ],
         ),
@@ -468,7 +481,7 @@ class _HeroStats extends StatelessWidget {
 class _HeroStatCell extends StatelessWidget {
   const _HeroStatCell({required this.stat});
 
-  final ({IconData icon, String value, String label}) stat;
+  final ({IconData icon, String value, String label, Color color}) stat;
 
   @override
   Widget build(BuildContext context) {
@@ -476,16 +489,45 @@ class _HeroStatCell extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(stat.icon, size: AppSpacing.xl, color: colors.gilt),
-        const SizedBox(height: AppSpacing.sm),
-        Text(stat.value, style: AppTypography.title3(colors.text)),
-        const SizedBox(height: AppSpacing.xs),
+        // Circular tinted icon
+        Container(
+          width: 42,
+          height: 42,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: stat.color.withValues(alpha: 0.12),
+          ),
+          child: Center(
+            child: Icon(
+              stat.icon,
+              size: 21,
+              color: stat.color,
+            ),
+          ),
+        ),
+        const SizedBox(height: 10),
+        // Metric value
+        Text(
+          stat.value,
+          style: AppTypography.title2(colors.text).copyWith(
+            fontWeight: FontWeight.w700,
+            fontSize: 18,
+            letterSpacing: -0.3,
+          ),
+        ),
+        const SizedBox(height: 3),
+        // Label
         Text(
           stat.label,
           textAlign: TextAlign.center,
-          style: AppTypography.caption(colors.text2),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: AppTypography.caption(colors.text2).copyWith(
+            fontWeight: FontWeight.w500,
+            fontSize: 12,
+          ),
         ),
-      ],
+       ]
     );
   }
 }
