@@ -9,6 +9,7 @@ import '../../core/widgets/app_snackbar.dart';
 import '../../models/notification_preferences_model.dart';
 import '../../providers/notification_preferences_provider.dart';
 import '../../providers/notifications_provider.dart';
+import '../../widgets/app_progress_bar.dart';
 import '../../widgets/auth_scaffold.dart';
 import '../../widgets/setting/marginalia_time_picker.dart';
 
@@ -30,12 +31,7 @@ class NotificationSettingsScreen extends ConsumerWidget {
             ),
             Expanded(
               child: prefsAsync.when(
-                loading: () => Center(
-                  child: CircularProgressIndicator(
-                    color: colors.gilt,
-                    strokeWidth: 2,
-                  ),
-                ),
+                loading: () => const AppProgressLoading(),
                 error: (err, _) => Center(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,

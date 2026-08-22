@@ -21,6 +21,7 @@ import '../../providers/sleep_timer_provider.dart';
 import '../../providers/state/audio_state.dart';
 import '../../services/backend/book_service.dart';
 import '../../services/backend/highlight_service.dart';
+import '../../widgets/app_progress_bar.dart';
 import '../../widgets/book_cover.dart';
 import '../../widgets/sleep_timer_sheet.dart';
 import '../../widgets/tag_picker_sheet.dart';
@@ -205,9 +206,7 @@ class _ListeningScreenState extends ConsumerState<ListeningScreen> {
               child: _error != null
                   ? _message(colors, _error!)
                   : !mine
-                      ? Center(
-                          child:
-                              CircularProgressIndicator(color: colors.accent))
+                      ? const AppProgressLoading()
                       : _playerBody(session, colors),
             ),
           ],

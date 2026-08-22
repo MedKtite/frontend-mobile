@@ -4,6 +4,7 @@ import 'package:flutter_svg/svg.dart';
 import '../app/theme/tokens/colors.dart';
 import '../app/theme/tokens/spacing.dart';
 import '../app/theme/tokens/typography.dart';
+import 'app_progress_bar.dart';
 
 /// Shared shell for the auth screens: back chevron, serif title, italic
 /// subtitle, the form [body], and an optional [footer] pinned to the bottom.
@@ -237,11 +238,11 @@ class AuthPrimaryButton extends StatelessWidget {
         onPressed: loading ? null : onPressed,
         child: loading
             ? SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
+                width: 32,
+                child: AppProgressBar(
+                  height: 3,
                   color: colors.bg,
+                  backgroundColor: colors.bg.withValues(alpha: 0.3),
                 ),
               )
             : Text(label),

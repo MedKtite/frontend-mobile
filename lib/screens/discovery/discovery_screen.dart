@@ -23,6 +23,7 @@ import '../../services/backend/book_service.dart';
 import '../../widgets/book_card.dart';
 import '../../widgets/book_cover.dart';
 import '../../widgets/add_to_library_sheet.dart';
+import '../../widgets/app_progress_bar.dart';
 import '../../widgets/glass_panel.dart';
 import '../../widgets/shelf_picker.dart';
 
@@ -451,9 +452,9 @@ class _DiscoveryScreenState extends ConsumerState<DiscoveryScreen> {
     );
   }
 
-  Widget _busy(AppColorsExtension colors) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: AppSpacing.xxl),
-    child: Center(child: CircularProgressIndicator(color: colors.accent)),
+  Widget _busy(AppColorsExtension colors) => const Padding(
+    padding: EdgeInsets.symmetric(vertical: AppSpacing.xxl),
+    child: AppProgressLoading(),
   );
 
   Widget _message(AppColorsExtension colors, String message) => Padding(
@@ -602,7 +603,7 @@ class _FeaturedLoading extends StatelessWidget {
         color: colors.surface2,
         borderRadius: AppRadii.brLg,
       ),
-      child: CircularProgressIndicator(color: colors.accent),
+      child: const AppProgressLoading(width: 140),
     );
   }
 }

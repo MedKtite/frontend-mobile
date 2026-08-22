@@ -12,6 +12,7 @@ import '../../models/note.dart';
 import '../../providers/annotations_provider.dart';
 import '../../providers/insights_provider.dart';
 import '../../providers/library_provider.dart';
+import '../../widgets/app_progress_bar.dart';
 import '../../widgets/book_cover.dart';
 
 /// A personal reading-year summary built from the library and annotations
@@ -44,7 +45,7 @@ class InsightsScreen extends ConsumerWidget {
     final highlights = highlightsAsync.valueOrNull;
     final notes = notesAsync.valueOrNull;
     if (books == null || highlights == null || notes == null) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(body: AppProgressLoading());
     }
 
     final insights = _Insights.from(books, highlights, notes, DateTime.now());
@@ -287,14 +288,11 @@ class _TagBreakdown extends StatelessWidget {
                 ),
               ),
               Expanded(
-                child: ClipRRect(
-                  borderRadius: AppRadii.brFull,
-                  child: LinearProgressIndicator(
-                    value: tag.count / max,
-                    minHeight: AppSpacing.sm,
-                    color: tag.color,
-                    backgroundColor: colors.surface2,
-                  ),
+                child: AppProgressBar(
+                  value: tag.count / max,
+                  height: AppSpacing.sm,
+                  color: tag.color,
+                  backgroundColor: colors.surface2,
                 ),
               ),
               const SizedBox(width: AppSpacing.md),

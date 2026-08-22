@@ -12,6 +12,7 @@ import '../../models/user.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/state/auth_state.dart';
 import '../../services/backend/profile_service.dart';
+import '../../widgets/app_progress_bar.dart';
 import '../../widgets/auth_scaffold.dart';
 import '../../widgets/setting/change_password_sheet.dart';
 import '../../widgets/setting/edit_profile_sheet.dart';
@@ -83,7 +84,7 @@ class ProfilScreen extends ConsumerWidget {
 
     if (user == null) {
       return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+        body: AppProgressLoading(),
       );
     }
 

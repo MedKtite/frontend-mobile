@@ -10,6 +10,7 @@ import '../../models/user.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/state/auth_state.dart';
 import '../../services/backend/profile_service.dart';
+import '../app_progress_bar.dart';
 import '../user_avatar.dart';
 
 Future<void> showEditProfileSheet(BuildContext context, {required User user}) {
@@ -268,11 +269,11 @@ class _EditProfileSheetState extends ConsumerState<_EditProfileSheet> {
                 ),
                 child: _isSaving
                     ? SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
+                        width: 32,
+                        child: AppProgressBar(
+                          height: 3,
                           color: colors.bg,
+                          backgroundColor: colors.bg.withValues(alpha: 0.3),
                         ),
                       )
                     : Text(

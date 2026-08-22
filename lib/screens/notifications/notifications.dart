@@ -11,6 +11,7 @@ import '../../app/theme/tokens/typography.dart';
 import '../../models/notification_model.dart';
 import '../../providers/notification_preferences_provider.dart';
 import '../../providers/notifications_provider.dart';
+import '../../widgets/app_progress_bar.dart';
 
 class NotificationsScreen extends ConsumerWidget {
   const NotificationsScreen({super.key});
@@ -38,12 +39,7 @@ class NotificationsScreen extends ConsumerWidget {
             const SizedBox(height: AppSpacing.sm),
             Expanded(
               child: state.isLoading && state.items.isEmpty
-                  ? Center(
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: colors.gilt,
-                      ),
-                    )
+                  ? const AppProgressLoading()
                   : RefreshIndicator(
                       color: colors.gilt,
                       backgroundColor: colors.surface,
@@ -728,11 +724,9 @@ class _EmptyNotificationsView extends StatelessWidget {
             const SizedBox(height: AppSpacing.sm),
 
             prefsAsync.when(
-              loading: () => const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(24),
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
+              loading: () => const Padding(
+                padding: EdgeInsets.all(24),
+                child: AppProgressLoading(),
               ),
               error: (err, _) => Center(
                 child: Text('Failed to load settings', style: TextStyle(color: colors.danger)),

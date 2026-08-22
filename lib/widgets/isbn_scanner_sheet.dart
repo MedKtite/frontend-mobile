@@ -9,6 +9,7 @@ import '../app/theme/tokens/spacing.dart';
 import '../app/theme/tokens/typography.dart';
 import '../models/catalog_book.dart';
 import '../services/frontend/isbn_lookup_service.dart';
+import 'app_progress_bar.dart';
 
 /// Opens the camera barcode scanner modal sheet for physical book cataloging.
 /// Returns the resolved [CatalogBook] (if found via metadata lookup) or the
@@ -270,10 +271,9 @@ class _ScannerOverlay extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2.5,
+                    width: 120,
+                    child: AppProgressBar(
+                      height: 3,
                       color: accentColor,
                     ),
                   ),

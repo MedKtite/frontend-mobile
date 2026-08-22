@@ -15,6 +15,7 @@ import '../../providers/book_file_provider.dart';
 import '../../providers/library_provider.dart';
 import '../../services/backend/book_service.dart';
 import '../../widgets/add_to_library_sheet.dart';
+import '../../widgets/app_progress_bar.dart';
 import '../../widgets/book_card.dart';
 import '../../widgets/book_cover.dart';
 import '../../widgets/delete_book_dialog.dart';
@@ -117,8 +118,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
       body: SafeArea(
         bottom: false,
         child: booksAsync.when(
-          loading: () =>
-              Center(child: CircularProgressIndicator(color: colors.accent)),
+          loading: () => const AppProgressLoading(),
           error: (e, _) => _ErrorRetry(
             message: e is ApiError ? e.message : 'Something went wrong',
             onRetry: () => ref.invalidate(libraryBooksProvider),

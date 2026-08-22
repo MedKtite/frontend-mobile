@@ -8,6 +8,7 @@ import '../../app/theme/tokens/spacing.dart';
 import '../../app/theme/tokens/typography.dart';
 import '../../core/widgets/app_snackbar.dart';
 import '../../providers/data_sync_provider.dart';
+import '../../widgets/app_progress_bar.dart';
 import '../../widgets/auth_scaffold.dart';
 import '../../widgets/setting/export_data_sheet.dart';
 
@@ -372,9 +373,12 @@ class _SyncStatusCard extends StatelessWidget {
               onPressed: isSyncing ? null : onSyncNow,
               icon: isSyncing
                   ? SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: colors.bg),
+                      width: 24,
+                      child: AppProgressBar(
+                        height: 2,
+                        color: colors.bg,
+                        backgroundColor: colors.bg.withValues(alpha: 0.3),
+                      ),
                     )
                   : const Icon(Icons.sync_rounded, size: 18),
               label: Text(

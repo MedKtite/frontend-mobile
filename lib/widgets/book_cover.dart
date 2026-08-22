@@ -5,6 +5,7 @@ import '../app/theme/tokens/radii.dart';
 import '../app/theme/tokens/spacing.dart';
 import '../app/theme/tokens/typography.dart';
 import '../core/dio_client.dart';
+import 'app_progress_bar.dart';
 
 /// A book cover. Shows the real cover image when [coverUrl] is given; otherwise
 /// (or while loading / on error) falls back to a flat color panel with centered
@@ -87,11 +88,9 @@ class BookCover extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2.2,
-                      color: colors.accent,
+                    width: width * 0.6,
+                    child: const AppProgressBar(
+                      height: 3,
                     ),
                   ),
                   const SizedBox(height: AppSpacing.sm),

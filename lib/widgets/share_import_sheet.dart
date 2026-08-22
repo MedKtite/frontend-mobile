@@ -23,6 +23,7 @@ import '../services/backend/book_service.dart';
 import '../services/backend/highlight_service.dart';
 import '../services/backend/note_service.dart';
 import '../services/backend/upload_service.dart';
+import 'app_progress_bar.dart';
 
 /// Modal presented when the user shares an EPUB/PDF file to Marginalia from another app.
 Future<void> showSharedFileImportSheet(
@@ -242,11 +243,11 @@ class _SharedFileImportSheetState
             onPressed: _busy ? null : _import,
             icon: _busy
                 ? SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
+                    width: 32,
+                    child: AppProgressBar(
+                      height: 3,
                       color: colors.bg,
+                      backgroundColor: colors.bg.withValues(alpha: 0.3),
                     ),
                   )
                 : const Icon(Icons.download_rounded, size: 20),
@@ -505,11 +506,11 @@ class _SharedQuoteSheetState extends ConsumerState<_SharedQuoteSheet> {
             ),
             child: _busy
                 ? SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
+                    width: 32,
+                    child: AppProgressBar(
+                      height: 3,
                       color: colors.bg,
+                      backgroundColor: colors.bg.withValues(alpha: 0.3),
                     ),
                   )
                 : Text(

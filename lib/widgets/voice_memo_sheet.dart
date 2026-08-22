@@ -16,6 +16,7 @@ import '../models/note_create_request.dart';
 import '../providers/book_highlights_provider.dart';
 import '../services/backend/highlight_service.dart';
 import '../services/backend/note_service.dart';
+import 'app_progress_bar.dart';
 
 /// Modal sheet to record a spoken voice memo attached to a reading or audio timestamp.
 Future<void> showVoiceMemoSheet(
@@ -357,11 +358,11 @@ class _VoiceMemoSheetState extends ConsumerState<_VoiceMemoSheet> {
             ),
             child: _busy
                 ? SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
+                    width: 32,
+                    child: AppProgressBar(
+                      height: 3,
                       color: colors.bg,
+                      backgroundColor: colors.bg.withValues(alpha: 0.3),
                     ),
                   )
                 : Text(

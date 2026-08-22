@@ -9,6 +9,7 @@ import '../../app/theme/tokens/spacing.dart';
 import '../../app/theme/tokens/typography.dart';
 import '../../models/catalog_book.dart';
 import '../../providers/author_provider.dart';
+import '../../widgets/app_progress_bar.dart';
 import '../../widgets/author_avatar.dart';
 import '../../widgets/book_cover.dart';
 import 'detail_shared.dart';
@@ -85,10 +86,9 @@ class AuthorDetailsScreen extends ConsumerWidget {
               AppSpacing.xxl,
             ),
             child: details.when(
-              loading: () => Padding(
-                padding: const EdgeInsets.symmetric(vertical: AppSpacing.xxxl),
-                child: Center(
-                    child: CircularProgressIndicator(color: colors.accent)),
+              loading: () => const Padding(
+                padding: EdgeInsets.symmetric(vertical: AppSpacing.xxxl),
+                child: AppProgressLoading(),
               ),
               error: (_, __) => Column(
                 children: [

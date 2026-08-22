@@ -28,6 +28,7 @@ import '../../providers/reading_settings_provider.dart';
 import '../../services/backend/book_service.dart';
 import '../../services/backend/highlight_service.dart';
 import '../../services/backend/note_service.dart';
+import '../../widgets/app_progress_bar.dart';
 import '../../widgets/note_sheet.dart';
 import '../../widgets/tag_picker_sheet.dart';
 import 'reader_shared.dart';
@@ -628,8 +629,9 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
                                         child: Column(
                                           mainAxisSize: MainAxisSize.min,
                                           children: [
-                                            CircularProgressIndicator(
-                                              color: colors.accent,
+                                            const SizedBox(
+                                              width: 140,
+                                              child: AppProgressBar(height: 4),
                                             ),
                                             const SizedBox(
                                               height: AppSpacing.md,

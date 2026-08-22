@@ -7,6 +7,7 @@ import '../../app/theme/tokens/spacing.dart';
 import '../../app/theme/tokens/typography.dart';
 import '../../core/widgets/app_snackbar.dart';
 import '../../services/backend/profile_service.dart';
+import '../app_progress_bar.dart';
 
 Future<void> showChangePasswordSheet(BuildContext context) {
   return showModalBottomSheet<void>(
@@ -196,11 +197,11 @@ class _ChangePasswordSheetState extends ConsumerState<_ChangePasswordSheet> {
                 ),
                 child: _isSubmitting
                     ? SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
+                        width: 32,
+                        child: AppProgressBar(
+                          height: 3,
                           color: colors.bg,
+                          backgroundColor: colors.bg.withValues(alpha: 0.3),
                         ),
                       )
                     : Text(

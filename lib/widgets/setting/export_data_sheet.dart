@@ -10,6 +10,7 @@ import '../../app/theme/tokens/typography.dart';
 import '../../core/widgets/app_snackbar.dart';
 import '../../providers/data_sync_provider.dart';
 import '../../services/backend/data_sync_service.dart';
+import '../app_progress_bar.dart';
 
 /// User-friendly Export Data bottom sheet for everyday readers.
 /// Supports clean printable PDF reports and Spreadsheet (CSV) exports.
@@ -171,11 +172,11 @@ class _ExportDataSheetState extends ConsumerState<_ExportDataSheet> {
               ),
               child: _isExporting
                   ? SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
+                      width: 32,
+                      child: AppProgressBar(
+                        height: 3,
                         color: colors.bg,
+                        backgroundColor: colors.bg.withValues(alpha: 0.3),
                       ),
                     )
                   : Text(

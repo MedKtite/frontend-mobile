@@ -19,6 +19,7 @@ import '../../providers/annotations_provider.dart';
 import '../../providers/library_provider.dart';
 import '../../services/backend/highlight_service.dart';
 import '../../services/backend/note_service.dart';
+import '../../widgets/app_progress_bar.dart';
 import '../../widgets/book_cover.dart';
 
 /// Margins — the annotation hub (replaces the old Search tab; built from the
@@ -197,7 +198,7 @@ class _MarginsScreenState extends ConsumerState<MarginsScreen> {
             else if (loading)
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: AppSpacing.xxxl),
-                child: Center(child: CircularProgressIndicator()),
+                child: AppProgressLoading(),
               )
             else if (entries.isEmpty)
               _Message(

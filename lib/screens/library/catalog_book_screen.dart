@@ -22,6 +22,7 @@ import '../../providers/book_description_provider.dart';
 import '../../providers/library_provider.dart';
 import '../../services/backend/book_service.dart';
 import '../../services/backend/upload_service.dart';
+import '../../widgets/app_progress_bar.dart';
 import '../../widgets/book_cover.dart';
 import '../../widgets/shelf_picker.dart';
 import 'detail_shared.dart';
@@ -418,15 +419,11 @@ class _CatalogBookScreenState extends ConsumerState<CatalogBookScreen> {
                         year: year,
                       ),
                       if (loadingExtras)
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
+                        const Padding(
+                          padding: EdgeInsets.symmetric(
                             vertical: AppSpacing.xxl,
                           ),
-                          child: Center(
-                            child: CircularProgressIndicator(
-                              color: colors.accent,
-                            ),
-                          ),
+                          child: AppProgressLoading(width: 140),
                         )
                       else if (description.isNotEmpty) ...[
                         const SizedBox(height: AppSpacing.xl),
@@ -618,10 +615,9 @@ class _CatalogBookScreenState extends ConsumerState<CatalogBookScreen> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            SizedBox.square(
-              dimension: 20,
-              child: CircularProgressIndicator(
-                  strokeWidth: 2, color: colors.accent),
+            const SizedBox(
+              width: 50,
+              child: AppProgressBar(height: 3),
             ),
             const SizedBox(width: AppSpacing.md),
             Text(

@@ -30,6 +30,7 @@ import '../screens/settings/notification_settings_screen.dart';
 import '../screens/settings/paywall_screen.dart';
 import '../screens/settings/profil_screen.dart';
 import '../screens/settings/settings_screen.dart';
+import '../widgets/app_progress_bar.dart';
 import '../screens/splash/splash_screen.dart';
 import '../widgets/app_shell.dart';
 
@@ -298,7 +299,7 @@ class _AuthGuard extends ConsumerWidget {
       return const SizedBox.shrink();
     }
     if (auth is AuthInitial || auth is AuthRestoring) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(body: AppProgressLoading());
     }
     return child;
   }

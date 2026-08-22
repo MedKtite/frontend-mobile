@@ -13,6 +13,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/state/auth_state.dart';
 import '../../services/backend/data_sync_service.dart';
 import '../../services/backend/support_service.dart';
+import '../app_progress_bar.dart';
 
 Future<void> showFeedbackBottomSheet(BuildContext context) {
   return showModalBottomSheet<void>(
@@ -291,11 +292,11 @@ class _FeedbackBottomSheetState extends ConsumerState<_FeedbackBottomSheet> {
                 ),
                 child: _isSubmitting
                     ? SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
+                        width: 32,
+                        child: AppProgressBar(
+                          height: 3,
                           color: colors.bg,
+                          backgroundColor: colors.bg.withValues(alpha: 0.3),
                         ),
                       )
                     : Text(

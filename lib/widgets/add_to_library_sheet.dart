@@ -15,6 +15,7 @@ import '../models/presign_upload_request.dart';
 import '../providers/library_provider.dart';
 import '../services/backend/book_service.dart';
 import '../services/backend/upload_service.dart';
+import 'app_progress_bar.dart';
 import 'log_physical_book_sheet.dart';
 
 /// Presents the "Add to library" modal sheet (frames 287:2 / 287:181).
@@ -177,7 +178,7 @@ class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
   List<Widget> _uploading(AppColorsExtension colors) => [
     Text('Add to library', style: AppTypography.title2(colors.text)),
     const SizedBox(height: AppSpacing.xxxl),
-    CircularProgressIndicator(color: colors.accent),
+    const AppProgressLoading(width: 180),
     const SizedBox(height: AppSpacing.lg),
     Text('Uploading your book…', style: AppTypography.subtitle(colors.text2)),
     const SizedBox(height: AppSpacing.xxxl),

@@ -22,6 +22,7 @@ import '../../providers/recommendations_provider.dart';
 import '../../providers/state/auth_state.dart';
 import '../../providers/state/home_state.dart';
 import '../../providers/trending_provider.dart';
+import '../../widgets/app_progress_bar.dart';
 import '../../widgets/author_avatar.dart';
 import '../../widgets/book_card.dart';
 import '../../widgets/book_cover.dart';
@@ -31,7 +32,6 @@ class HomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final colors = context.appColors;
     final state = ref.watch(homeProvider);
 
 
@@ -55,11 +55,9 @@ class HomeScreen extends ConsumerWidget {
       ),
       child: Scaffold(
         body: switch (state) {
-          HomeLoading() => SafeArea(
+          HomeLoading() => const SafeArea(
             bottom: false,
-            child: Center(
-              child: CircularProgressIndicator(color: colors.accent),
-            ),
+            child: AppProgressLoading(),
           ),
           HomeEmpty() => _PopulatedHome(
             greetingName: name,
@@ -679,14 +677,9 @@ class _ContinueRowCard extends StatelessWidget {
                     Row(
                       children: [
                         Expanded(
-                          child: ClipRRect(
-                            borderRadius: AppRadii.brFull,
-                            child: LinearProgressIndicator(
-                              value: pct / 100,
-                              minHeight: 4,
-                              backgroundColor: colors.border,
-                              color: colors.accent,
-                            ),
+                          child: AppProgressBar(
+                            value: pct / 100,
+                            height: 4,
                           ),
                         ),
                         const SizedBox(width: AppSpacing.sm),

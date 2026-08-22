@@ -19,6 +19,7 @@ import '../../providers/book_highlights_provider.dart';
 import '../../providers/book_provider.dart';
 import '../../providers/library_provider.dart';
 import '../../services/backend/book_service.dart';
+import '../../widgets/app_progress_bar.dart';
 import '../../widgets/book_cover.dart';
 import '../../widgets/delete_book_dialog.dart';
 import '../../widgets/quote_camera_scanner_sheet.dart';
@@ -57,11 +58,9 @@ class BookDetailScreen extends ConsumerWidget {
     final colors = context.appColors;
     final bookAsync = ref.watch(bookByIdProvider(book.id));
     if (bookAsync.isLoading) {
-      return Scaffold(
+      return const Scaffold(
         body: SafeArea(
-          child: Center(
-            child: CircularProgressIndicator(color: colors.accent),
-          ),
+          child: AppProgressLoading(),
         ),
       );
     }
@@ -79,7 +78,7 @@ class BookDetailScreen extends ConsumerWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const CircularProgressIndicator(),
+                  const AppProgressBar(height: 4),
                   const SizedBox(height: AppSpacing.lg),
                   Text('Preparing your book…',
                       style: AppTypography.title3(colors.text)),
@@ -105,11 +104,9 @@ class BookDetailScreen extends ConsumerWidget {
     );
     final extrasAsync = ref.watch(bookExtrasProvider(extrasKey));
     if (extrasAsync.isLoading) {
-      return Scaffold(
+      return const Scaffold(
         body: SafeArea(
-          child: Center(
-            child: CircularProgressIndicator(color: colors.accent),
-          ),
+          child: AppProgressLoading(),
         ),
       );
     }
@@ -250,7 +247,10 @@ class BookDetailScreen extends ConsumerWidget {
                         loading: () => const Center(
                           child: Padding(
                             padding: EdgeInsets.all(AppSpacing.md),
-                            child: CircularProgressIndicator(strokeWidth: 2),
+                            child: SizedBox(
+                              width: 120,
+                              child: AppProgressBar(height: 3),
+                            ),
                           ),
                         ),
                         error: (_, __) => const SizedBox.shrink(),

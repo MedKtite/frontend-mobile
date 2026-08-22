@@ -11,6 +11,7 @@ import '../models/catalog_book.dart';
 import '../providers/library_provider.dart';
 import '../services/backend/book_service.dart';
 import '../services/frontend/isbn_lookup_service.dart';
+import 'app_progress_bar.dart';
 import 'isbn_scanner_sheet.dart';
 
 Future<void> showLogPhysicalBookSheet(BuildContext context) =>
@@ -306,9 +307,8 @@ class _LogPhysicalBookSheetState extends ConsumerState<_LogPhysicalBookSheet> {
                             ? const Padding(
                                 padding: EdgeInsets.all(12),
                                 child: SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                  width: 24,
+                                  child: AppProgressBar(height: 2),
                                 ),
                               )
                             : IconButton(
@@ -346,11 +346,11 @@ class _LogPhysicalBookSheetState extends ConsumerState<_LogPhysicalBookSheet> {
                   ),
                   child: _busy
                       ? SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
+                          width: 32,
+                          child: AppProgressBar(
+                            height: 3,
                             color: colors.bg,
+                            backgroundColor: colors.bg.withValues(alpha: 0.3),
                           ),
                         )
                       : const Text('Save to library'),
