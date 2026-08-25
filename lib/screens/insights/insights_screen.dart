@@ -85,10 +85,8 @@ class InsightsScreen extends ConsumerWidget {
             _SectionLabel(label: 'MOST ANNOTATED'),
             const SizedBox(height: AppSpacing.md),
             _MostAnnotated(books: insights.mostAnnotated),
-            if (insights.quietSuggestion != null) ...[
-              const SizedBox(height: AppSpacing.xxl),
-              _QuietSuggestion(book: insights.quietSuggestion!),
-            ],
+            const SizedBox(height: AppSpacing.xxl),
+           
           ],
         ),
       ),
@@ -153,30 +151,6 @@ class _WeekCard extends StatelessWidget {
           Text(
             'read in the last 7 days',
             style: AppTypography.label(colors.text3),
-          ),
-          const SizedBox(height: AppSpacing.xl),
-          Container(
-            padding: const EdgeInsets.all(AppSpacing.md),
-            decoration: BoxDecoration(
-              color: colors.surface2,
-              borderRadius: AppRadii.brMd,
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.schedule_outlined,
-                  size: AppSpacing.xl,
-                  color: colors.text2,
-                ),
-                const SizedBox(width: AppSpacing.md),
-                Expanded(
-                  child: Text(
-                    'Every reading session counts toward this total.',
-                    style: AppTypography.caption(colors.text2),
-                  ),
-                ),
-              ],
-            ),
           ),
         ],
       ),
@@ -256,19 +230,25 @@ class _TagBreakdown extends StatelessWidget {
 
   final List<_TagTotal> tags;
 
+  static const _defaultTags = [
+    _TagTotal('urgent', 0),
+    _TagTotal('curious', 0),
+    _TagTotal('resonant', 0),
+    _TagTotal('beautiful', 0),
+    _TagTotal('reference', 0),
+    _TagTotal('disagree', 0),
+    _TagTotal('revisit', 0),
+  ];
+
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    if (tags.isEmpty) {
-      return Text(
-        'Your tagged passages will appear here.',
-        style: AppTypography.subtitle(colors.text2),
-      );
-    }
-    final max = tags.first.count;
+    final displayTags = tags.isNotEmpty ? tags : _defaultTags;
+    final max = displayTags.first.count > 0 ? displayTags.first.count : 1;
+
     return Column(
       children: [
-        for (final tag in tags) ...[
+        for (final tag in displayTags) ...[
           Row(
             children: [
               Container(
@@ -306,7 +286,7 @@ class _TagBreakdown extends StatelessWidget {
               ),
             ],
           ),
-          if (tag != tags.last) const SizedBox(height: AppSpacing.md),
+          if (tag != displayTags.last) const SizedBox(height: AppSpacing.md),
         ],
       ],
     );
@@ -322,12 +302,7 @@ class _ReadingMix extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     final total = mix.print + mix.audio + mix.both;
-    if (total == 0) {
-      return Text(
-        'Add books to see your reading mix.',
-        style: AppTypography.subtitle(colors.text2),
-      );
-    }
+
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
@@ -340,28 +315,32 @@ class _ReadingMix extends StatelessWidget {
             borderRadius: AppRadii.brFull,
             child: SizedBox(
               height: AppSpacing.md,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _MixSegment(
-                    count: mix.print,
-                    total: total,
-                    color: colors.text,
-                  ),
-                  const SizedBox(width: AppSpacing.xs),
-                  _MixSegment(
-                    count: mix.audio,
-                    total: total,
-                    color: colors.accent,
-                  ),
-                  const SizedBox(width: AppSpacing.xs),
-                  _MixSegment(
-                    count: mix.both,
-                    total: total,
-                    color: colors.text3,
-                  ),
-                ],
-              ),
+              child: total > 0
+                  ? Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        _MixSegment(
+                          count: mix.print,
+                          total: total,
+                          color: colors.text,
+                        ),
+                        if (mix.print > 0 && (mix.audio > 0 || mix.both > 0))
+                          const SizedBox(width: AppSpacing.xs),
+                        _MixSegment(
+                          count: mix.audio,
+                          total: total,
+                          color: colors.accent,
+                        ),
+                        if (mix.audio > 0 && mix.both > 0)
+                          const SizedBox(width: AppSpacing.xs),
+                        _MixSegment(
+                          count: mix.both,
+                          total: total,
+                          color: colors.text3,
+                        ),
+                      ],
+                    )
+                  : ColoredBox(color: colors.surface2),
             ),
           ),
           const SizedBox(height: AppSpacing.md),
@@ -442,9 +421,27 @@ class _MostAnnotated extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     if (books.isEmpty) {
-      return Text(
-        'Highlight passages to build this list.',
-        style: AppTypography.subtitle(colors.text2),
+      return Container(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        decoration: BoxDecoration(
+          color: colors.surface,
+          borderRadius: AppRadii.brLg,
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'No annotated books yet',
+              style: AppTypography.caption(colors.text2),
+            ),
+            Text(
+              '0',
+              style: AppTypography.label(colors.text).copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
       );
     }
     return Container(
@@ -524,52 +521,6 @@ class _AnnotatedBookRow extends StatelessWidget {
   }
 }
 
-class _QuietSuggestion extends StatelessWidget {
-  const _QuietSuggestion({required this.book});
-
-  final Book book;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final progress = book.progressPct?.round() ?? 0;
-    final lastOpened = DateTime.tryParse(book.lastOpenedAt ?? '');
-    final since = lastOpened == null
-        ? ''
-        : ' since ${DateFormat('MMMM').format(lastOpened.toLocal())}';
-    final pagesRemaining = book.pageCount == null
-        ? null
-        : ((book.pageCount! * (100 - progress)) / 100)
-              .ceil()
-              .clamp(1, book.pageCount!)
-              .toInt();
-    final ending = pagesRemaining == null
-        ? 'a few pages from the end.'
-        : '$pagesRemaining ${pagesRemaining == 1 ? 'page' : 'pages'} from the end.';
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
-        color: colors.surface2,
-        border: Border.all(color: colors.border),
-        borderRadius: AppRadii.brLg,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'A QUIET SUGGESTION',
-            style: AppTypography.overline(colors.accent),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            '${book.title} has been waiting at $progress%$since — $ending',
-            style: AppTypography.subtitle(colors.text),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 class _Insights {
   const _Insights({

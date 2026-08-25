@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../app/theme/tokens/colors.dart';
@@ -197,7 +198,10 @@ class BookCover extends StatelessWidget {
 /// the device can't. Returns null when there's no URL.
 String? proxiedCoverUrl(String? raw) {
   if (raw == null || raw.isEmpty) return null;
-  return '${DioFactory.defaultBaseUrl}/covers?url=${Uri.encodeQueryComponent(raw)}';
+  if (kIsWeb) {
+    return '${DioFactory.defaultBaseUrl}/covers?url=${Uri.encodeQueryComponent(raw)}';
+  }
+  return raw;
 }
 
 /// Parses a backend `coverDominantColor` (#RRGGBB) into a [Color], falling back

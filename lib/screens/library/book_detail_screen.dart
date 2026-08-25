@@ -12,6 +12,7 @@ import '../../app/theme/tokens/typography.dart';
 import '../../core/dio_client.dart';
 import '../../core/widgets/app_snackbar.dart';
 import '../../models/book.dart';
+import '../../models/book_update_request.dart';
 import '../../models/highlight.dart';
 import '../../providers/book_description_provider.dart';
 import '../../providers/book_file_provider.dart';
@@ -22,13 +23,37 @@ import '../../services/backend/book_service.dart';
 import '../../widgets/app_progress_bar.dart';
 import '../../widgets/book_cover.dart';
 import '../../widgets/delete_book_dialog.dart';
-import '../../widgets/quote_camera_scanner_sheet.dart';
 import 'detail_shared.dart';
 
 class BookDetailScreen extends ConsumerWidget {
   const BookDetailScreen({super.key, required this.book});
 
   final Book book;
+
+  Future<void> _toggleMode(BuildContext context, WidgetRef ref, Book book) async {
+    final isAudio = book.status == 'listening' ||
+        book.format == 'm4b' ||
+        book.format == 'mp3';
+    final targetStatus = isAudio ? 'reading' : 'listening';
+    final targetLabel = isAudio ? 'reading' : 'listening';
+    final messenger = ScaffoldMessenger.of(context)..hideCurrentSnackBar();
+
+    try {
+      await ref.read(bookServiceProvider).update(
+            book.id,
+            BookUpdateRequest(status: targetStatus),
+          );
+      ref.invalidate(bookByIdProvider(book.id));
+      ref.invalidate(libraryBooksProvider);
+      if (!context.mounted) return;
+      messenger.showSnackBar(
+        appSnackBar('Switched to $targetLabel mode', SnackType.success),
+      );
+    } on ApiError catch (e) {
+      if (!context.mounted) return;
+      messenger.showSnackBar(appSnackBar(e.message, SnackType.error));
+    }
+  }
 
   Future<void> _delete(BuildContext context, WidgetRef ref) async {
     final confirmed = await showDialog<bool>(
@@ -194,65 +219,26 @@ class BookDetailScreen extends ConsumerWidget {
                             style: AppTypography.bodySerif(colors.text2)),
                       ],
 
-                      const SizedBox(height: AppSpacing.xxl),
-
-                      // Marginalia & Highlights Section
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Marginalia & Highlights',
-                            style: AppTypography.title3(colors.text),
-                          ),
-                          TextButton.icon(
-                            onPressed: () => showQuoteCameraScannerSheet(
-                              context: context,
-                              book: displayBook,
-                            ),
-                            icon: const Icon(Icons.document_scanner_outlined, size: 18),
-                            label: const Text('Scan Page'),
-                            style: TextButton.styleFrom(
-                              foregroundColor: colors.accent,
-                              textStyle: AppTypography.label(colors.accent),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-
+                      // Marginalia & Highlights Section (shown only when highlights exist)
                       highlightsAsync.when(
                         data: (highlights) {
-                          if (highlights.isEmpty) {
-                            return Container(
-                              padding: const EdgeInsets.all(AppSpacing.lg),
-                              decoration: BoxDecoration(
-                                color: colors.surface2,
-                                borderRadius: BorderRadius.circular(AppRadii.md),
-                              ),
-                              child: Center(
-                                child: Text(
-                                  'No marginalia yet. Tap "Scan Page" to capture quotes.',
-                                  textAlign: TextAlign.center,
-                                  style: AppTypography.caption(colors.text2),
-                                ),
-                              ),
-                            );
-                          }
+                          if (highlights.isEmpty) return const SizedBox.shrink();
                           return Column(
-                            children: highlights.map((h) {
-                              return _HighlightDetailCard(highlight: h);
-                            }).toList(),
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              const SizedBox(height: AppSpacing.xxl),
+                              Text(
+                                'Marginalia & Highlights',
+                                style: AppTypography.title3(colors.text),
+                              ),
+                              const SizedBox(height: AppSpacing.sm),
+                              ...highlights.map((h) {
+                                return _HighlightDetailCard(highlight: h);
+                              }),
+                            ],
                           );
                         },
-                        loading: () => const Center(
-                          child: Padding(
-                            padding: EdgeInsets.all(AppSpacing.md),
-                            child: SizedBox(
-                              width: 120,
-                              child: AppProgressBar(height: 3),
-                            ),
-                          ),
-                        ),
+                        loading: () => const SizedBox.shrink(),
                         error: (_, __) => const SizedBox.shrink(),
                       ),
                     ],
@@ -261,7 +247,7 @@ class BookDetailScreen extends ConsumerWidget {
               ],
             ),
           ),
-          // Pinned CTA — Primary reading/listening action
+          // Pinned CTA — Primary reading/listening action + Mode switch
           SafeArea(
             top: false,
             child: Padding(
@@ -276,28 +262,49 @@ class BookDetailScreen extends ConsumerWidget {
                     displayBook.format == 'm4b' ||
                     displayBook.format == 'mp3';
                 final verb = isAudio ? 'listening' : 'reading';
-                return FilledButton(
-                  onPressed: () => context.push(
-                    isAudio
-                        ? Routes.listeningPath(displayBook.id)
-                        : Routes.readingPath(displayBook.id),
-                    extra: displayBook,
-                  ),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: colors.accent,
-                    foregroundColor: colors.bg,
-                    padding: const EdgeInsets.symmetric(
-                        vertical: AppSpacing.md, horizontal: AppSpacing.lg),
-                    shape:
-                        RoundedRectangleBorder(borderRadius: AppRadii.brMd),
-                  ),
-                  child: Text(
-                    progress > 0
-                        ? 'Continue $verb — ${progress.round()}%'
-                        : 'Start $verb',
-                    style: AppTypography.label(colors.bg)
-                        .copyWith(fontWeight: FontWeight.w600),
-                  ),
+                return Row(
+                  children: [
+                    Expanded(
+                      child: FilledButton(
+                        onPressed: () => context.push(
+                          isAudio
+                              ? Routes.listeningPath(displayBook.id)
+                              : Routes.readingPath(displayBook.id),
+                          extra: displayBook,
+                        ),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: colors.accent,
+                          foregroundColor: colors.bg,
+                          padding: const EdgeInsets.symmetric(
+                              vertical: AppSpacing.md, horizontal: AppSpacing.lg),
+                          shape:
+                              RoundedRectangleBorder(borderRadius: AppRadii.brMd),
+                        ),
+                        child: Text(
+                          progress > 0
+                              ? 'Continue $verb — ${progress.round()}%'
+                              : 'Start $verb',
+                          style: AppTypography.label(colors.bg)
+                              .copyWith(fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    IconButton.outlined(
+                      onPressed: () => _toggleMode(context, ref, displayBook),
+                      tooltip: isAudio ? 'Switch to reading' : 'Switch to listening',
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: colors.text,
+                        side: BorderSide(color: colors.border),
+                        padding: const EdgeInsets.all(AppSpacing.md),
+                        shape: RoundedRectangleBorder(borderRadius: AppRadii.brMd),
+                      ),
+                      icon: Icon(
+                        isAudio ? Icons.auto_stories_rounded : Icons.headphones_rounded,
+                        size: 20,
+                      ),
+                    ),
+                  ],
                 );
               }),
             ),

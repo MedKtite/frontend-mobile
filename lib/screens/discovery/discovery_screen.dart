@@ -393,6 +393,7 @@ class _DiscoveryScreenState extends ConsumerState<DiscoveryScreen> {
             ],
           ),
         ),
+        const SizedBox(height: AppSpacing.xxxl),
       ],
     );
   }

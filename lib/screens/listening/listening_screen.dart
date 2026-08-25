@@ -17,13 +17,11 @@ import '../../models/highlight_create_request.dart';
 import '../../providers/audio_player_provider.dart';
 import '../../providers/book_highlights_provider.dart';
 import '../../providers/library_provider.dart';
-import '../../providers/sleep_timer_provider.dart';
 import '../../providers/state/audio_state.dart';
 import '../../services/backend/book_service.dart';
 import '../../services/backend/highlight_service.dart';
 import '../../widgets/app_progress_bar.dart';
 import '../../widgets/book_cover.dart';
-import '../../widgets/sleep_timer_sheet.dart';
 import '../../widgets/tag_picker_sheet.dart';
 import '../../widgets/voice_memo_sheet.dart';
 
@@ -138,52 +136,6 @@ class _ListeningScreenState extends ConsumerState<ListeningScreen> {
                       style: AppTypography.overline(colors.text3),
                     ),
                   ),
-                  Builder(
-                    builder: (context) {
-                      final sleepTimer = ref.watch(sleepTimerProvider);
-                      return GestureDetector(
-                        onTap: () => showSleepTimerSheet(context),
-                        child: Container(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: sleepTimer != null
-                                ? AppSpacing.sm
-                                : AppSpacing.xs,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: sleepTimer != null
-                                ? colors.accent.withValues(alpha: 0.15)
-                                : Colors.transparent,
-                            borderRadius: AppRadii.brFull,
-                            border: sleepTimer != null
-                                ? Border.all(color: colors.accent, width: 1)
-                                : null,
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.bedtime_outlined,
-                                size: 20,
-                                color: sleepTimer != null
-                                    ? colors.accent
-                                    : colors.text2,
-                              ),
-                              if (sleepTimer != null) ...[
-                                const SizedBox(width: 4),
-                                Text(
-                                  '${sleepTimer.remaining.inMinutes}:${sleepTimer.remaining.inSeconds.remainder(60).toString().padLeft(2, '0')}',
-                                  style: AppTypography.caption(colors.accent)
-                                      .copyWith(fontWeight: FontWeight.w700),
-                                ),
-                              ],
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                  const SizedBox(width: AppSpacing.xs),
                   PopupMenuButton<String>(
                     icon: Icon(Icons.more_horiz,
                         size: 24, color: colors.text2),
@@ -474,34 +426,6 @@ class _ListeningScreenState extends ConsumerState<ListeningScreen> {
                     ),
                     const SizedBox(height: AppSpacing.sm),
                     Text('TAG MOMENT',
-                        style: AppTypography.overline(colors.text3)),
-                  ],
-                ),
-              ),
-              // Sleep Timer
-              GestureDetector(
-                onTap: () => showSleepTimerSheet(context),
-                child: Column(
-                  children: [
-                    Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        color: colors.surface,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.12),
-                            blurRadius: 10,
-                            offset: const Offset(0, 3),
-                          ),
-                        ],
-                      ),
-                      child: Icon(Icons.bedtime_outlined,
-                          size: 22, color: colors.text),
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    Text('SLEEP TIMER',
                         style: AppTypography.overline(colors.text3)),
                   ],
                 ),

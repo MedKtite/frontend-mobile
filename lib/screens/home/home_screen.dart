@@ -416,60 +416,69 @@ class _HeroStats extends StatelessWidget {
     final colors = context.appColors;
     final stats = [
       (
-        icon: Icons.menu_book_rounded,
+        icon: Icons.auto_stories_outlined,
         value: '${summary?.booksReadThisYear ?? 0}',
         label: 'Books',
-        color: const Color(0xFFC07A2B), // Amber / Bronze
       ),
       (
-        icon: Icons.access_time_rounded,
+        icon: Icons.schedule_outlined,
         value: _readingTime,
-        label: 'Time Read',
-        color: const Color(0xFF10B981), // Emerald Green
+        label: 'This week',
       ),
       (
-        icon: Icons.local_fire_department_rounded,
-        value: '${summary?.currentStreakDays ?? 0}',
-        label: 'Day Streak',
-        color: const Color(0xFFF97316), // Flame Orange
+        icon: Icons.local_fire_department_outlined,
+        value: '${summary?.currentStreakDays ?? 0}d',
+        label: 'Streak',
       ),
       (
         icon: Icons.bookmark_border_rounded,
         value: '${summary?.highlightsCount ?? 0}',
         label: 'Quotes',
-        color: const Color(0xFF8B5CF6), // Royal Violet
       ),
     ];
 
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 18, horizontal: AppSpacing.sm),
       decoration: BoxDecoration(
-        color: colors.surface.withValues(alpha: 0.9),
-        borderRadius: BorderRadius.circular(24),
+        color: colors.surface,
+        borderRadius: AppRadii.brLg,
         border: Border.all(color: colors.border),
         boxShadow: [
           BoxShadow(
-            color: colors.text.withValues(alpha: 0.05),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
+            color: colors.text.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
-      child: IntrinsicHeight(
-        child: Row(
-          children: [
-            for (var index = 0; index < stats.length; index++) ...[
-              Expanded(child: _HeroStatCell(stat: stats[index])),
-              if (index != stats.length - 1)
-                VerticalDivider(
-                  color: colors.border.withValues(alpha: 0.1),
-                  width: 1,
-                  thickness: 1,
-                  indent: 6,
-                  endIndent: 6,
-                ),
-            ],
-          ],
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: AppRadii.brLg,
+        child: InkWell(
+          onTap: () => context.go(Routes.insights),
+          borderRadius: AppRadii.brLg,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              vertical: AppSpacing.md,
+              horizontal: AppSpacing.sm,
+            ),
+            child: IntrinsicHeight(
+              child: Row(
+                children: [
+                  for (var index = 0; index < stats.length; index++) ...[
+                    Expanded(child: _HeroStatCell(stat: stats[index])),
+                    if (index != stats.length - 1)
+                      VerticalDivider(
+                        color: colors.border,
+                        width: 1,
+                        thickness: 1,
+                        indent: 4,
+                        endIndent: 4,
+                      ),
+                  ],
+                ],
+              ),
+            ),
+          ),
         ),
       ),
     );
@@ -479,7 +488,7 @@ class _HeroStats extends StatelessWidget {
 class _HeroStatCell extends StatelessWidget {
   const _HeroStatCell({required this.stat});
 
-  final ({IconData icon, String value, String label, Color color}) stat;
+  final ({IconData icon, String value, String label}) stat;
 
   @override
   Widget build(BuildContext context) {
@@ -487,45 +496,39 @@ class _HeroStatCell extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Circular tinted icon
-        Container(
-          width: 42,
-          height: 42,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: stat.color.withValues(alpha: 0.12),
-          ),
-          child: Center(
-            child: Icon(
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
               stat.icon,
-              size: 21,
-              color: stat.color,
+              size: 14,
+              color: colors.text3,
             ),
-          ),
-        ),
-        const SizedBox(height: 10),
-        // Metric value
-        Text(
-          stat.value,
-          style: AppTypography.title2(colors.text).copyWith(
-            fontWeight: FontWeight.w700,
-            fontSize: 18,
-            letterSpacing: -0.3,
-          ),
+            const SizedBox(width: AppSpacing.xs),
+            Text(
+              stat.value,
+              style: AppTypography.title3(colors.text).copyWith(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                height: 1.1,
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 3),
-        // Label
         Text(
           stat.label,
           textAlign: TextAlign.center,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: AppTypography.caption(colors.text2).copyWith(
+          style: AppTypography.overline(colors.text2).copyWith(
+            fontSize: 9.5,
+            letterSpacing: 0.8,
             fontWeight: FontWeight.w500,
-            fontSize: 12,
           ),
         ),
-       ]
+      ],
     );
   }
 }
