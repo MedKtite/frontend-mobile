@@ -372,13 +372,11 @@ class _SyncStatusCard extends StatelessWidget {
             child: FilledButton.icon(
               onPressed: isSyncing ? null : onSyncNow,
               icon: isSyncing
-                  ? SizedBox(
-                      width: 24,
-                      child: AppProgressBar(
-                        height: 2,
-                        color: colors.bg,
-                        backgroundColor: colors.bg.withValues(alpha: 0.3),
-                      ),
+                  ? AppProgressRing(
+                      size: 16,
+                      strokeWidth: 1.5,
+                      fillColor: colors.bg,
+                      trackColor: colors.bg.withValues(alpha: 0.3),
                     )
                   : const Icon(Icons.sync_rounded, size: 18),
               label: Text(

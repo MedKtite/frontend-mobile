@@ -270,12 +270,10 @@ class _ScannerOverlay extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  SizedBox(
-                    width: 120,
-                    child: AppProgressBar(
-                      height: 3,
-                      color: accentColor,
-                    ),
+                  AppProgressRing(
+                    size: 28,
+                    strokeWidth: 1.5,
+                    fillColor: accentColor,
                   ),
                   if (statusText != null) ...[
                     const SizedBox(height: AppSpacing.sm),

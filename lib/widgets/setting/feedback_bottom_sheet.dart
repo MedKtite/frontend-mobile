@@ -291,13 +291,11 @@ class _FeedbackBottomSheetState extends ConsumerState<_FeedbackBottomSheet> {
                   padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
                 child: _isSubmitting
-                    ? SizedBox(
-                        width: 32,
-                        child: AppProgressBar(
-                          height: 3,
-                          color: colors.bg,
-                          backgroundColor: colors.bg.withValues(alpha: 0.3),
-                        ),
+                    ? AppProgressRing(
+                        size: 18,
+                        strokeWidth: 1.5,
+                        fillColor: colors.bg,
+                        trackColor: colors.bg.withValues(alpha: 0.3),
                       )
                     : Text(
                         'Send Feedback',

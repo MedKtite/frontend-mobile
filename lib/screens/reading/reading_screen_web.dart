@@ -629,9 +629,9 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
                                         child: Column(
                                           mainAxisSize: MainAxisSize.min,
                                           children: [
-                                            const SizedBox(
-                                              width: 140,
-                                              child: AppProgressBar(height: 4),
+                                            const AppProgressRing(
+                                              size: 36,
+                                              strokeWidth: 1.5,
                                             ),
                                             const SizedBox(
                                               height: AppSpacing.md,

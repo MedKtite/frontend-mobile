@@ -14,6 +14,7 @@ class BookCard extends StatelessWidget {
     this.coverUrl,
     this.width = cardWidth,
     this.processingStatus,
+    this.progressPct,
     this.onTap,
     this.onLongPress,
   });
@@ -25,6 +26,7 @@ class BookCard extends StatelessWidget {
   final String? coverUrl;
   final double width;
   final String? processingStatus;
+  final double? progressPct;
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
 
@@ -54,6 +56,7 @@ class BookCard extends StatelessWidget {
                 coverUrl: coverUrl,
                 width: width,
                 processingStatus: processingStatus,
+                progressPct: progressPct,
               ),
             ),
           ),

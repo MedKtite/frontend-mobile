@@ -615,9 +615,9 @@ class _CatalogBookScreenState extends ConsumerState<CatalogBookScreen> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const SizedBox(
-              width: 50,
-              child: AppProgressBar(height: 3),
+            const AppProgressRing(
+              size: 18,
+              strokeWidth: 1.5,
             ),
             const SizedBox(width: AppSpacing.md),
             Text(

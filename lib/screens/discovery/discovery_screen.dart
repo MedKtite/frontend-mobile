@@ -353,8 +353,13 @@ class _DiscoveryScreenState extends ConsumerState<DiscoveryScreen> {
       children: [
         Text('ADD TO YOUR LIBRARY', style: AppTypography.overline(colors.text3)),
         const SizedBox(height: AppSpacing.md),
-        GlassPanel(
+        Container(
           padding: const EdgeInsets.all(AppSpacing.xl),
+          decoration: BoxDecoration(
+            color: colors.surface,
+            borderRadius: AppRadii.brMd,
+            border: Border.all(color: colors.border),
+          ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [

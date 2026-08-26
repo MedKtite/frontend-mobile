@@ -103,7 +103,7 @@ class BookDetailScreen extends ConsumerWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const AppProgressBar(height: 4),
+                  const AppProgressRing(size: 40, strokeWidth: 1.5),
                   const SizedBox(height: AppSpacing.lg),
                   Text('Preparing your book…',
                       style: AppTypography.title3(colors.text)),
@@ -174,7 +174,12 @@ class BookDetailScreen extends ConsumerWidget {
                         children: [
                           if (!isPhysical)
                             StatChip(
-                              icon: Icons.auto_stories_rounded,
+                              customIcon: AppProgressRing(
+                                value: progress / 100,
+                                size: 16,
+                                strokeWidth: 1.5,
+                                visibleOnlyWhenInProgress: false,
+                              ),
                               tone: colors.accent,
                               value: '${progress.round()}%',
                               label: 'Progress',

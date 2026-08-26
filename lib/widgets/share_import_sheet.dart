@@ -242,13 +242,11 @@ class _SharedFileImportSheetState
           FilledButton.icon(
             onPressed: _busy ? null : _import,
             icon: _busy
-                ? SizedBox(
-                    width: 32,
-                    child: AppProgressBar(
-                      height: 3,
-                      color: colors.bg,
-                      backgroundColor: colors.bg.withValues(alpha: 0.3),
-                    ),
+                ? AppProgressRing(
+                    size: 18,
+                    strokeWidth: 1.5,
+                    fillColor: colors.bg,
+                    trackColor: colors.bg.withValues(alpha: 0.3),
                   )
                 : const Icon(Icons.download_rounded, size: 20),
             label: Text(
@@ -505,13 +503,11 @@ class _SharedQuoteSheetState extends ConsumerState<_SharedQuoteSheet> {
               shape: RoundedRectangleBorder(borderRadius: AppRadii.brMd),
             ),
             child: _busy
-                ? SizedBox(
-                    width: 32,
-                    child: AppProgressBar(
-                      height: 3,
-                      color: colors.bg,
-                      backgroundColor: colors.bg.withValues(alpha: 0.3),
-                    ),
+                ? AppProgressRing(
+                    size: 18,
+                    strokeWidth: 1.5,
+                    fillColor: colors.bg,
+                    trackColor: colors.bg.withValues(alpha: 0.3),
                   )
                 : Text(
                     'Save Quote',

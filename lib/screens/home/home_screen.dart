@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:marginalia/widgets/app_progress_ring.dart';
+
 
 import '../../app/routes.dart';
 import '../../app/theme/tokens/colors.dart';
@@ -359,9 +361,8 @@ class _HomeHero extends ConsumerWidget {
                       summary.currentStreakDays > 0 ||
                       summary.highlightsCount > 0)) ...[
                 const SizedBox(height: AppSpacing.lg),
-                _HeroStats(summary: summary),
+                _HeroStatsCard(summary: summary),
               ],
-              // _pubCard(),
             ],
           ),
         ),
@@ -396,8 +397,8 @@ class _HeroAction extends StatelessWidget {
   }
 }
 
-class _HeroStats extends StatelessWidget {
-  const _HeroStats({required this.summary});
+class _HeroStatsCard extends StatelessWidget {
+  const _HeroStatsCard({required this.summary});
 
   final InsightsSummary? summary;
 
@@ -406,129 +407,123 @@ class _HeroStats extends StatelessWidget {
     if (minutes == null) return '—';
     if (minutes < 60) return '${minutes}m';
     final hours = minutes ~/ 60;
-    final remainingMinutes = minutes % 60;
-    if (remainingMinutes == 0) return '${hours}h';
-    return '${hours}h ${remainingMinutes}m';
+    final rem = minutes % 60;
+    if (rem == 0) return '${hours}h';
+    return '${hours}h ${rem}m';
   }
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
+
     final stats = [
-      (
-        icon: Icons.auto_stories_outlined,
-        value: '${summary?.booksReadThisYear ?? 0}',
-        label: 'Books',
-      ),
-      (
-        icon: Icons.schedule_outlined,
-        value: _readingTime,
-        label: 'This week',
-      ),
-      (
-        icon: Icons.local_fire_department_outlined,
-        value: '${summary?.currentStreakDays ?? 0}d',
-        label: 'Streak',
-      ),
-      (
-        icon: Icons.bookmark_border_rounded,
-        value: '${summary?.highlightsCount ?? 0}',
-        label: 'Quotes',
-      ),
+      (value: '${summary?.booksReadThisYear ?? 0}', label: 'books'),
+      (value: '${summary?.highlightsCount ?? 0}', label: 'saved'),
+      (value: _readingTime, label: 'this week'),
+      (value: '${summary?.currentStreakDays ?? 0}', label: 'day streak'),
     ];
 
-    return Container(
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: AppRadii.brLg,
-        border: Border.all(color: colors.border),
-        boxShadow: [
-          BoxShadow(
-            color: colors.text.withValues(alpha: 0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: AppRadii.brLg,
-        child: InkWell(
-          onTap: () => context.go(Routes.insights),
-          borderRadius: AppRadii.brLg,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              vertical: AppSpacing.md,
-              horizontal: AppSpacing.sm,
-            ),
-            child: IntrinsicHeight(
-              child: Row(
-                children: [
-                  for (var index = 0; index < stats.length; index++) ...[
-                    Expanded(child: _HeroStatCell(stat: stats[index])),
-                    if (index != stats.length - 1)
-                      VerticalDivider(
-                        color: colors.border,
+    // const weeklyTarget = 7;
+    // final streak = summary?.currentStreakDays ?? 0;
+    // final pct = (streak / weeklyTarget).clamp(0.0, 1.0);
+
+    return GestureDetector(
+      onTap: () => context.go(Routes.insights),
+      behavior: HitTestBehavior.opaque,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── Stat numerals ──
+          IntrinsicHeight(
+            child: Row(
+              children: [
+                for (var i = 0; i < stats.length; i++) ...[
+                  Expanded(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Text(
+                          stats[i].value,
+                          style: AppTypography.title2(colors.text).copyWith(
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          stats[i].label,
+                          style: AppTypography.caption(colors.text3),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (i < stats.length - 1)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.xs,
+                      ),
+                      child: VerticalDivider(
                         width: 1,
                         thickness: 1,
+                        color: colors.border,
                         indent: 4,
                         endIndent: 4,
                       ),
-                  ],
+                    ),
                 ],
-              ),
+              ],
             ),
           ),
-        ),
+          // ── Streak progress (subtle) ──
+          // const SizedBox(height: AppSpacing.md),
+          // Row(
+          //   children: [
+          //     // Streak dot
+          //     Container(
+          //       width: 6,
+          //       height: 6,
+          //       decoration: BoxDecoration(
+          //         shape: BoxShape.circle,
+          //         color: streak > 0 ? colors.success : colors.text3,
+          //       ),
+          //     ),
+          //     const SizedBox(width: AppSpacing.sm),
+          //     Expanded(
+          //       child: Text(
+          //         streak >= weeklyTarget
+          //             ? 'Weekly goal reached — $streak days'
+          //             : '$streak of $weeklyTarget days this week',
+          //         style: AppTypography.caption(colors.text2).copyWith(
+          //           fontStyle: FontStyle.italic,
+          //         ),
+          //       ),
+          //     ),
+          //     if (pct > 0 && pct < 1) ...[
+          //       const SizedBox(width: AppSpacing.md),
+          //       SizedBox(
+          //         width: 48,
+          //         child: AppProgressBar(
+          //           value: pct,
+          //           height: 3,
+          //           color: colors.accent,
+          //           backgroundColor: colors.border,
+          //         ),
+          //       ),
+          //     ],
+          //     if (pct >= 1)
+          //       Padding(
+          //         padding: const EdgeInsets.only(left: AppSpacing.sm),
+          //         child: Icon(
+          //           Icons.check_circle_outline_rounded,
+          //           size: 14,
+          //           color: colors.success,
+          //         ),
+          //       ),
+          //   ],
+          // ),
+        ],
       ),
-    );
-  }
-}
-
-class _HeroStatCell extends StatelessWidget {
-  const _HeroStatCell({required this.stat});
-
-  final ({IconData icon, String value, String label}) stat;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              stat.icon,
-              size: 14,
-              color: colors.text3,
-            ),
-            const SizedBox(width: AppSpacing.xs),
-            Text(
-              stat.value,
-              style: AppTypography.title3(colors.text).copyWith(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                height: 1.1,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 3),
-        Text(
-          stat.label,
-          textAlign: TextAlign.center,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: AppTypography.overline(colors.text2).copyWith(
-            fontSize: 9.5,
-            letterSpacing: 0.8,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ],
     );
   }
 }
@@ -636,15 +631,9 @@ class _ContinueRowCard extends StatelessWidget {
         width: _ContinueRow._cardW,
         child: Container(
           decoration: BoxDecoration(
-            color: colors.surface,
+            color: colors.accent.withValues(alpha: 0.04),
             borderRadius: AppRadii.brMd,
-            boxShadow: [
-              BoxShadow(
-                color: colors.text.withValues(alpha: 0.06),
-                blurRadius: AppSpacing.md,
-                offset: const Offset(0, AppSpacing.xs),
-              ),
-            ],
+          
           ),
           padding: const EdgeInsets.all(AppSpacing.md),
           child: Row(
@@ -676,25 +665,18 @@ class _ContinueRowCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: AppTypography.caption(colors.text2),
                     ),
-                    const SizedBox(height: AppSpacing.sm),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: AppProgressBar(
-                            value: pct / 100,
-                            height: 4,
-                          ),
-                        ),
-                        const SizedBox(width: AppSpacing.sm),
-                        Text(
-                          '${pct.round()}%',
-                          style: AppTypography.caption(colors.text3),
-                        ),
-                      ],
-                    ),
                   ],
                 ),
               ),
+              if (pct > 0 && pct < 100) ...[
+                const SizedBox(width: AppSpacing.md),
+                AppProgressRing(
+                  value: pct / 100,
+                  size: 34,
+                  strokeWidth: 1.5,
+                  showLabel: true,
+                ),
+              ],
             ],
           ),
         ),

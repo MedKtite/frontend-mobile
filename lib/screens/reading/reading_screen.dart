@@ -32,6 +32,7 @@ import '../../providers/state/reading_mini_state.dart';
 import '../../services/backend/book_service.dart';
 import '../../services/backend/highlight_service.dart';
 import '../../services/backend/note_service.dart';
+import '../../widgets/app_progress_ring.dart';
 import '../../widgets/note_sheet.dart';
 import '../../widgets/table_of_contents_sheet.dart';
 import '../../widgets/tag_picker_sheet.dart';
@@ -1076,16 +1077,9 @@ class _TextLoading extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              SizedBox(
-                width: 220,
-                child: ClipRRect(
-                  borderRadius: AppRadii.brFull,
-                  child: LinearProgressIndicator(
-                    minHeight: 4,
-                    color: colors.accent,
-                    backgroundColor: colors.border,
-                  ),
-                ),
+              const AppProgressRing(
+                size: 36,
+                strokeWidth: 1.5,
               ),
               const SizedBox(height: AppSpacing.lg),
               Text(

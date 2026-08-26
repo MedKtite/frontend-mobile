@@ -6,7 +6,7 @@ import '../app/theme/tokens/radii.dart';
 import '../app/theme/tokens/spacing.dart';
 import '../app/theme/tokens/typography.dart';
 import '../core/dio_client.dart';
-import 'app_progress_bar.dart';
+import 'app_progress_ring.dart';
 
 /// A book cover. Shows the real cover image when [coverUrl] is given; otherwise
 /// (or while loading / on error) falls back to a flat color panel with centered
@@ -27,6 +27,7 @@ class BookCover extends StatelessWidget {
     this.width = 88,
     this.bookmarked = false,
     this.processingStatus,
+    this.progressPct,
   });
 
   final String title;
@@ -37,6 +38,7 @@ class BookCover extends StatelessWidget {
   final double width;
   final bool bookmarked;
   final String? processingStatus;
+  final double? progressPct;
 
   @override
   Widget build(BuildContext context) {
@@ -45,6 +47,8 @@ class BookCover extends StatelessWidget {
     final isProcessing =
         processingStatus == 'pending' || processingStatus == 'processing';
     final isFailed = processingStatus == 'failed';
+    final showProgress =
+        progressPct != null && progressPct! > 0 && progressPct! < 100;
 
     final cover = Container(
       width: width,
@@ -88,11 +92,11 @@ class BookCover extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  SizedBox(
-                    width: width * 0.6,
-                    child: const AppProgressBar(
-                      height: 3,
-                    ),
+                  AppProgressRing(
+                    size: (width * 0.35).clamp(22.0, 36.0),
+                    strokeWidth: 1.5,
+                    fillColor: Colors.white,
+                    trackColor: Colors.white24,
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   Text(
@@ -135,25 +139,49 @@ class BookCover extends StatelessWidget {
       ),
     );
 
-    if (!bookmarked) return cover;
+    if (!bookmarked && !showProgress) return cover;
 
     return Stack(
       clipBehavior: Clip.none,
       children: [
         cover,
-        Positioned(
-          top: 8,
-          right: 8,
-          child: Container(
-            width: 24,
-            height: 24,
-            decoration: BoxDecoration(
-              color: colors.surface,
-              shape: BoxShape.circle,
+        if (bookmarked)
+          Positioned(
+            top: 8,
+            right: 8,
+            child: Container(
+              width: 24,
+              height: 24,
+              decoration: BoxDecoration(
+                color: colors.surface,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.bookmark_outline, size: 14, color: colors.text),
             ),
-            child: Icon(Icons.bookmark_outline, size: 14, color: colors.text),
           ),
-        ),
+        if (showProgress)
+          Positioned(
+            bottom: 6,
+            right: 6,
+            child: Container(
+              padding: const EdgeInsets.all(3),
+              decoration: BoxDecoration(
+                color: colors.surface.withValues(alpha: 0.92),
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.12),
+                    blurRadius: 4,
+                  ),
+                ],
+              ),
+              child: AppProgressRing.fromPercent(
+                percent: progressPct,
+                size: (width * 0.28).clamp(18.0, 26.0),
+                strokeWidth: 1.5,
+              ),
+            ),
+          ),
       ],
     );
   }

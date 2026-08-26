@@ -4,7 +4,6 @@ import '../../app/theme/tokens/colors.dart';
 import '../../app/theme/tokens/spacing.dart';
 import '../../app/theme/tokens/typography.dart';
 
-
 class CircleIconButton extends StatelessWidget {
   const CircleIconButton({super.key, required this.icon, required this.onTap});
   final IconData icon;
@@ -28,17 +27,19 @@ class CircleIconButton extends StatelessWidget {
   }
 }
 
-/// One labeled stat: colored glyph + bold value on top, muted label beneath.
+/// One labeled stat: colored glyph / custom widget + bold value on top, muted label beneath.
 class StatChip extends StatelessWidget {
   const StatChip({
     super.key,
-    required this.icon,
+    this.icon,
+    this.customIcon,
     required this.tone,
     required this.value,
     required this.label,
-  });
+  }) : assert(icon != null || customIcon != null);
 
-  final IconData icon;
+  final IconData? icon;
+  final Widget? customIcon;
   final Color tone;
   final String value;
   final String label;
@@ -52,7 +53,7 @@ class StatChip extends StatelessWidget {
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 18, color: tone),
+            customIcon ?? Icon(icon!, size: 18, color: tone),
             const SizedBox(width: AppSpacing.xs),
             Text(
               value,

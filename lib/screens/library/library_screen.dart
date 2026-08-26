@@ -417,6 +417,7 @@ class _GridCell extends StatelessWidget {
       coverUrl: proxiedCoverUrl(book.coverUrl),
       width: width,
       processingStatus: book.processingStatus,
+      progressPct: book.progressPct,
       onTap: () => context.push(Routes.bookDetail, extra: book),
       onLongPress: onDelete,
     );

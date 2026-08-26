@@ -306,9 +306,9 @@ class _LogPhysicalBookSheetState extends ConsumerState<_LogPhysicalBookSheet> {
                         suffixIcon: _isLookingUpIsbn
                             ? const Padding(
                                 padding: EdgeInsets.all(12),
-                                child: SizedBox(
-                                  width: 24,
-                                  child: AppProgressBar(height: 2),
+                                child: AppProgressRing(
+                                  size: 16,
+                                  strokeWidth: 1.5,
                                 ),
                               )
                             : IconButton(
@@ -345,13 +345,11 @@ class _LogPhysicalBookSheetState extends ConsumerState<_LogPhysicalBookSheet> {
                     ),
                   ),
                   child: _busy
-                      ? SizedBox(
-                          width: 32,
-                          child: AppProgressBar(
-                            height: 3,
-                            color: colors.bg,
-                            backgroundColor: colors.bg.withValues(alpha: 0.3),
-                          ),
+                      ? AppProgressRing(
+                          size: 18,
+                          strokeWidth: 1.5,
+                          fillColor: colors.bg,
+                          trackColor: colors.bg.withValues(alpha: 0.3),
                         )
                       : const Text('Save to library'),
                 ),

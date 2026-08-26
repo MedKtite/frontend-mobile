@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../app/theme/tokens/colors.dart';
 import '../app/theme/tokens/radii.dart';
+import 'app_progress_ring.dart';
+
+export 'app_progress_ring.dart';
 
 /// Unified progress bar for Marginalia.
 ///
@@ -36,19 +39,31 @@ class AppProgressBar extends StatelessWidget {
   }
 }
 
-/// Unified centered progress bar loader for screens, sheets, and content areas.
+/// Unified centered progress loader for screens, sheets, and content areas.
 class AppProgressLoading extends StatelessWidget {
   const AppProgressLoading({
     super.key,
     this.width = 180,
     this.height = 4,
+    this.useRing = true,
+    this.ringSize = 36.0,
   });
 
   final double width;
   final double height;
+  final bool useRing;
+  final double ringSize;
 
   @override
   Widget build(BuildContext context) {
+    if (useRing) {
+      return Center(
+        child: AppProgressRing(
+          size: ringSize,
+          strokeWidth: 1.5,
+        ),
+      );
+    }
     return Center(
       child: SizedBox(
         width: width,
