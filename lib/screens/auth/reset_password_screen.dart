@@ -15,7 +15,6 @@ import '../../services/frontend/auth_error_messages.dart';
 import '../../widgets/auth_scaffold.dart';
 import '../../widgets/glass_panel.dart';
 
-/// Screen 3: Dedicated screen for entering the new password after code verification.
 class ResetPasswordScreen extends ConsumerStatefulWidget {
   const ResetPasswordScreen({
     super.key,

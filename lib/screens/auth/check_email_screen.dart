@@ -17,7 +17,6 @@ import '../../services/frontend/auth_error_messages.dart';
 import '../../widgets/auth_scaffold.dart';
 import '../../widgets/glass_panel.dart';
 
-/// Screen 2: Dedicated 6-digit code entry with auto-clipboard capture and resend timer.
 class CheckEmailScreen extends ConsumerStatefulWidget {
   const CheckEmailScreen({super.key, required this.email});
 

@@ -16,7 +16,7 @@ import '../../services/frontend/auth_error_messages.dart';
 import '../../services/frontend/social_auth_service.dart';
 import '../../widgets/auth_scaffold.dart';
 import '../../widgets/glass_panel.dart';
-/// Login — authenticate a returning user (frame `78:66`).
+
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
@@ -27,7 +27,6 @@ class LoginScreen extends ConsumerStatefulWidget {
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _socialAuth = SocialAuthService();
 
-  void _comingSoon(String what) => showAppSnack(context, '$what — coming soon');
 
   final _formKey = GlobalKey<FormState>();
   final _email = TextEditingController();
@@ -154,24 +153,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           ),
           const SizedBox(height: AppSpacing.md),
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Checkbox(
-                    value: false,
-                    onChanged: (_) => _comingSoon('Remember me'),
-                  ),
-                  GestureDetector(
-                    onTap: () => _comingSoon('Remember me'),
-                    child: Text(
-                      'Remember me',
-                      style: AppTypography.label(colors.text2),
-                    ),
-                  ),
-                ],
-              ),
+              
               GestureDetector(
                 onTap: () => context.push(
                   Routes.forgotPassword,
