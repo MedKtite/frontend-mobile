@@ -123,8 +123,16 @@ GoRouter createAppRouter({
     ),
     GoRoute(
       path: Routes.resetPassword,
-      builder: (context, state) =>
-          ResetPasswordScreen(token: state.uri.queryParameters['token'] ?? ''),
+      builder: (context, state) {
+        final extra = state.extra;
+        final token = extra is Map<String, dynamic>
+            ? (extra['code'] ?? extra['token'] ?? '')
+            : (extra is String ? extra : (state.uri.queryParameters['token'] ?? ''));
+        final email = extra is Map<String, dynamic> ? extra['email'] as String? : null;
+        return _AuthGuard(
+          child: ResetPasswordScreen(token: token.toString(), email: email),
+        );
+      },
     ),
     // The main tabs live inside ONE persistent shell: the glass nav bar
     // is built once (in AppShell) and never rebuilds on tab switches; each

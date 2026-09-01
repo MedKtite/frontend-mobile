@@ -8,14 +8,7 @@ import '../app/theme/tokens/typography.dart';
 import '../core/dio_client.dart';
 import 'app_progress_ring.dart';
 
-/// A book cover. Shows the real cover image when [coverUrl] is given; otherwise
-/// (or while loading / on error) falls back to a flat color panel with centered
-/// type (design-system.md §8). `bg`/`fg` are per-book content colors; internal
-/// metrics scale with [width] since the cover is artwork.
-///
-/// The cover helpers that feed this widget — [proxiedCoverUrl] for the image URL
-/// and [coverColorFromHex] / [coverFgFor] for the fallback colors — live in this
-/// same file so the whole cover concern sits in one place.
+
 class BookCover extends StatelessWidget {
   const BookCover({
     super.key,

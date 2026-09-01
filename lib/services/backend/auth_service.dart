@@ -75,10 +75,16 @@ class AuthService {
   Future<void> resetPassword({
     required String token,
     required String password,
+    String? email,
   }) async {
     await _dio.post<void>(
       '/auth/password/reset',
-      data: {'token': token, 'password': password},
+      data: {
+        'token': token,
+        'code': token,
+        'password': password,
+        if (email != null) 'email': email,
+      },
     );
   }
 }

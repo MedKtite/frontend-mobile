@@ -15,10 +15,16 @@ import '../../services/frontend/auth_error_messages.dart';
 import '../../widgets/auth_scaffold.dart';
 import '../../widgets/glass_panel.dart';
 
+/// Screen 3: Dedicated screen for entering the new password after code verification.
 class ResetPasswordScreen extends ConsumerStatefulWidget {
-  const ResetPasswordScreen({super.key, required this.token});
+  const ResetPasswordScreen({
+    super.key,
+    required this.token,
+    this.email,
+  });
 
   final String token;
+  final String? email;
 
   @override
   ConsumerState<ResetPasswordScreen> createState() =>
@@ -49,29 +55,40 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
     if (widget.token.isEmpty) {
       showAppSnack(
         context,
-        'This recovery link is invalid. Request a new one.',
+        'Verification code is missing. Please enter your code again.',
         type: SnackType.error,
       );
+      context.pop();
       return;
     }
+
     FocusScope.of(context).unfocus();
     final reset = await ref.read(authProvider.notifier).resetPassword(
           token: widget.token,
           password: _password.text,
+          email: widget.email,
         );
+
     if (!mounted) return;
+
     if (reset) {
       showAppSnack(
         context,
-        'Password updated — sign in to continue',
+        'Password updated successfully! Sign in to continue.',
         type: SnackType.success,
       );
       context.go(Routes.login);
       return;
     }
+
     final state = ref.read(authProvider);
     if (state is AuthUnauthenticated && state.message != null) {
-      showAppSnack(context, AuthErrorMessages.from(state.message, context: AuthErrorContext.resetPassword), type: SnackType.error);
+      showAppSnack(
+        context,
+        AuthErrorMessages.from(state.message,
+            context: AuthErrorContext.resetPassword),
+        type: SnackType.error,
+      );
     }
   }
 
@@ -80,46 +97,96 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
     final colors = context.appColors;
     final loading = ref.watch(authProvider) is AuthLoading;
 
-    return Form(
-      key: _formKey,
-      child: AuthScaffold(
-        onBack: () =>
-            context.canPop() ? context.pop() : context.go(Routes.login),
-        body: GlassPanel(
-          padding: const EdgeInsets.all(AppSpacing.lg),
+    return Scaffold(
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.pageHorizontal,
+            vertical: AppSpacing.md,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(
-                'Set a new password',
-                style: AppTypography.title1(colors.text),
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              Text(
-                'Choose a new password to finish resetting your account.',
-                style: AppTypography.subtitle(colors.text2),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: AuthBackButton(onPressed: () => context.pop()),
               ),
               const SizedBox(height: AppSpacing.xl),
-              AppTextField(
-                controller: _password,
-                hint: 'New password',
-                obscure: true,
-                validator: AuthValidators.password,
-              ),
-              const SizedBox(height: AppSpacing.md),
-              AppTextField(
-                controller: _confirm,
-                hint: 'Confirm password',
-                obscure: true,
-                textInputAction: TextInputAction.done,
-                onSubmitted: (_) => _submit(),
-                validator: _confirmValidator,
-              ),
-              const SizedBox(height: AppSpacing.xl),
-              AuthPrimaryButton(
-                label: 'Reset password',
-                loading: loading,
-                onPressed: _submit,
+              GlassPanel(
+                padding: const EdgeInsets.all(AppSpacing.lg),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Center(
+                        child: Container(
+                          width: 72,
+                          height: 72,
+                          decoration: BoxDecoration(
+                            color: colors.accent.withValues(alpha: 0.12),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.lock_reset_rounded,
+                            size: 32,
+                            color: colors.accent,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.xl),
+                      Text(
+                        'Set a new password',
+                        textAlign: TextAlign.center,
+                        style: AppTypography.title1(colors.text),
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        widget.email != null && widget.email!.isNotEmpty
+                            ? 'Create a new password for ${widget.email}'
+                            : 'Choose a strong password with at least 6 characters.',
+                        textAlign: TextAlign.center,
+                        style: AppTypography.subtitle(colors.text2),
+                      ),
+                      const SizedBox(height: AppSpacing.xxxl),
+
+                      Text(
+                        'NEW PASSWORD',
+                        style: AppTypography.overline(colors.text3),
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      AppTextField(
+                        controller: _password,
+                        hint: 'New password (min. 6 characters)',
+                        obscure: true,
+                        validator: AuthValidators.password,
+                      ),
+                      const SizedBox(height: AppSpacing.lg),
+
+                      Text(
+                        'CONFIRM PASSWORD',
+                        style: AppTypography.overline(colors.text3),
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      AppTextField(
+                        controller: _confirm,
+                        hint: 'Confirm your new password',
+                        obscure: true,
+                        textInputAction: TextInputAction.done,
+                        onSubmitted: (_) => _submit(),
+                        validator: _confirmValidator,
+                      ),
+
+                      const SizedBox(height: AppSpacing.xxxl),
+
+                      AuthPrimaryButton(
+                        label: 'Save New Password',
+                        loading: loading,
+                        onPressed: _submit,
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ],
           ),

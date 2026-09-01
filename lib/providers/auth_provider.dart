@@ -121,10 +121,11 @@ class AuthController extends StateNotifier<AuthState> {
   Future<bool> resetPassword({
     required String token,
     required String password,
+    String? email,
   }) async {
     state = const AuthState.loading();
     try {
-      await _service.resetPassword(token: token, password: password);
+      await _service.resetPassword(token: token, password: password, email: email);
       state = const AuthState.unauthenticated();
       return true;
     } on ApiError catch (e) {
