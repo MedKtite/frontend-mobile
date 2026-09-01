@@ -23,8 +23,8 @@ import '../../services/backend/book_service.dart';
 import '../../widgets/book_card.dart';
 import '../../widgets/book_cover.dart';
 import '../../widgets/add_to_library_sheet.dart';
+import '../../widgets/advanced_filters_sheet.dart';
 import '../../widgets/app_progress_bar.dart';
-import '../../widgets/glass_panel.dart';
 import '../../widgets/shelf_picker.dart';
 
 class DiscoveryScreen extends ConsumerStatefulWidget {
@@ -47,7 +47,6 @@ class _DiscoveryScreenState extends ConsumerState<DiscoveryScreen> {
   Timer? _debounce;
   String _query = '';
   String _catalogQuery = '';
-  bool _filtersOpen = false;
   bool _advanced = false;
   bool _freeOnly = false;
   final Set<String> _adding = {};
@@ -98,6 +97,16 @@ class _DiscoveryScreenState extends ConsumerState<DiscoveryScreen> {
     super.dispose();
   }
 
+  int get _activeFiltersCount {
+    var count = 0;
+    if (_titleController.text.trim().isNotEmpty) count++;
+    if (_authorController.text.trim().isNotEmpty) count++;
+    if (_subjectController.text.trim().isNotEmpty) count++;
+    if (_isbnController.text.trim().isNotEmpty) count++;
+    if (_freeOnly) count++;
+    return count;
+  }
+
   void _onQueryChanged(String value) {
     _debounce?.cancel();
     final trimmed = value.trim();
@@ -126,61 +135,81 @@ class _DiscoveryScreenState extends ConsumerState<DiscoveryScreen> {
     _debounce?.cancel();
     _searchController.clear();
     _searchFocus.unfocus();
-    setState(() {
-      _query = '';
-      _catalogQuery = '';
-      _advanced = false;
-    });
-  }
-
-  void _applyAdvanced() {
-    String text(TextEditingController controller) => controller.text.trim();
-
-    final parts = <String>[
-      if (text(_titleController).isNotEmpty)
-        'intitle:"${text(_titleController)}"',
-      if (text(_authorController).isNotEmpty)
-        'inauthor:"${text(_authorController)}"',
-      if (text(_subjectController).isNotEmpty)
-        'subject:"${text(_subjectController)}"',
-      if (text(_isbnController).isNotEmpty) 'isbn:${text(_isbnController)}',
-    ];
-    if (parts.isEmpty) {
-      showAppSnack(
-        context,
-        'Fill at least one filter to search.',
-        type: SnackType.warning,
-      );
-      return;
-    }
-
-    final label = [
-      text(_titleController),
-      text(_authorController),
-      text(_subjectController),
-      text(_isbnController),
-    ].where((value) => value.isNotEmpty).join(' ');
-
-    _debounce?.cancel();
-    _searchController.text = label;
-    _searchFocus.unfocus();
-    setState(() {
-      _advanced = true;
-      _query = label;
-      _catalogQuery = parts.join(' ');
-      _filtersOpen = false;
-    });
-  }
-
-  void _resetAdvanced() {
     _titleController.clear();
     _authorController.clear();
     _subjectController.clear();
     _isbnController.clear();
     setState(() {
+      _query = '';
+      _catalogQuery = '';
       _advanced = false;
       _freeOnly = false;
     });
+  }
+
+  void _syncActiveFilters() {
+    final title = _titleController.text.trim();
+    final author = _authorController.text.trim();
+    final subject = _subjectController.text.trim();
+    final isbn = _isbnController.text.trim();
+
+    final parts = <String>[
+      if (title.isNotEmpty) 'intitle:"$title"',
+      if (author.isNotEmpty) 'inauthor:"$author"',
+      if (subject.isNotEmpty) 'subject:"$subject"',
+      if (isbn.isNotEmpty) 'isbn:$isbn',
+    ];
+
+    if (parts.isEmpty) {
+      setState(() {
+        _advanced = false;
+        if (_query == _searchController.text &&
+            (_catalogQuery.startsWith('subject:') ||
+                _catalogQuery.startsWith('intitle:') ||
+                _catalogQuery.startsWith('inauthor:') ||
+                _catalogQuery.startsWith('isbn:'))) {
+          _catalogQuery = '';
+          _query = '';
+          _searchController.clear();
+        }
+      });
+    } else {
+      final label = [
+        title,
+        author,
+        subject,
+        isbn,
+      ].where((value) => value.isNotEmpty).join(' ');
+
+      _debounce?.cancel();
+      _searchController.text = label;
+      _searchFocus.unfocus();
+      setState(() {
+        _advanced = true;
+        _query = label;
+        _catalogQuery = parts.join(' ');
+      });
+    }
+  }
+
+  Future<void> _openFiltersSheet() async {
+    final result = await showAdvancedFiltersSheet(
+      context,
+      initialTitle: _titleController.text.trim(),
+      initialAuthor: _authorController.text.trim(),
+      initialSubject: _subjectController.text.trim(),
+      initialIsbn: _isbnController.text.trim(),
+      initialFreeOnly: _freeOnly,
+    );
+    if (result == null || !mounted) return;
+
+    _titleController.text = result.title;
+    _authorController.text = result.author;
+    _subjectController.text = result.subject;
+    _isbnController.text = result.isbn;
+    _freeOnly = result.freeOnly;
+
+    _syncActiveFilters();
   }
 
   String _key(CatalogBook book) => book.googleId ?? book.title;
@@ -271,27 +300,28 @@ class _DiscoveryScreenState extends ConsumerState<DiscoveryScreen> {
               _SearchDesk(
                 searchController: _searchController,
                 searchFocus: _searchFocus,
-                filtersActive: _filtersOpen || _advanced || _freeOnly,
+                activeCount: _activeFiltersCount,
                 onChanged: _onQueryChanged,
                 onSubmitted: _submitQuery,
                 onClear: _clearSearch,
-                onToggleFilters: () =>
-                    setState(() => _filtersOpen = !_filtersOpen),
+                onOpenFilters: _openFiltersSheet,
               ),
-              if (_filtersOpen) ...[
-                const SizedBox(height: AppSpacing.md),
-                _AdvancedPanel(
-                  title: _titleController,
-                  author: _authorController,
-                  subject: _subjectController,
-                  isbn: _isbnController,
-                  freeOnly: _freeOnly,
-                  onFreeOnly: (value) => setState(() => _freeOnly = value),
-                  onApply: _applyAdvanced,
-                  onReset: _resetAdvanced,
-                  onClose: () => setState(() => _filtersOpen = false),
-                ),
-              ],
+              const SizedBox(height: AppSpacing.md),
+              _QuickFilterChips(
+                freeOnly: _freeOnly,
+                activeSubject: _subjectController.text.trim(),
+                activeAuthor: _authorController.text.trim(),
+                activeIsbn: _isbnController.text.trim(),
+                onToggleFreeOnly: (val) {
+                  setState(() => _freeOnly = val);
+                  _syncActiveFilters();
+                },
+                onSelectSubject: (subject) {
+                  _subjectController.text = subject;
+                  _syncActiveFilters();
+                },
+                onOpenFilters: _openFiltersSheet,
+              ),
               const SizedBox(height: AppSpacing.xxl),
               if (searching)
                 _results(colors)
@@ -708,20 +738,20 @@ class _SearchDesk extends StatelessWidget {
   const _SearchDesk({
     required this.searchController,
     required this.searchFocus,
-    required this.filtersActive,
+    required this.activeCount,
     required this.onChanged,
     required this.onSubmitted,
     required this.onClear,
-    required this.onToggleFilters,
+    required this.onOpenFilters,
   });
 
   final TextEditingController searchController;
   final FocusNode searchFocus;
-  final bool filtersActive;
+  final int activeCount;
   final ValueChanged<String> onChanged;
   final ValueChanged<String> onSubmitted;
   final VoidCallback onClear;
-  final VoidCallback onToggleFilters;
+  final VoidCallback onOpenFilters;
 
   @override
   Widget build(BuildContext context) {
@@ -733,7 +763,6 @@ class _SearchDesk extends StatelessWidget {
             controller: searchController,
             focusNode: searchFocus,
             hint: 'Title, author, subject, or ISBN…',
-            search: true,
             prefixIcon: Icons.search,
             textInputAction: TextInputAction.search,
             onChanged: onChanged,
@@ -742,159 +771,213 @@ class _SearchDesk extends StatelessWidget {
           ),
         ),
         const SizedBox(width: AppSpacing.sm),
-        Material(
-          color: filtersActive ? colors.accent : colors.surface,
-          borderRadius: AppRadii.brMd,
-          child: InkWell(
-            onTap: onToggleFilters,
-            borderRadius: AppRadii.brMd,
-            child: Padding(
-              padding: const EdgeInsets.all(AppSpacing.md),
-              child: Icon(
-                Icons.tune_rounded,
-                size: AppSpacing.xl,
-                color: filtersActive ? colors.bg : colors.text2,
+        Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Container(
+              height: AppSpacing.inputHeight,
+              width: AppSpacing.inputHeight,
+              decoration: BoxDecoration(
+                color: activeCount > 0 ? colors.accent : colors.surface,
+                borderRadius: AppRadii.brMd,
+                border: Border.all(
+                  color: activeCount > 0 ? colors.accent : colors.border,
+                ),
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: onOpenFilters,
+                  borderRadius: AppRadii.brMd,
+                  child: Center(
+                    child: Icon(
+                      Icons.tune_rounded,
+                      size: 20,
+                      color: activeCount > 0 ? colors.bg : colors.text2,
+                    ),
+                  ),
+                ),
               ),
             ),
-          ),
+            if (activeCount > 0)
+              Positioned(
+                top: -4,
+                right: -4,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: colors.text,
+                    borderRadius: AppRadii.brFull,
+                    border: Border.all(color: colors.surface, width: 1.5),
+                  ),
+                  constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+                  child: Center(
+                    child: Text(
+                      '$activeCount',
+                      style: TextStyle(
+                        color: colors.bg,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        height: 1,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
         ),
       ],
     );
   }
 }
 
-class _AdvancedPanel extends StatelessWidget {
-  const _AdvancedPanel({
-    required this.title,
-    required this.author,
-    required this.subject,
-    required this.isbn,
+class _QuickFilterChips extends StatelessWidget {
+  const _QuickFilterChips({
     required this.freeOnly,
-    required this.onFreeOnly,
-    required this.onApply,
-    required this.onReset,
-    required this.onClose,
+    required this.activeSubject,
+    required this.activeAuthor,
+    required this.activeIsbn,
+    required this.onToggleFreeOnly,
+    required this.onSelectSubject,
+    required this.onOpenFilters,
   });
 
-  final TextEditingController title;
-  final TextEditingController author;
-  final TextEditingController subject;
-  final TextEditingController isbn;
   final bool freeOnly;
-  final ValueChanged<bool> onFreeOnly;
-  final VoidCallback onApply;
-  final VoidCallback onReset;
-  final VoidCallback onClose;
+  final String activeSubject;
+  final String activeAuthor;
+  final String activeIsbn;
+  final ValueChanged<bool> onToggleFreeOnly;
+  final ValueChanged<String> onSelectSubject;
+  final VoidCallback onOpenFilters;
+
+  static const _categories = [
+    'Classics',
+    'Fiction',
+    'Philosophy',
+    'History',
+    'Biography',
+    'Self Help',
+    'Poetry',
+    'Business',
+  ];
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
-
-    Widget field(
-      String hint,
-      TextEditingController controller, {
-      TextInputType? keyboardType,
-    }) {
-      return AppTextField(
-        controller: controller,
-        hint: hint,
-        keyboardType: keyboardType,
-        fillColor: colors.surface,
-        textInputAction: TextInputAction.search,
-        onSubmitted: (_) => onApply(),
-      );
-    }
-
-    return GlassPanel(
-      radius: AppRadii.lg,
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
         children: [
-          Row(
-            children: [
-              Text(
-                'ADVANCED SEARCH',
-                style: AppTypography.overline(colors.text3),
-              ),
-              const Spacer(),
-              IconButton(
-                onPressed: onClose,
-                icon: Icon(
-                  Icons.close,
-                  size: AppSpacing.xl,
-                  color: colors.text3,
-                ),
-              ),
-            ],
+          _FilterChip(
+            label: 'Free to read',
+            icon: Icons.check_circle_outline_rounded,
+            active: freeOnly,
+            onTap: () => onToggleFreeOnly(!freeOnly),
           ),
-          const SizedBox(height: AppSpacing.sm),
-          field('Title', title),
-          const SizedBox(height: AppSpacing.sm),
-          field('Author', author),
-          const SizedBox(height: AppSpacing.sm),
-          field('Genre or subject', subject),
-          const SizedBox(height: AppSpacing.sm),
-          field('ISBN', isbn, keyboardType: TextInputType.number),
-          const SizedBox(height: AppSpacing.md),
-          InkWell(
-            onTap: () => onFreeOnly(!freeOnly),
-            child: Row(
-              children: [
-                Checkbox(
-                  value: freeOnly,
-                  onChanged: (value) => onFreeOnly(value ?? false),
-                  visualDensity: VisualDensity.compact,
-                  side: BorderSide(color: colors.border),
-                  activeColor: colors.accent,
-                  checkColor: colors.bg,
-                ),
-                Expanded(
-                  child: Text(
-                    'Free to read in Marginalia only',
-                    style: AppTypography.caption(colors.text2),
-                  ),
-                ),
-              ],
+          if (activeAuthor.isNotEmpty) ...[
+            const SizedBox(width: AppSpacing.sm),
+            _FilterChip(
+              label: 'Author: $activeAuthor',
+              icon: Icons.person_outline,
+              active: true,
+              onTap: onOpenFilters,
             ),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          Row(
-            children: [
-              // Expanded(
-              //   child: OutlinedButton(
-                  
-              //     onPressed: onReset,
-              //     child: Text(
-              //       'Reset',
-              //       style: AppTypography.label(colors.text2),
-              //     ),
-              //   ),
-              // ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: FilledButton(
-                  onPressed: onApply,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: colors.accent,
-                    foregroundColor: colors.bg,
-                    padding: EdgeInsets.zero,
-                  ),
-                  child: Text(
-                    'Search',
-                    style: AppTypography.label(
-                      colors.bg,
-                    ).copyWith(fontWeight: FontWeight.w600),
-                  ),
-                ),
-              ),
-            ],
+          ],
+          if (activeIsbn.isNotEmpty) ...[
+            const SizedBox(width: AppSpacing.sm),
+            _FilterChip(
+              label: 'ISBN: $activeIsbn',
+              icon: Icons.qr_code_scanner_outlined,
+              active: true,
+              onTap: onOpenFilters,
+            ),
+          ],
+          for (final cat in _categories) ...[
+            const SizedBox(width: AppSpacing.sm),
+            _FilterChip(
+              label: cat,
+              active: activeSubject.toLowerCase() == cat.toLowerCase(),
+              onTap: () {
+                if (activeSubject.toLowerCase() == cat.toLowerCase()) {
+                  onSelectSubject('');
+                } else {
+                  onSelectSubject(cat);
+                }
+              },
+            ),
+          ],
+          const SizedBox(width: AppSpacing.sm),
+          _FilterChip(
+            label: 'More filters ▾',
+            active: false,
+            onTap: onOpenFilters,
           ),
         ],
       ),
     );
   }
 }
+
+class _FilterChip extends StatelessWidget {
+  const _FilterChip({
+    required this.label,
+    required this.active,
+    required this.onTap,
+    this.icon,
+  });
+
+  final String label;
+  final bool active;
+  final VoidCallback onTap;
+  final IconData? icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Material(
+      color: active ? colors.text : colors.surface,
+      borderRadius: AppRadii.brFull,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: AppRadii.brFull,
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.sm,
+          ),
+          decoration: BoxDecoration(
+            borderRadius: AppRadii.brFull,
+            border: Border.all(
+              color: active ? colors.text : colors.border,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (icon != null) ...[
+                Icon(
+                  icon,
+                  size: 14,
+                  color: active ? colors.bg : colors.text2,
+                ),
+                const SizedBox(width: AppSpacing.xs),
+              ],
+              Text(
+                label,
+                style: AppTypography.caption(
+                  active ? colors.bg : colors.text2,
+                ).copyWith(
+                  fontWeight: active ? FontWeight.w600 : FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+
 
 class _CatalogGrid extends StatelessWidget {
   const _CatalogGrid({required this.books, required this.onOpen});

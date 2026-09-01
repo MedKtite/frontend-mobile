@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import 'package:marginalia/widgets/app_progress_ring.dart';
 
 
 import '../../app/routes.dart';
@@ -578,6 +577,7 @@ class _ContinueRow extends ConsumerWidget {
 
   static const double _cardW = 272;
   static const double _rowH = 92;
+  static const int _maxDisplayCount = 5;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -595,6 +595,8 @@ class _ContinueRow extends ConsumerWidget {
         );
     if (reading.isEmpty) return const SizedBox.shrink();
 
+    final displayBooks = reading.take(_maxDisplayCount).toList();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -604,9 +606,9 @@ class _ContinueRow extends ConsumerWidget {
           height: _rowH,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
-            itemCount: reading.length,
+            itemCount: displayBooks.length,
             separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.md),
-            itemBuilder: (context, i) => _ContinueRowCard(book: reading[i]),
+            itemBuilder: (context, i) => _ContinueRowCard(book: displayBooks[i]),
           ),
         ),
         const SizedBox(height: AppSpacing.xxl),

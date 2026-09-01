@@ -51,7 +51,7 @@ class AppTextField extends StatefulWidget {
   /// Custom suffix — wins over the clear button and the password eye.
   final Widget? suffix;
 
-  /// Defaults by flavor: search → surface, form → bg (forms sit on glass).
+  /// Defaults to surface (white in light mode).
   final Color? fillColor;
 
   final bool autofocus;
@@ -67,9 +67,9 @@ class _AppTextFieldState extends State<AppTextField> {
   late bool _hidden = widget.obscure;
   late bool _hasText = widget.controller.text.isNotEmpty;
 
-  // sm(8)+2 vertical — ~42px (form) / ~46px (pill) tall: visibly tighter than
-  // Material's 56 while staying a comfortable touch target.
-  static const double _vPad = AppSpacing.sm + 2;
+  // Vertical padding: 14px aligns standard text height (~20px) to AppSpacing.inputHeight (48px),
+  // ensuring identical height whether an icon is present or not.
+  static const double _vPad = 14;
 
   @override
   void initState() {
@@ -110,6 +110,10 @@ class _AppTextFieldState extends State<AppTextField> {
       return IconButton(
         onPressed: () => setState(() => _hidden = !_hidden),
         padding: EdgeInsets.zero,
+        constraints: const BoxConstraints(
+          minWidth: AppSpacing.xxxl,
+          minHeight: AppSpacing.inputHeight,
+        ),
         icon: Icon(
           _hidden ? Icons.visibility_off_outlined : Icons.visibility_outlined,
           size: 18,
@@ -121,6 +125,10 @@ class _AppTextFieldState extends State<AppTextField> {
       return IconButton(
         onPressed: widget.onClear,
         padding: EdgeInsets.zero,
+        constraints: const BoxConstraints(
+          minWidth: AppSpacing.xxxl,
+          minHeight: AppSpacing.inputHeight,
+        ),
         icon: Icon(Icons.close, size: 18, color: colors.text3),
       );
     }
@@ -157,18 +165,21 @@ class _AppTextFieldState extends State<AppTextField> {
       decoration: InputDecoration(
         isDense: true,
         filled: true,
-        fillColor:
-            widget.fillColor ?? (widget.search ? colors.surface : colors.bg),
+        fillColor: widget.fillColor ?? colors.surface,
         hintText: widget.hint,
         hintStyle: hintStyle,
         prefixIcon: widget.prefixIcon == null
             ? null
             : Icon(widget.prefixIcon, size: 20, color: colors.text3),
-        prefixIconConstraints:
-            const BoxConstraints(minWidth: AppSpacing.xxxl, minHeight: 42),
+        prefixIconConstraints: const BoxConstraints(
+          minWidth: AppSpacing.xxxl,
+          minHeight: AppSpacing.inputHeight,
+        ),
         suffixIcon: _suffix(colors),
-        suffixIconConstraints:
-            const BoxConstraints(minWidth: AppSpacing.xxxl, minHeight: 42),
+        suffixIconConstraints: const BoxConstraints(
+          minWidth: AppSpacing.xxxl,
+          minHeight: AppSpacing.inputHeight,
+        ),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.lg,
           vertical: _vPad,

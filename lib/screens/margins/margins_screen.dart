@@ -79,8 +79,12 @@ class _MarginsScreenState extends ConsumerState<MarginsScreen> {
     final highlights = highlightsAsync.valueOrNull;
     final notes = notesAsync.valueOrNull;
 
-    final failed = highlightsAsync.hasError || notesAsync.hasError;
-    final loading = !failed && (highlights == null || notes == null);
+    final isRetrying = highlightsAsync.isLoading ||
+        highlightsAsync.isRefreshing ||
+        notesAsync.isLoading ||
+        notesAsync.isRefreshing;
+    final failed = (highlightsAsync.hasError || notesAsync.hasError) && !isRetrying;
+    final loading = isRetrying || (highlights == null || notes == null);
 
     // Totals for the header come from the unfiltered feed.
     final allHighlights = ref.watch(allHighlightsProvider).valueOrNull;
@@ -191,7 +195,13 @@ class _MarginsScreenState extends ConsumerState<MarginsScreen> {
                 title: "Couldn't load your margins.",
                 hint: 'Check your connection and try again.',
                 action: OutlinedButton(
-                  onPressed: () => refreshAnnotations(ref),
+                  onPressed: () {
+                    refreshAnnotations(ref);
+                    ref.invalidate(libraryBooksProvider);
+                    if (_tagId != null) {
+                      ref.invalidate(tagHighlightsProvider(_tagId!));
+                    }
+                  },
                   child: const Text('Try again'),
                 ),
               )

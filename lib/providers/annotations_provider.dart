@@ -43,9 +43,9 @@ final savedNotesProvider = FutureProvider<List<Note>>(
 void refreshAnnotations(WidgetRef ref) {
   ref.invalidate(tagsProvider);
   ref.invalidate(tagCountsProvider);
-  ref.invalidate(tagHighlightsProvider);
   ref.invalidate(allHighlightsProvider);
   ref.invalidate(allNotesProvider);
   ref.invalidate(savedHighlightsProvider);
   ref.invalidate(savedNotesProvider);
+  ref.invalidate(tagHighlightsProvider);
 }
