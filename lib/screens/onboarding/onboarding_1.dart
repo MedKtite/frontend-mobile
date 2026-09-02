@@ -15,7 +15,9 @@ class Onboarding1 extends StatelessWidget {
     final colors = context.appColors;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.pageHorizontal),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.pageHorizontal,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -24,11 +26,15 @@ class Onboarding1 extends StatelessWidget {
           const SizedBox(height: AppSpacing.xl),
           const Center(child: _FormatPills()),
           const Spacer(flex: 4),
-          Text('Every book you read.', style: AppTypography.display(colors.text)),
+          Text(
+            'Every book you read.',
+            style: AppTypography.display(colors.text),
+          ),
           Text(
             'Every word you hear.',
-            style: AppTypography.display(colors.text)
-                .copyWith(fontStyle: FontStyle.italic),
+            style: AppTypography.display(
+              colors.text,
+            ).copyWith(fontStyle: FontStyle.italic),
           ),
           const SizedBox(height: AppSpacing.md),
           Text(
@@ -118,8 +124,9 @@ class _Pill extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: AppTypography.caption(colors.text2)
-            .copyWith(fontWeight: FontWeight.w500),
+        style: AppTypography.caption(
+          colors.text2,
+        ).copyWith(fontWeight: FontWeight.w500),
       ),
     );
   }

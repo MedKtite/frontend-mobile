@@ -381,7 +381,10 @@ class _DiscoveryScreenState extends ConsumerState<DiscoveryScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('ADD TO YOUR LIBRARY', style: AppTypography.overline(colors.text3)),
+        Text(
+          'ADD TO YOUR LIBRARY',
+          style: AppTypography.overline(colors.text3),
+        ),
         const SizedBox(height: AppSpacing.md),
         Container(
           padding: const EdgeInsets.all(AppSpacing.xl),
@@ -400,26 +403,44 @@ class _DiscoveryScreenState extends ConsumerState<DiscoveryScreen> {
                   color: colors.accentSoft,
                   borderRadius: AppRadii.brMd,
                 ),
-                child: Icon(Icons.file_upload_outlined, color: colors.accent, size: AppSpacing.xl),
+                child: Icon(
+                  Icons.file_upload_outlined,
+                  color: colors.accent,
+                  size: AppSpacing.xl,
+                ),
               ),
               const SizedBox(width: AppSpacing.lg),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Bring a book with you.', style: AppTypography.title3(colors.text)),
+                    Text(
+                      'Bring a book with you.',
+                      style: AppTypography.title3(colors.text),
+                    ),
                     const SizedBox(height: AppSpacing.xs),
-                    Text('Upload an EPUB or PDF and make it part of your reading life.', style: AppTypography.label(colors.text2)),
+                    Text(
+                      'Upload an EPUB or PDF and make it part of your reading life.',
+                      style: AppTypography.label(colors.text2),
+                    ),
                     const SizedBox(height: AppSpacing.lg),
                     FilledButton.icon(
                       onPressed: () => showAddToLibrarySheet(context),
-                      icon: const Icon(Icons.file_upload_outlined, size: AppSpacing.lg),
+                      icon: const Icon(
+                        Icons.file_upload_outlined,
+                        size: AppSpacing.lg,
+                      ),
                       label: const Text('Upload a book'),
                       style: FilledButton.styleFrom(
                         backgroundColor: colors.text,
                         foregroundColor: colors.bg,
-                        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
-                        shape: RoundedRectangleBorder(borderRadius: AppRadii.brFull),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.lg,
+                          vertical: AppSpacing.sm,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: AppRadii.brFull,
+                        ),
                       ),
                     ),
                   ],
@@ -804,13 +825,19 @@ class _SearchDesk extends StatelessWidget {
                 top: -4,
                 right: -4,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 5,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: colors.text,
                     borderRadius: AppRadii.brFull,
                     border: Border.all(color: colors.surface, width: 1.5),
                   ),
-                  constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+                  constraints: const BoxConstraints(
+                    minWidth: 18,
+                    minHeight: 18,
+                  ),
                   child: Center(
                     child: Text(
                       '$activeCount',
@@ -946,28 +973,21 @@ class _FilterChip extends StatelessWidget {
           ),
           decoration: BoxDecoration(
             borderRadius: AppRadii.brFull,
-            border: Border.all(
-              color: active ? colors.text : colors.border,
-            ),
+            border: Border.all(color: active ? colors.text : colors.border),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               if (icon != null) ...[
-                Icon(
-                  icon,
-                  size: 14,
-                  color: active ? colors.bg : colors.text2,
-                ),
+                Icon(icon, size: 14, color: active ? colors.bg : colors.text2),
                 const SizedBox(width: AppSpacing.xs),
               ],
               Text(
                 label,
-                style: AppTypography.caption(
-                  active ? colors.bg : colors.text2,
-                ).copyWith(
-                  fontWeight: active ? FontWeight.w600 : FontWeight.w500,
-                ),
+                style: AppTypography.caption(active ? colors.bg : colors.text2)
+                    .copyWith(
+                      fontWeight: active ? FontWeight.w600 : FontWeight.w500,
+                    ),
               ),
             ],
           ),
@@ -976,8 +996,6 @@ class _FilterChip extends StatelessWidget {
     );
   }
 }
-
-
 
 class _CatalogGrid extends StatelessWidget {
   const _CatalogGrid({required this.books, required this.onOpen});

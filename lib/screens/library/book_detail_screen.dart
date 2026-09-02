@@ -30,8 +30,13 @@ class BookDetailScreen extends ConsumerWidget {
 
   final Book book;
 
-  Future<void> _toggleMode(BuildContext context, WidgetRef ref, Book book) async {
-    final isAudio = book.status == 'listening' ||
+  Future<void> _toggleMode(
+    BuildContext context,
+    WidgetRef ref,
+    Book book,
+  ) async {
+    final isAudio =
+        book.status == 'listening' ||
         book.format == 'm4b' ||
         book.format == 'mp3';
     final targetStatus = isAudio ? 'reading' : 'listening';
@@ -39,10 +44,9 @@ class BookDetailScreen extends ConsumerWidget {
     final messenger = ScaffoldMessenger.of(context)..hideCurrentSnackBar();
 
     try {
-      await ref.read(bookServiceProvider).update(
-            book.id,
-            BookUpdateRequest(status: targetStatus),
-          );
+      await ref
+          .read(bookServiceProvider)
+          .update(book.id, BookUpdateRequest(status: targetStatus));
       ref.invalidate(bookByIdProvider(book.id));
       ref.invalidate(libraryBooksProvider);
       if (!context.mounted) return;
@@ -83,11 +87,7 @@ class BookDetailScreen extends ConsumerWidget {
     final colors = context.appColors;
     final bookAsync = ref.watch(bookByIdProvider(book.id));
     if (bookAsync.isLoading) {
-      return const Scaffold(
-        body: SafeArea(
-          child: AppProgressLoading(),
-        ),
-      );
+      return const Scaffold(body: SafeArea(child: AppProgressLoading()));
     }
 
     final latestBook = bookAsync.valueOrNull;
@@ -105,8 +105,10 @@ class BookDetailScreen extends ConsumerWidget {
                 children: [
                   const AppProgressRing(size: 40, strokeWidth: 1.5),
                   const SizedBox(height: AppSpacing.lg),
-                  Text('Preparing your book…',
-                      style: AppTypography.title3(colors.text)),
+                  Text(
+                    'Preparing your book…',
+                    style: AppTypography.title3(colors.text),
+                  ),
                   const SizedBox(height: AppSpacing.sm),
                   Text(
                     'We are extracting the text, cover, and available details.',
@@ -129,15 +131,13 @@ class BookDetailScreen extends ConsumerWidget {
     );
     final extrasAsync = ref.watch(bookExtrasProvider(extrasKey));
     if (extrasAsync.isLoading) {
-      return const Scaffold(
-        body: SafeArea(
-          child: AppProgressLoading(),
-        ),
-      );
+      return const Scaffold(body: SafeArea(child: AppProgressLoading()));
     }
 
     final extras = extrasAsync.valueOrNull;
-    final description = cleanHtml(displayBook.description ?? extras?.description);
+    final description = cleanHtml(
+      displayBook.description ?? extras?.description,
+    );
     final rating = extras?.rating;
     final pages = displayBook.pageCount ?? extras?.pageCount;
     final year = displayBook.publishedYear ?? extras?.year;
@@ -191,6 +191,7 @@ class BookDetailScreen extends ConsumerWidget {
                               value: 'Paper',
                               label: 'Format',
                             ),
+                       
                           if (rating != null)
                             StatChip(
                               icon: Icons.star_rounded,
@@ -217,17 +218,22 @@ class BookDetailScreen extends ConsumerWidget {
 
                       if (description.isNotEmpty) ...[
                         const SizedBox(height: AppSpacing.xl),
-                        Text('Description',
-                            style: AppTypography.title3(colors.text)),
+                        Text(
+                          'Description',
+                          style: AppTypography.title3(colors.text),
+                        ),
                         const SizedBox(height: AppSpacing.md),
-                        Text(description,
-                            style: AppTypography.bodySerif(colors.text2)),
+                        Text(
+                          description,
+                          style: AppTypography.bodySerif(colors.text2),
+                        ),
                       ],
 
                       // Marginalia & Highlights Section (shown only when highlights exist)
                       highlightsAsync.when(
                         data: (highlights) {
-                          if (highlights.isEmpty) return const SizedBox.shrink();
+                          if (highlights.isEmpty)
+                            return const SizedBox.shrink();
                           return Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
@@ -262,56 +268,69 @@ class BookDetailScreen extends ConsumerWidget {
                 AppSpacing.pageHorizontal,
                 AppSpacing.md,
               ),
-              child: Builder(builder: (context) {
-                final isAudio = displayBook.status == 'listening' ||
-                    displayBook.format == 'm4b' ||
-                    displayBook.format == 'mp3';
-                final verb = isAudio ? 'listening' : 'reading';
-                return Row(
-                  children: [
-                    Expanded(
-                      child: FilledButton(
-                        onPressed: () => context.push(
+              child: Builder(
+                builder: (context) {
+                  final isAudio =
+                      displayBook.status == 'listening' ||
+                      displayBook.format == 'm4b' ||
+                      displayBook.format == 'mp3';
+                  final verb = isAudio ? 'listening' : 'reading';
+                  return Row(
+                    children: [
+                      Expanded(
+                        child: FilledButton(
+                          onPressed: () => context.push(
+                            isAudio
+                                ? Routes.listeningPath(displayBook.id)
+                                : Routes.readingPath(displayBook.id),
+                            extra: displayBook,
+                          ),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: colors.accent,
+                            foregroundColor: colors.bg,
+                            padding: const EdgeInsets.symmetric(
+                              vertical: AppSpacing.md,
+                              horizontal: AppSpacing.lg,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: AppRadii.brMd,
+                            ),
+                          ),
+                          child: Text(
+                            progress > 0
+                                ? 'Continue $verb — ${progress.round()}%'
+                                : 'Start $verb',
+                            style: AppTypography.label(
+                              colors.bg,
+                            ).copyWith(fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      IconButton.outlined(
+                        onPressed: () => _toggleMode(context, ref, displayBook),
+                        tooltip: isAudio
+                            ? 'Switch to reading'
+                            : 'Switch to listening',
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: colors.text,
+                          side: BorderSide(color: colors.border),
+                          padding: const EdgeInsets.all(AppSpacing.md),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: AppRadii.brMd,
+                          ),
+                        ),
+                        icon: Icon(
                           isAudio
-                              ? Routes.listeningPath(displayBook.id)
-                              : Routes.readingPath(displayBook.id),
-                          extra: displayBook,
-                        ),
-                        style: FilledButton.styleFrom(
-                          backgroundColor: colors.accent,
-                          foregroundColor: colors.bg,
-                          padding: const EdgeInsets.symmetric(
-                              vertical: AppSpacing.md, horizontal: AppSpacing.lg),
-                          shape:
-                              RoundedRectangleBorder(borderRadius: AppRadii.brMd),
-                        ),
-                        child: Text(
-                          progress > 0
-                              ? 'Continue $verb — ${progress.round()}%'
-                              : 'Start $verb',
-                          style: AppTypography.label(colors.bg)
-                              .copyWith(fontWeight: FontWeight.w600),
+                              ? Icons.auto_stories_rounded
+                              : Icons.headphones_rounded,
+                          size: 20,
                         ),
                       ),
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
-                    IconButton.outlined(
-                      onPressed: () => _toggleMode(context, ref, displayBook),
-                      tooltip: isAudio ? 'Switch to reading' : 'Switch to listening',
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: colors.text,
-                        side: BorderSide(color: colors.border),
-                        padding: const EdgeInsets.all(AppSpacing.md),
-                        shape: RoundedRectangleBorder(borderRadius: AppRadii.brMd),
-                      ),
-                      icon: Icon(
-                        isAudio ? Icons.auto_stories_rounded : Icons.headphones_rounded,
-                        size: 20,
-                      ),
-                    ),
-                  ],
-                );
-              }),
+                    ],
+                  );
+                },
+              ),
             ),
           ),
         ],
@@ -338,9 +357,7 @@ class _HighlightDetailCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: colors.surface2,
         borderRadius: BorderRadius.circular(AppRadii.md),
-        border: Border(
-          left: BorderSide(color: tagColor, width: 3.5),
-        ),
+        border: Border(left: BorderSide(color: tagColor, width: 3.5)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -350,10 +367,9 @@ class _HighlightDetailCard extends StatelessWidget {
             children: [
               Text(
                 tag.toUpperCase(),
-                style: AppTypography.caption(tagColor).copyWith(
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1.1,
-                ),
+                style: AppTypography.caption(
+                  tagColor,
+                ).copyWith(fontWeight: FontWeight.w700, letterSpacing: 1.1),
               ),
               if (highlight.textChapterRef != null)
                 Text(
@@ -366,9 +382,9 @@ class _HighlightDetailCard extends StatelessWidget {
             const SizedBox(height: AppSpacing.xs),
             Text(
               '“$text”',
-              style: AppTypography.bodySerif(colors.text).copyWith(
-                fontStyle: FontStyle.italic,
-              ),
+              style: AppTypography.bodySerif(
+                colors.text,
+              ).copyWith(fontStyle: FontStyle.italic),
             ),
           ],
         ],
@@ -393,11 +409,7 @@ class _AmbientBookHeader extends StatelessWidget {
     final colors = context.appColors;
     final isLight = Theme.of(context).brightness == Brightness.light;
     final coverTone = coverColorFromHex(book.coverDominantColor);
-    final fadedTone = Color.lerp(
-      coverTone,
-      colors.bg,
-      isLight ? 0.68 : 0.58,
-    )!;
+    final fadedTone = Color.lerp(coverTone, colors.bg, isLight ? 0.68 : 0.58)!;
     final coverUrl = proxiedCoverUrl(book.coverUrl);
     final radius = const BorderRadius.vertical(
       bottom: Radius.circular(AppRadii.xl),
@@ -450,10 +462,7 @@ class _AmbientBookHeader extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    CircleIconButton(
-                      icon: Icons.chevron_left,
-                      onTap: onBack,
-                    ),
+                    CircleIconButton(icon: Icons.chevron_left, onTap: onBack),
                     const Spacer(),
                     CircleIconButton(
                       icon: Icons.delete_outline,
@@ -469,12 +478,45 @@ class _AmbientBookHeader extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          if (book.isUploaded) ...[
+                            Container(
+                              margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: AppSpacing.sm,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: colors.accentSoft,
+                                borderRadius: BorderRadius.circular(AppRadii.xs),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.upload_file_rounded,
+                                    size: 11,
+                                    color: colors.accent,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'MY UPLOAD · ${(book.format ?? 'EBOOK').toUpperCase()}',
+                                    style: AppTypography.caption(colors.accent).copyWith(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w700,
+                                      letterSpacing: 0.6,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                           Text(
                             book.title,
                             maxLines: 4,
                             overflow: TextOverflow.ellipsis,
-                            style: AppTypography.body(colors.text)
-                                .copyWith(fontWeight: FontWeight.w700),
+                            style: AppTypography.body(
+                              colors.text,
+                            ).copyWith(fontWeight: FontWeight.w700),
                           ),
                           if (book.author != null &&
                               book.author!.isNotEmpty) ...[

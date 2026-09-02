@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../app/theme/tokens/colors.dart';
+import '../app/theme/tokens/radii.dart';
 import '../app/theme/tokens/spacing.dart';
 import '../app/theme/tokens/typography.dart';
 import 'book_cover.dart';
@@ -15,6 +16,7 @@ class BookCard extends StatelessWidget {
     this.width = cardWidth,
     this.processingStatus,
     this.progressPct,
+    this.badge,
     this.onTap,
     this.onLongPress,
   });
@@ -27,6 +29,7 @@ class BookCard extends StatelessWidget {
   final double width;
   final String? processingStatus;
   final double? progressPct;
+  final String? badge;
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
 
@@ -48,15 +51,60 @@ class BookCard extends StatelessWidget {
               behavior: HitTestBehavior.opaque,
               onTap: onTap,
               onLongPress: onLongPress,
-              child: BookCover(
-                title: title,
-                author: author ?? '',
-                bg: colors.accent,
-                fg: colors.surface,
-                coverUrl: coverUrl,
-                width: width,
-                processingStatus: processingStatus,
-                progressPct: progressPct,
+              child: Stack(
+                children: [
+                  BookCover(
+                    title: title,
+                    author: author ?? '',
+                    bg: colors.accent,
+                    fg: colors.surface,
+                    coverUrl: coverUrl,
+                    width: width,
+                    processingStatus: processingStatus,
+                    progressPct: progressPct,
+                  ),
+                  if (badge != null && badge!.isNotEmpty)
+                    Positioned(
+                      top: 6,
+                      left: 6,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 5,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: colors.text.withValues(alpha: 0.78),
+                          borderRadius: BorderRadius.circular(AppRadii.xs),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.16),
+                              blurRadius: 4,
+                              offset: const Offset(0, 1),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.upload_file_rounded,
+                              size: 10,
+                              color: colors.bg,
+                            ),
+                            const SizedBox(width: 2),
+                            Text(
+                              badge!.toUpperCase(),
+                              style: AppTypography.caption(colors.bg).copyWith(
+                                fontSize: 8.5,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.4,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
           ),

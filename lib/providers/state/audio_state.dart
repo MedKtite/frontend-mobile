@@ -12,8 +12,10 @@ part 'audio_state.freezed.dart';
 class AudioSession with _$AudioSession {
   const factory AudioSession({
     required Book book,
+
     /// Non-null when streaming a LibriVox playlist instead of an uploaded file.
     LibrivoxAudiobook? librivox,
+
     /// Global start second of each playlist section (empty for single files).
     @Default(<double>[]) List<double> cumStart,
     required double totalSecs,

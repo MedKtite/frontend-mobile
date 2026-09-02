@@ -10,12 +10,14 @@ part 'highlight_create_request.g.dart';
 class HighlightCreateRequest with _$HighlightCreateRequest {
   const factory HighlightCreateRequest({
     required String bookId,
-    required String colorTag, // curious|resonant|beautiful|reference|urgent|disagree|revisit
+    required String
+    colorTag, // curious|resonant|beautiful|reference|urgent|disagree|revisit
     String? textChapterRef,
     int? textStartOffset,
     int? textEndOffset,
     String? passageText,
-    double? audioStartSec, // audio bookmark timestamp — null for text highlights
+    double?
+    audioStartSec, // audio bookmark timestamp — null for text highlights
     double? audioEndSec,
   }) = _HighlightCreateRequest;
 

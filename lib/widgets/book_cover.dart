@@ -8,7 +8,6 @@ import '../app/theme/tokens/typography.dart';
 import '../core/dio_client.dart';
 import 'app_progress_ring.dart';
 
-
 class BookCover extends StatelessWidget {
   const BookCover({
     super.key,
@@ -95,10 +94,9 @@ class BookCover extends StatelessWidget {
                   Text(
                     'Preparing…',
                     textAlign: TextAlign.center,
-                    style: AppTypography.caption(Colors.white).copyWith(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: AppTypography.caption(
+                      Colors.white,
+                    ).copyWith(fontSize: 10, fontWeight: FontWeight.w600),
                   ),
                 ],
               ),
@@ -119,11 +117,9 @@ class BookCover extends StatelessWidget {
                   Text(
                     'Failed',
                     textAlign: TextAlign.center,
-                    style: AppTypography.caption(const Color(0xFFEF5350))
-                        .copyWith(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: AppTypography.caption(
+                      const Color(0xFFEF5350),
+                    ).copyWith(fontSize: 10, fontWeight: FontWeight.w600),
                   ),
                 ],
               ),
@@ -180,38 +176,42 @@ class BookCover extends StatelessWidget {
   }
 
   Widget _typePanel() => Padding(
-        padding: EdgeInsets.all(width * 0.12),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-              style: AppTypography.serif(TextStyle(
-                color: fg,
-                fontSize: width * 0.19,
-                height: 1.1,
-                fontWeight: FontWeight.w500,
-                fontStyle: FontStyle.italic,
-              )),
+    padding: EdgeInsets.all(width * 0.12),
+    child: Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Text(
+          title,
+          textAlign: TextAlign.center,
+          maxLines: 3,
+          overflow: TextOverflow.ellipsis,
+          style: AppTypography.serif(
+            TextStyle(
+              color: fg,
+              fontSize: width * 0.19,
+              height: 1.1,
+              fontWeight: FontWeight.w500,
+              fontStyle: FontStyle.italic,
             ),
-            SizedBox(height: width * 0.06),
-            Text(
-              author,
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: AppTypography.serif(TextStyle(
-                color: fg.withValues(alpha: 0.82),
-                fontSize: width * 0.12,
-                fontStyle: FontStyle.italic,
-              )),
-            ),
-          ],
+          ),
         ),
-      );
+        SizedBox(height: width * 0.06),
+        Text(
+          author,
+          textAlign: TextAlign.center,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: AppTypography.serif(
+            TextStyle(
+              color: fg.withValues(alpha: 0.82),
+              fontSize: width * 0.12,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
 /// Wraps a raw book-cover URL in the backend cover proxy (`/covers?url=`) so the

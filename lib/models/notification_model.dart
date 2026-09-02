@@ -1,4 +1,3 @@
-
 enum NotificationCategory {
   readingReminder,
   streakUpdate,
@@ -152,13 +151,13 @@ class NotificationItemModel {
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'category': category,
-        'title': title,
-        'body': body,
-        'data': data,
-        'is_unread': isUnread,
-        'read_at': readAt?.toIso8601String(),
-        'created_at': createdAt.toIso8601String(),
-      };
+    'id': id,
+    'category': category,
+    'title': title,
+    'body': body,
+    'data': data,
+    'is_unread': isUnread,
+    'read_at': readAt?.toIso8601String(),
+    'created_at': createdAt.toIso8601String(),
+  };
 }

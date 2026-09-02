@@ -37,7 +37,8 @@ class AuthorDetailsScreen extends ConsumerWidget {
             decoration: BoxDecoration(
               color: colors.accentSoft,
               borderRadius: const BorderRadius.vertical(
-                  bottom: Radius.circular(AppRadii.xl)),
+                bottom: Radius.circular(AppRadii.xl),
+              ),
             ),
             padding: EdgeInsets.fromLTRB(
               AppSpacing.pageHorizontal,
@@ -93,11 +94,12 @@ class AuthorDetailsScreen extends ConsumerWidget {
               error: (_, __) => Column(
                 children: [
                   const SizedBox(height: AppSpacing.xl),
-                  Icon(Icons.cloud_off_outlined,
-                      size: 40, color: colors.text3),
+                  Icon(Icons.cloud_off_outlined, size: 40, color: colors.text3),
                   const SizedBox(height: AppSpacing.lg),
-                  Text("Couldn't load this author.",
-                      style: AppTypography.title3(colors.text)),
+                  Text(
+                    "Couldn't load this author.",
+                    style: AppTypography.title3(colors.text),
+                  ),
                   const SizedBox(height: AppSpacing.xl),
                   OutlinedButton(
                     onPressed: () =>
@@ -109,7 +111,9 @@ class AuthorDetailsScreen extends ConsumerWidget {
               data: (d) {
                 final readable = d.books.where((b) => b.isReadable).length;
                 final readers = d.books.fold<int>(
-                    0, (sum, b) => sum + (b.downloadCount ?? 0));
+                  0,
+                  (sum, b) => sum + (b.downloadCount ?? 0),
+                );
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -146,8 +150,10 @@ class AuthorDetailsScreen extends ConsumerWidget {
                     if ((d.bio ?? '').isNotEmpty) ...[
                       Text('About', style: AppTypography.title3(colors.text)),
                       const SizedBox(height: AppSpacing.md),
-                      Text(d.bio!,
-                          style: AppTypography.bodySerif(colors.text2)),
+                      Text(
+                        d.bio!,
+                        style: AppTypography.bodySerif(colors.text2),
+                      ),
                       const SizedBox(height: AppSpacing.xl),
                     ],
                     if (d.books.isNotEmpty) ...[
@@ -157,7 +163,8 @@ class AuthorDetailsScreen extends ConsumerWidget {
                     ] else
                       Padding(
                         padding: const EdgeInsets.symmetric(
-                            vertical: AppSpacing.xxl),
+                          vertical: AppSpacing.xxl,
+                        ),
                         child: Center(
                           child: Text(
                             (d.bio ?? '').isEmpty

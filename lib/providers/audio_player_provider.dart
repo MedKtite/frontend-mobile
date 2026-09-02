@@ -35,8 +35,8 @@ class AudioPlayerController extends StateNotifier<AudioSession?> {
     await stop(); // save + release the previous book's session
 
     try {
-      final book = initialBook ??
-          await _ref.read(bookServiceProvider).getOne(bookId);
+      final book =
+          initialBook ?? await _ref.read(bookServiceProvider).getOne(bookId);
       final hasFile = book.format == 'm4b' || book.format == 'mp3';
 
       if (hasFile) {
@@ -45,15 +45,13 @@ class AudioPlayerController extends StateNotifier<AudioSession?> {
         await player.setUrl(url);
         state = AudioSession(
           book: book,
-          totalSecs:
-              (player.duration ?? Duration.zero).inMilliseconds / 1000,
+          totalSecs: (player.duration ?? Duration.zero).inMilliseconds / 1000,
         );
       } else {
         // No file — look for a free LibriVox recording (public domain).
-        final lv = await _ref.read(catalogServiceProvider).librivox(
-              title: book.title,
-              author: book.author,
-            );
+        final lv = await _ref
+            .read(catalogServiceProvider)
+            .librivox(title: book.title, author: book.author);
         if (lv == null || lv.sections.isEmpty) {
           return 'No audio for this book yet — no free LibriVox recording '
               'exists, and no M4B/MP3 has been uploaded.';
@@ -65,23 +63,28 @@ class AudioPlayerController extends StateNotifier<AudioSession?> {
           acc += (s.playtimeSecs ?? 0).toDouble();
         }
         await player.setAudioSource(
-          ConcatenatingAudioSource(children: [
-            for (final s in lv.sections)
-              AudioSource.uri(Uri.parse(s.listenUrl)),
-          ]),
+          ConcatenatingAudioSource(
+            children: [
+              for (final s in lv.sections)
+                AudioSource.uri(Uri.parse(s.listenUrl)),
+            ],
+          ),
         );
         state = AudioSession(
           book: book,
           librivox: lv,
           cumStart: starts,
-          totalSecs:
-              (lv.totalTimeSecs ?? 0) > 0 ? lv.totalTimeSecs!.toDouble() : acc,
+          totalSecs: (lv.totalTimeSecs ?? 0) > 0
+              ? lv.totalTimeSecs!.toDouble()
+              : acc,
         );
       }
 
       await seekGlobal(_resumeSec(book));
       _saveTimer = Timer.periodic(
-          const Duration(seconds: 30), (_) => saveProgress());
+        const Duration(seconds: 30),
+        (_) => saveProgress(),
+      );
       return null;
     } on ApiError catch (e) {
       return e.message;
@@ -117,8 +120,10 @@ class AudioPlayerController extends StateNotifier<AudioSession?> {
     final s = state;
     final base = (s == null || s.cumStart.isEmpty)
         ? 0.0
-        : s.cumStart[
-            (player.currentIndex ?? 0).clamp(0, s.cumStart.length - 1)];
+        : s.cumStart[(player.currentIndex ?? 0).clamp(
+            0,
+            s.cumStart.length - 1,
+          )];
     return base + itemPos.inMilliseconds / 1000;
   }
 
@@ -163,7 +168,9 @@ class AudioPlayerController extends StateNotifier<AudioSession?> {
         if (m is Map && (m['type'] == 'audio' || m['type'] == 'librivox')) {
           return (m['sec'] as num?)?.toDouble() ?? 0;
         }
-      } catch (_) {/* not audio json — ignore */}
+      } catch (_) {
+        /* not audio json — ignore */
+      }
     }
     final pct = book.progressPct;
     final total = state?.totalSecs ?? 0;
@@ -176,7 +183,9 @@ class AudioPlayerController extends StateNotifier<AudioSession?> {
     if (s == null) return;
     final sec = globalSec(player.position);
     try {
-      await _ref.read(bookServiceProvider).update(
+      await _ref
+          .read(bookServiceProvider)
+          .update(
             s.book.id,
             BookUpdateRequest(
               progressPct: s.totalSecs <= 0
@@ -189,10 +198,13 @@ class AudioPlayerController extends StateNotifier<AudioSession?> {
             ),
           );
       _ref.invalidate(libraryBooksProvider); // Home's "Still listening" row
-    } catch (_) {/* progress save is best-effort */}
+    } catch (_) {
+      /* progress save is best-effort */
+    }
   }
 }
 
 final audioPlayerProvider =
     StateNotifierProvider<AudioPlayerController, AudioSession?>(
-        (ref) => AudioPlayerController(ref));
+      (ref) => AudioPlayerController(ref),
+    );

@@ -82,7 +82,10 @@ class _ExportDataSheetState extends ConsumerState<_ExportDataSheet> {
         color: colors.surface,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
         border: Border(
-          top: BorderSide(color: colors.border.withValues(alpha: 0.1), width: 1),
+          top: BorderSide(
+            color: colors.border.withValues(alpha: 0.1),
+            width: 1,
+          ),
         ),
       ),
       child: SafeArea(
@@ -132,7 +135,11 @@ class _ExportDataSheetState extends ConsumerState<_ExportDataSheet> {
                   ],
                 ),
                 IconButton(
-                  icon: Icon(Icons.close_rounded, color: colors.text3, size: 22),
+                  icon: Icon(
+                    Icons.close_rounded,
+                    color: colors.text3,
+                    size: 22,
+                  ),
                   onPressed: () => Navigator.of(context).pop(),
                 ),
               ],
@@ -143,7 +150,8 @@ class _ExportDataSheetState extends ConsumerState<_ExportDataSheet> {
             // Format Selection Options
             _FormatOptionCard(
               title: 'PDF Document (.pdf)',
-              subtitle: 'Formatted, printable document with books, quotes, tags & notes',
+              subtitle:
+                  'Formatted, printable document with books, quotes, tags & notes',
               icon: Icons.picture_as_pdf_outlined,
               isSelected: _selectedFormat == 'pdf',
               onTap: () => setState(() => _selectedFormat = 'pdf'),
@@ -153,7 +161,8 @@ class _ExportDataSheetState extends ConsumerState<_ExportDataSheet> {
 
             _FormatOptionCard(
               title: 'Spreadsheet (.csv)',
-              subtitle: 'Opens in Excel, Google Sheets, or Apple Numbers as a clean table',
+              subtitle:
+                  'Opens in Excel, Google Sheets, or Apple Numbers as a clean table',
               icon: Icons.table_chart_outlined,
               isSelected: _selectedFormat == 'csv',
               onTap: () => setState(() => _selectedFormat = 'csv'),
@@ -167,7 +176,9 @@ class _ExportDataSheetState extends ConsumerState<_ExportDataSheet> {
               style: FilledButton.styleFrom(
                 backgroundColor: colors.text,
                 foregroundColor: colors.bg,
-                shape: const RoundedRectangleBorder(borderRadius: AppRadii.brFull),
+                shape: const RoundedRectangleBorder(
+                  borderRadius: AppRadii.brFull,
+                ),
                 padding: const EdgeInsets.symmetric(vertical: 16),
               ),
               child: _isExporting
@@ -179,7 +190,9 @@ class _ExportDataSheetState extends ConsumerState<_ExportDataSheet> {
                     )
                   : Text(
                       'Download ${_selectedFormat.toUpperCase()} Export',
-                      style: AppTypography.label(colors.bg).copyWith(fontWeight: FontWeight.w600),
+                      style: AppTypography.label(
+                        colors.bg,
+                      ).copyWith(fontWeight: FontWeight.w600),
                     ),
             ),
           ],
@@ -217,7 +230,9 @@ class _FormatOptionCard extends StatelessWidget {
           color: isSelected ? colors.gilt.withValues(alpha: 0.08) : colors.bg,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isSelected ? colors.gilt : colors.border.withValues(alpha: 0.1),
+            color: isSelected
+                ? colors.gilt
+                : colors.border.withValues(alpha: 0.1),
             width: isSelected ? 1.5 : 1,
           ),
         ),
@@ -230,7 +245,9 @@ class _FormatOptionCard extends StatelessWidget {
                 shape: BoxShape.circle,
                 color: isSelected ? colors.gilt : colors.surface,
                 border: Border.all(
-                  color: isSelected ? colors.gilt : colors.border.withValues(alpha: 0.15),
+                  color: isSelected
+                      ? colors.gilt
+                      : colors.border.withValues(alpha: 0.15),
                 ),
               ),
               child: Center(
@@ -260,7 +277,11 @@ class _FormatOptionCard extends StatelessWidget {
                   Text(
                     subtitle,
                     style: AppTypography.sans(
-                      TextStyle(fontSize: 12.5, color: colors.text3, height: 1.3),
+                      TextStyle(
+                        fontSize: 12.5,
+                        color: colors.text3,
+                        height: 1.3,
+                      ),
                     ),
                   ),
                 ],
@@ -268,7 +289,9 @@ class _FormatOptionCard extends StatelessWidget {
             ),
             const SizedBox(width: 8),
             Icon(
-              isSelected ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+              isSelected
+                  ? Icons.check_circle_rounded
+                  : Icons.radio_button_unchecked_rounded,
               color: isSelected ? colors.gilt : colors.text3,
               size: 22,
             ),

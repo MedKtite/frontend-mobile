@@ -36,7 +36,11 @@ class NotificationSettingsScreen extends ConsumerWidget {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.error_outline_rounded, color: colors.danger, size: 36),
+                      Icon(
+                        Icons.error_outline_rounded,
+                        color: colors.danger,
+                        size: 36,
+                      ),
                       const SizedBox(height: AppSpacing.sm),
                       Text(
                         'Failed to load notification settings',
@@ -44,7 +48,9 @@ class NotificationSettingsScreen extends ConsumerWidget {
                       ),
                       const SizedBox(height: AppSpacing.md),
                       OutlinedButton(
-                        onPressed: () => ref.read(notificationPreferencesProvider.notifier).load(),
+                        onPressed: () => ref
+                            .read(notificationPreferencesProvider.notifier)
+                            .load(),
                         child: const Text('Retry'),
                       ),
                     ],
@@ -163,11 +169,15 @@ class _SettingsContent extends ConsumerWidget {
             _ToggleRow(
               title: 'Daily Reading Ritual',
               subtitle: 'Gentle notification to pick up where you left off',
-              value: prefs.enabled && (prefs.categories['reading_reminder'] ?? true),
+              value:
+                  prefs.enabled &&
+                  (prefs.categories['reading_reminder'] ?? true),
               enabled: prefs.enabled,
-              onChanged: (val) => notifier.toggleCategory('reading_reminder', val),
+              onChanged: (val) =>
+                  notifier.toggleCategory('reading_reminder', val),
             ),
-            if (prefs.enabled && (prefs.categories['reading_reminder'] ?? true)) ...[
+            if (prefs.enabled &&
+                (prefs.categories['reading_reminder'] ?? true)) ...[
               _Divider(),
               _ActionRow(
                 title: 'Reminder Time',
@@ -178,7 +188,8 @@ class _SettingsContent extends ConsumerWidget {
                   ref,
                   initialHour: prefs.ritualTimeLocal,
                   title: 'Select Reading Reminder Time',
-                  onSave: (hour) => notifier.update(prefs.copyWith(ritualTimeLocal: hour)),
+                  onSave: (hour) =>
+                      notifier.update(prefs.copyWith(ritualTimeLocal: hour)),
                 ),
               ),
             ],
@@ -201,7 +212,8 @@ class _SettingsContent extends ConsumerWidget {
                   ref,
                   initialHour: prefs.passageTimeLocal,
                   title: 'Select Morning Delivery Time',
-                  onSave: (hour) => notifier.update(prefs.copyWith(passageTimeLocal: hour)),
+                  onSave: (hour) =>
+                      notifier.update(prefs.copyWith(passageTimeLocal: hour)),
                 ),
               ),
             ],
@@ -218,17 +230,22 @@ class _SettingsContent extends ConsumerWidget {
             _ToggleRow(
               title: 'Reading Streaks & Challenges',
               subtitle: 'Milestones, streak protection, and monthly goals',
-              value: prefs.enabled && (prefs.categories['streak_update'] ?? true),
+              value:
+                  prefs.enabled && (prefs.categories['streak_update'] ?? true),
               enabled: prefs.enabled,
               onChanged: (val) => notifier.toggleCategory('streak_update', val),
             ),
             _Divider(),
             _ToggleRow(
               title: 'Weekly Reading Insights',
-              subtitle: 'Sunday summary of reading time & margin notes captured',
-              value: prefs.enabled && (prefs.categories['weekly_insights'] ?? true),
+              subtitle:
+                  'Sunday summary of reading time & margin notes captured',
+              value:
+                  prefs.enabled &&
+                  (prefs.categories['weekly_insights'] ?? true),
               enabled: prefs.enabled,
-              onChanged: (val) => notifier.toggleCategory('weekly_insights', val),
+              onChanged: (val) =>
+                  notifier.toggleCategory('weekly_insights', val),
             ),
             _Divider(),
             _ToggleRow(
@@ -258,7 +275,8 @@ class _SettingsContent extends ConsumerWidget {
                 ref,
                 initialHour: prefs.quietStartLocal,
                 title: 'Quiet Window Starts',
-                onSave: (hour) => notifier.update(prefs.copyWith(quietStartLocal: hour)),
+                onSave: (hour) =>
+                    notifier.update(prefs.copyWith(quietStartLocal: hour)),
               ),
             ),
             _Divider(),
@@ -272,7 +290,8 @@ class _SettingsContent extends ConsumerWidget {
                 ref,
                 initialHour: prefs.quietEndLocal,
                 title: 'Quiet Window Ends',
-                onSave: (hour) => notifier.update(prefs.copyWith(quietEndLocal: hour)),
+                onSave: (hour) =>
+                    notifier.update(prefs.copyWith(quietEndLocal: hour)),
               ),
             ),
           ],
@@ -310,7 +329,10 @@ class _SectionHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     return Padding(
-      padding: const EdgeInsets.only(left: AppSpacing.sm, bottom: AppSpacing.xs),
+      padding: const EdgeInsets.only(
+        left: AppSpacing.sm,
+        bottom: AppSpacing.xs,
+      ),
       child: Text(
         title,
         style: AppTypography.sans(
@@ -344,7 +366,9 @@ class _CardContainer extends StatelessWidget {
           width: 1,
         ),
       ),
-      child: child ?? Column(mainAxisSize: MainAxisSize.min, children: children ?? []),
+      child:
+          child ??
+          Column(mainAxisSize: MainAxisSize.min, children: children ?? []),
     );
   }
 }
@@ -489,11 +513,7 @@ class _ActionRow extends StatelessWidget {
               ),
             ],
             const SizedBox(width: 6),
-            Icon(
-              Icons.chevron_right_rounded,
-              size: 20,
-              color: colors.text3,
-            ),
+            Icon(Icons.chevron_right_rounded, size: 20, color: colors.text3),
           ],
         ),
       ),

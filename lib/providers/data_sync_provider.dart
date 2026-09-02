@@ -82,10 +82,7 @@ class DataSyncNotifier extends StateNotifier<DataSyncState> {
     state = state.copyWith(isSyncing: true, errorMessage: null);
     try {
       await _service.triggerSync();
-      state = state.copyWith(
-        isSyncing: false,
-        lastSyncedAt: DateTime.now(),
-      );
+      state = state.copyWith(isSyncing: false, lastSyncedAt: DateTime.now());
     } catch (e) {
       state = state.copyWith(isSyncing: false, errorMessage: e.toString());
     }
@@ -108,7 +105,8 @@ class DataSyncNotifier extends StateNotifier<DataSyncState> {
   }
 }
 
-final dataSyncProvider =
-    StateNotifierProvider<DataSyncNotifier, DataSyncState>((ref) {
-  return DataSyncNotifier(ref.watch(dataSyncServiceProvider));
-});
+final dataSyncProvider = StateNotifierProvider<DataSyncNotifier, DataSyncState>(
+  (ref) {
+    return DataSyncNotifier(ref.watch(dataSyncServiceProvider));
+  },
+);

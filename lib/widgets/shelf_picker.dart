@@ -25,7 +25,9 @@ class _ShelfPicker extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: colors.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(AppRadii.xl)),
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(AppRadii.xl),
+        ),
       ),
       child: SafeArea(
         top: false,
@@ -78,7 +80,11 @@ class _ShelfPicker extends StatelessWidget {
 }
 
 class _ShelfOption extends StatelessWidget {
-  const _ShelfOption({required this.icon, required this.label, required this.onTap});
+  const _ShelfOption({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
 
   final IconData icon;
   final String label;
@@ -114,8 +120,9 @@ class _ShelfOption extends StatelessWidget {
               const SizedBox(width: AppSpacing.md),
               Text(
                 label,
-                style: AppTypography.body(colors.text)
-                    .copyWith(fontWeight: FontWeight.w600),
+                style: AppTypography.body(
+                  colors.text,
+                ).copyWith(fontWeight: FontWeight.w600),
               ),
             ],
           ),

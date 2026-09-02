@@ -66,7 +66,10 @@ class DataSyncScreen extends ConsumerWidget {
                       onSyncNow: () async {
                         await notifier.triggerSync();
                         if (context.mounted) {
-                          showAppSnack(context, 'Sync completed. Library is up to date.');
+                          showAppSnack(
+                            context,
+                            'Sync completed. Library is up to date.',
+                          );
                         }
                       },
                     ),
@@ -121,7 +124,10 @@ class DataSyncScreen extends ConsumerWidget {
                                     Text(
                                       'Download as Formatted PDF or Spreadsheet (CSV)',
                                       style: AppTypography.sans(
-                                        TextStyle(fontSize: 12.5, color: colors.text3),
+                                        TextStyle(
+                                          fontSize: 12.5,
+                                          color: colors.text3,
+                                        ),
                                       ),
                                     ),
                                   ],
@@ -146,9 +152,7 @@ class DataSyncScreen extends ConsumerWidget {
                     _CardContainer(
                       children: [
                         // Current Device Row (Always first)
-                        _CurrentDeviceRow(
-                          deviceName: state.currentDeviceName,
-                        ),
+                        _CurrentDeviceRow(deviceName: state.currentDeviceName),
 
                         // Other Synced Devices
                         for (var i = 0; i < state.devices.length; i++) ...[
@@ -159,7 +163,9 @@ class DataSyncScreen extends ConsumerWidget {
                           ),
                           _DeviceRow(
                             device: state.devices[i],
-                            onRemove: () => notifier.removeDevice(state.devices[i]['id'].toString()),
+                            onRemove: () => notifier.removeDevice(
+                              state.devices[i]['id'].toString(),
+                            ),
                           ),
                         ],
                       ],
@@ -182,7 +188,8 @@ class DataSyncScreen extends ConsumerWidget {
                               children: [
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         'Local Cache Size',
@@ -198,7 +205,10 @@ class DataSyncScreen extends ConsumerWidget {
                                       Text(
                                         'Downloaded book copies, audio & covers',
                                         style: AppTypography.sans(
-                                          TextStyle(fontSize: 12.5, color: colors.text3),
+                                          TextStyle(
+                                            fontSize: 12.5,
+                                            color: colors.text3,
+                                          ),
                                         ),
                                       ),
                                     ],
@@ -221,21 +231,34 @@ class DataSyncScreen extends ConsumerWidget {
                             SizedBox(
                               width: double.infinity,
                               child: OutlinedButton.icon(
-                                icon: Icon(Icons.cleaning_services_outlined, size: 16, color: colors.text2),
+                                icon: Icon(
+                                  Icons.cleaning_services_outlined,
+                                  size: 16,
+                                  color: colors.text2,
+                                ),
                                 label: Text(
                                   'Clear Offline Cache',
                                   style: AppTypography.label(colors.text2),
                                 ),
                                 style: OutlinedButton.styleFrom(
                                   foregroundColor: colors.text,
-                                  side: BorderSide(color: colors.border.withValues(alpha: 0.2)),
-                                  shape: const RoundedRectangleBorder(borderRadius: AppRadii.brFull),
-                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  side: BorderSide(
+                                    color: colors.border.withValues(alpha: 0.2),
+                                  ),
+                                  shape: const RoundedRectangleBorder(
+                                    borderRadius: AppRadii.brFull,
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 12,
+                                  ),
                                 ),
                                 onPressed: () async {
                                   await notifier.clearCache();
                                   if (context.mounted) {
-                                    showAppSnack(context, 'Offline cache cleared safely.');
+                                    showAppSnack(
+                                      context,
+                                      'Offline cache cleared safely.',
+                                    );
                                   }
                                 },
                               ),
@@ -339,7 +362,8 @@ class _SyncStatusCard extends StatelessWidget {
                   color: isSyncing ? colors.warning : colors.success,
                   boxShadow: [
                     BoxShadow(
-                      color: (isSyncing ? colors.warning : colors.success).withValues(alpha: 0.4),
+                      color: (isSyncing ? colors.warning : colors.success)
+                          .withValues(alpha: 0.4),
                       blurRadius: 4,
                       spreadRadius: 1,
                     ),
@@ -348,7 +372,9 @@ class _SyncStatusCard extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Text(
-                isSyncing ? 'Syncing with Marginalia Cloud...' : 'Library Up to Date',
+                isSyncing
+                    ? 'Syncing with Marginalia Cloud...'
+                    : 'Library Up to Date',
                 style: AppTypography.serif(
                   TextStyle(
                     fontSize: 17,
@@ -381,12 +407,16 @@ class _SyncStatusCard extends StatelessWidget {
                   : const Icon(Icons.sync_rounded, size: 18),
               label: Text(
                 isSyncing ? 'Syncing...' : 'Sync Now',
-                style: AppTypography.label(colors.bg).copyWith(fontWeight: FontWeight.w600),
+                style: AppTypography.label(
+                  colors.bg,
+                ).copyWith(fontWeight: FontWeight.w600),
               ),
               style: FilledButton.styleFrom(
                 backgroundColor: colors.text,
                 foregroundColor: colors.bg,
-                shape: const RoundedRectangleBorder(borderRadius: AppRadii.brFull),
+                shape: const RoundedRectangleBorder(
+                  borderRadius: AppRadii.brFull,
+                ),
                 padding: const EdgeInsets.symmetric(vertical: 14),
               ),
             ),
@@ -418,7 +448,11 @@ class _CurrentDeviceRow extends StatelessWidget {
               color: colors.gilt.withValues(alpha: 0.1),
             ),
             child: Center(
-              child: Icon(Icons.phone_android_rounded, color: colors.gilt, size: 20),
+              child: Icon(
+                Icons.phone_android_rounded,
+                color: colors.gilt,
+                size: 20,
+              ),
             ),
           ),
           const SizedBox(width: 14),
@@ -443,7 +477,10 @@ class _CurrentDeviceRow extends StatelessWidget {
                     ),
                     const SizedBox(width: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 7,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: colors.gilt.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(10),
@@ -498,7 +535,9 @@ class _DeviceRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     final platform = (device['platform'] as String? ?? 'device').toLowerCase();
-    final name = device['device_name'] as String? ?? (platform == 'ios' ? 'Apple Device' : 'Android Device');
+    final name =
+        device['device_name'] as String? ??
+        (platform == 'ios' ? 'Apple Device' : 'Android Device');
 
     IconData icon = Icons.phone_android_rounded;
     if (platform == 'ios') icon = Icons.phone_iphone_rounded;
@@ -532,7 +571,11 @@ class _DeviceRow extends StatelessWidget {
             ),
           ),
           IconButton(
-            icon: Icon(Icons.delete_outline_rounded, color: colors.text3, size: 20),
+            icon: Icon(
+              Icons.delete_outline_rounded,
+              color: colors.text3,
+              size: 20,
+            ),
             onPressed: onRemove,
             tooltip: 'Unlink device',
           ),
@@ -550,7 +593,10 @@ class _SectionHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     return Padding(
-      padding: const EdgeInsets.only(left: AppSpacing.sm, bottom: AppSpacing.xs),
+      padding: const EdgeInsets.only(
+        left: AppSpacing.sm,
+        bottom: AppSpacing.xs,
+      ),
       child: Text(
         title,
         style: AppTypography.sans(
@@ -584,7 +630,9 @@ class _CardContainer extends StatelessWidget {
           width: 1,
         ),
       ),
-      child: child ?? Column(mainAxisSize: MainAxisSize.min, children: children ?? []),
+      child:
+          child ??
+          Column(mainAxisSize: MainAxisSize.min, children: children ?? []),
     );
   }
 }

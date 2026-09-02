@@ -53,7 +53,8 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
         await ProPurchases.configure(auth.user.id);
       }
       final package = await ProPurchases.proPackage();
-      final hasTrial = package != null &&
+      final hasTrial =
+          package != null &&
           await ProPurchases.hasEligibleSevenDayTrial(package);
       if (mounted) {
         setState(() {
@@ -103,11 +104,7 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
       await ProPurchases.restore();
       if (!mounted) return;
       ref.invalidate(subscriptionProvider);
-      showAppSnack(
-        context,
-        'Purchases restored.',
-        type: SnackType.success,
-      );
+      showAppSnack(context, 'Purchases restored.', type: SnackType.success);
     } catch (_) {
       if (mounted) {
         showAppSnack(
@@ -157,9 +154,8 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
           children: [
             _SubscriptionTopBar(
               isOnboarding: widget.isOnboarding,
-              onBack: () => widget.isOnboarding
-                  ? context.go(Routes.home)
-                  : context.pop(),
+              onBack: () =>
+                  widget.isOnboarding ? context.go(Routes.home) : context.pop(),
             ),
             Expanded(
               child: SingleChildScrollView(
@@ -174,16 +170,8 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
                   children: [
                     _PlanCard(
                       planLabel: _planLabel(subscription, inTrial),
-                      renewalLabel: _renewalLabel(
-                        subscription,
-                        isPro,
-                        inTrial,
-                      ),
-                      renewalValue: _renewalValue(
-                        subscription,
-                        isPro,
-                        inTrial,
-                      ),
+                      renewalLabel: _renewalLabel(subscription, isPro, inTrial),
+                      renewalValue: _renewalValue(subscription, isPro, inTrial),
                       price: _priceText,
                     ),
                     const SizedBox(height: AppSpacing.xxl),
@@ -208,8 +196,8 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
                             title: _buying
                                 ? 'Opening the store…'
                                 : _hasSevenDayTrial
-                                    ? 'Start seven-day free trial'
-                                    : 'Start Pro',
+                                ? 'Start seven-day free trial'
+                                : 'Start Pro',
                             subtitle: _purchaseSubtitle,
                             onTap: _canPurchase ? _buy : null,
                           ),
@@ -235,18 +223,17 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
                     Text(
                       isPro
                           ? inTrial
-                              ? 'Your trial becomes a paid subscription unless '
-                                  'cancelled before it ends.'
-                              : 'Your subscription auto-renews until cancelled.\n'
-                                  'We’ll remind you 7 days before renewal.'
+                                ? 'Your trial becomes a paid subscription unless '
+                                      'cancelled before it ends.'
+                                : 'Your subscription auto-renews until cancelled.\n'
+                                      'We’ll remind you 7 days before renewal.'
                           : 'Your subscription renews automatically.\n'
-                              'Cancel anytime in $_storeName.',
+                                'Cancel anytime in $_storeName.',
                       textAlign: TextAlign.center,
                       style: AppTypography.serif(
-                        AppTypography.caption(colors.text3).copyWith(
-                          fontStyle: FontStyle.italic,
-                          height: 1.6,
-                        ),
+                        AppTypography.caption(
+                          colors.text3,
+                        ).copyWith(fontStyle: FontStyle.italic, height: 1.6),
                       ),
                     ),
                   ],
@@ -263,17 +250,17 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
       !_loading && !_buying && ProPurchases.available && _package != null;
 
   String get _storeName => switch (defaultTargetPlatform) {
-        TargetPlatform.iOS => 'App Store',
-        TargetPlatform.macOS => 'App Store',
-        TargetPlatform.android => 'Google Play',
-        _ => 'Store',
-      };
+    TargetPlatform.iOS => 'App Store',
+    TargetPlatform.macOS => 'App Store',
+    TargetPlatform.android => 'Google Play',
+    _ => 'Store',
+  };
 
   String get _billingPeriod => switch (_package?.packageType) {
-        PackageType.annual => 'year',
-        PackageType.monthly => 'month',
-        _ => 'period',
-      };
+    PackageType.annual => 'year',
+    PackageType.monthly => 'month',
+    _ => 'period',
+  };
 
   String get _priceText {
     final package = _package;
@@ -313,21 +300,13 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
     return subscription?.isPro ?? false ? 'Active plan' : 'Choose your plan';
   }
 
-  String _renewalLabel(
-    Subscription? subscription,
-    bool isPro,
-    bool inTrial,
-  ) {
+  String _renewalLabel(Subscription? subscription, bool isPro, bool inTrial) {
     if (!isPro) return 'CURRENT PLAN';
     if (inTrial) return 'TRIAL ENDS';
     return subscription?.cancelAt == null ? 'NEXT RENEWAL' : 'ACCESS UNTIL';
   }
 
-  String _renewalValue(
-    Subscription? subscription,
-    bool isPro,
-    bool inTrial,
-  ) {
+  String _renewalValue(Subscription? subscription, bool isPro, bool inTrial) {
     if (!isPro) return 'Free';
     final rawDate = inTrial
         ? subscription?.trialEnd
@@ -340,10 +319,7 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
 }
 
 class _SubscriptionTopBar extends StatelessWidget {
-  const _SubscriptionTopBar({
-    required this.onBack,
-    this.isOnboarding = false,
-  });
+  const _SubscriptionTopBar({required this.onBack, this.isOnboarding = false});
 
   final VoidCallback onBack;
   final bool isOnboarding;
@@ -363,8 +339,10 @@ class _SubscriptionTopBar extends StatelessWidget {
               child: isOnboarding
                   ? TextButton(
                       onPressed: onBack,
-                      child: Text('Not now',
-                          style: AppTypography.body(colors.text2)),
+                      child: Text(
+                        'Not now',
+                        style: AppTypography.body(colors.text2),
+                      ),
                     )
                   : IconButton(
                       onPressed: onBack,
@@ -376,8 +354,10 @@ class _SubscriptionTopBar extends StatelessWidget {
                     ),
             ),
           ),
-          Text(isOnboarding ? 'Choose Plan' : 'Subscription',
-              style: AppTypography.title3(colors.text)),
+          Text(
+            isOnboarding ? 'Choose Plan' : 'Subscription',
+            style: AppTypography.title3(colors.text),
+          ),
         ],
       ),
     );
@@ -426,10 +406,7 @@ class _PlanCard extends StatelessWidget {
               color: colors.accent,
               borderRadius: AppRadii.brFull,
             ),
-            child: Text(
-              'PRO',
-              style: AppTypography.overline(colors.bg),
-            ),
+            child: Text('PRO', style: AppTypography.overline(colors.bg)),
           ),
           const SizedBox(height: AppSpacing.md),
           Text('Marginalia Pro', style: AppTypography.title2(colors.text)),
@@ -437,9 +414,9 @@ class _PlanCard extends StatelessWidget {
           Text(
             planLabel,
             style: AppTypography.serif(
-              AppTypography.label(colors.text2).copyWith(
-                fontStyle: FontStyle.italic,
-              ),
+              AppTypography.label(
+                colors.text2,
+              ).copyWith(fontStyle: FontStyle.italic),
             ),
           ),
           const SizedBox(height: AppSpacing.lg),
@@ -449,18 +426,11 @@ class _PlanCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                child: _PlanDatum(
-                  label: renewalLabel,
-                  value: renewalValue,
-                ),
+                child: _PlanDatum(label: renewalLabel, value: renewalValue),
               ),
               const SizedBox(width: AppSpacing.md),
               Expanded(
-                child: _PlanDatum(
-                  label: 'PRICE',
-                  value: price,
-                  alignEnd: true,
-                ),
+                child: _PlanDatum(label: 'PRICE', value: price, alignEnd: true),
               ),
             ],
           ),
@@ -485,8 +455,9 @@ class _PlanDatum extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     return Column(
-      crossAxisAlignment:
-          alignEnd ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+      crossAxisAlignment: alignEnd
+          ? CrossAxisAlignment.end
+          : CrossAxisAlignment.start,
       children: [
         Text(label, style: AppTypography.overline(colors.text3)),
         const SizedBox(height: AppSpacing.xs),
@@ -495,9 +466,9 @@ class _PlanDatum extends StatelessWidget {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           textAlign: alignEnd ? TextAlign.end : TextAlign.start,
-          style: AppTypography.label(colors.text).copyWith(
-            fontWeight: FontWeight.w500,
-          ),
+          style: AppTypography.label(
+            colors.text,
+          ).copyWith(fontWeight: FontWeight.w500),
         ),
       ],
     );
@@ -555,8 +526,8 @@ class _SubscriptionAction extends StatelessWidget {
     final titleColor = destructive
         ? colors.danger
         : enabled
-            ? colors.text
-            : colors.text3;
+        ? colors.text
+        : colors.text3;
 
     return Material(
       color: Colors.transparent,
@@ -571,18 +542,16 @@ class _SubscriptionAction extends StatelessWidget {
             children: [
               Expanded(
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(
-                    minHeight: AppSpacing.xxxl,
-                  ),
+                  constraints: const BoxConstraints(minHeight: AppSpacing.xxxl),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         title,
-                        style: AppTypography.label(titleColor).copyWith(
-                          fontWeight: FontWeight.w500,
-                        ),
+                        style: AppTypography.label(
+                          titleColor,
+                        ).copyWith(fontWeight: FontWeight.w500),
                       ),
                       if (subtitle != null) ...[
                         const SizedBox(height: AppSpacing.xs),
@@ -591,9 +560,9 @@ class _SubscriptionAction extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: AppTypography.serif(
-                            AppTypography.caption(colors.text3).copyWith(
-                              fontStyle: FontStyle.italic,
-                            ),
+                            AppTypography.caption(
+                              colors.text3,
+                            ).copyWith(fontStyle: FontStyle.italic),
                           ),
                         ),
                       ],

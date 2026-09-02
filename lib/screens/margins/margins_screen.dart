@@ -79,11 +79,13 @@ class _MarginsScreenState extends ConsumerState<MarginsScreen> {
     final highlights = highlightsAsync.valueOrNull;
     final notes = notesAsync.valueOrNull;
 
-    final isRetrying = highlightsAsync.isLoading ||
+    final isRetrying =
+        highlightsAsync.isLoading ||
         highlightsAsync.isRefreshing ||
         notesAsync.isLoading ||
         notesAsync.isRefreshing;
-    final failed = (highlightsAsync.hasError || notesAsync.hasError) && !isRetrying;
+    final failed =
+        (highlightsAsync.hasError || notesAsync.hasError) && !isRetrying;
     final loading = isRetrying || (highlights == null || notes == null);
 
     // Totals for the header come from the unfiltered feed.

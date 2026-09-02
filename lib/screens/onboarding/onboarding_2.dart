@@ -27,7 +27,10 @@ class Onboarding2 extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Leave your mark.', style: AppTypography.display(colors.text)),
+              Text(
+                'Leave your mark.',
+                style: AppTypography.display(colors.text),
+              ),
               const SizedBox(height: AppSpacing.md),
               Text(
                 'Seven colors. Infinite meaning.',

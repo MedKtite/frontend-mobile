@@ -39,10 +39,12 @@ class _MarginaliaTimePickerSheet extends StatefulWidget {
   });
 
   @override
-  State<_MarginaliaTimePickerSheet> createState() => _MarginaliaTimePickerSheetState();
+  State<_MarginaliaTimePickerSheet> createState() =>
+      _MarginaliaTimePickerSheetState();
 }
 
-class _MarginaliaTimePickerSheetState extends State<_MarginaliaTimePickerSheet> {
+class _MarginaliaTimePickerSheetState
+    extends State<_MarginaliaTimePickerSheet> {
   late int _hour; // 1 - 12
   late int _minute; // 0 - 59
   late bool _isPm;
@@ -84,7 +86,10 @@ class _MarginaliaTimePickerSheetState extends State<_MarginaliaTimePickerSheet> 
         color: colors.surface,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
         border: Border(
-          top: BorderSide(color: colors.border.withValues(alpha: 0.1), width: 1),
+          top: BorderSide(
+            color: colors.border.withValues(alpha: 0.1),
+            width: 1,
+          ),
         ),
       ),
       child: SafeArea(
@@ -128,10 +133,7 @@ class _MarginaliaTimePickerSheetState extends State<_MarginaliaTimePickerSheet> 
                         Text(
                           widget.subtitle!,
                           style: AppTypography.sans(
-                            TextStyle(
-                              fontSize: 13,
-                              color: colors.text3,
-                            ),
+                            TextStyle(fontSize: 13, color: colors.text3),
                           ),
                         ),
                       ],
@@ -139,7 +141,11 @@ class _MarginaliaTimePickerSheetState extends State<_MarginaliaTimePickerSheet> 
                   ),
                 ),
                 IconButton(
-                  icon: Icon(Icons.close_rounded, color: colors.text3, size: 22),
+                  icon: Icon(
+                    Icons.close_rounded,
+                    color: colors.text3,
+                    size: 22,
+                  ),
                   onPressed: () => Navigator.of(context).pop(),
                 ),
               ],
@@ -270,7 +276,9 @@ class _MarginaliaTimePickerSheetState extends State<_MarginaliaTimePickerSheet> 
                       '$hourVal',
                       style: GoogleFonts.sourceSerif4(
                         fontSize: 16,
-                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                        fontWeight: isSelected
+                            ? FontWeight.w600
+                            : FontWeight.w500,
                         color: isSelected ? Colors.white : colors.text,
                       ),
                     ),
@@ -321,7 +329,9 @@ class _MarginaliaTimePickerSheetState extends State<_MarginaliaTimePickerSheet> 
                           style: AppTypography.sans(
                             TextStyle(
                               fontSize: 14,
-                              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                              fontWeight: isSelected
+                                  ? FontWeight.w600
+                                  : FontWeight.w500,
                               color: isSelected ? Colors.white : colors.text,
                             ),
                           ),
@@ -382,11 +392,18 @@ class _MarginaliaTimePickerSheetState extends State<_MarginaliaTimePickerSheet> 
                     onPressed: () => Navigator.of(context).pop(),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: colors.text,
-                      side: BorderSide(color: colors.border.withValues(alpha: 0.2)),
-                      shape: const RoundedRectangleBorder(borderRadius: AppRadii.brFull),
+                      side: BorderSide(
+                        color: colors.border.withValues(alpha: 0.2),
+                      ),
+                      shape: const RoundedRectangleBorder(
+                        borderRadius: AppRadii.brFull,
+                      ),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
-                    child: Text('Cancel', style: AppTypography.label(colors.text)),
+                    child: Text(
+                      'Cancel',
+                      style: AppTypography.label(colors.text),
+                    ),
                   ),
                 ),
                 const SizedBox(width: AppSpacing.md),
@@ -396,12 +413,16 @@ class _MarginaliaTimePickerSheetState extends State<_MarginaliaTimePickerSheet> 
                     style: FilledButton.styleFrom(
                       backgroundColor: colors.text,
                       foregroundColor: colors.bg,
-                      shape: const RoundedRectangleBorder(borderRadius: AppRadii.brFull),
+                      shape: const RoundedRectangleBorder(
+                        borderRadius: AppRadii.brFull,
+                      ),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
                     child: Text(
                       'Confirm Time',
-                      style: AppTypography.label(colors.bg).copyWith(fontWeight: FontWeight.w600),
+                      style: AppTypography.label(
+                        colors.bg,
+                      ).copyWith(fontWeight: FontWeight.w600),
                     ),
                   ),
                 ),
@@ -459,10 +480,7 @@ class _PresetChip extends StatelessWidget {
   final String label;
   final VoidCallback onTap;
 
-  const _PresetChip({
-    required this.label,
-    required this.onTap,
-  });
+  const _PresetChip({required this.label, required this.onTap});
 
   @override
   Widget build(BuildContext context) {

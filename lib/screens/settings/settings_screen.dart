@@ -15,15 +15,16 @@ import '../../providers/data_sync_provider.dart';
 import '../../providers/library_provider.dart';
 import '../../providers/notification_preferences_provider.dart';
 import '../../providers/theme_provider.dart';
+import '../../providers/language_provider.dart';
 import '../../providers/reading_settings_provider.dart';
 import '../../widgets/auth_scaffold.dart';
+import '../../widgets/setting/language_picker_sheet.dart';
 import '../../widgets/setting/theme_picker_sheet.dart';
 import '../../widgets/setting/typography_sheet.dart';
 import '../../widgets/user_avatar.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
-
 
   Future<void> _signOut(BuildContext context, WidgetRef ref) async {
     await ref.read(authProvider.notifier).logout();
@@ -42,7 +43,6 @@ class SettingsScreen extends ConsumerWidget {
 
     final name = user?.displayName ?? 'Your account';
     final email = user?.email ?? '';
-
 
     return Scaffold(
       body: SafeArea(
@@ -80,6 +80,18 @@ class SettingsScreen extends ConsumerWidget {
                           onTap: () => _pickTheme(context, ref, themeMode),
                         ),
                         _SettingsRow(
+                          label: 'Language',
+                          value: _languageLabel(
+                            ref.watch(languageProvider).languageCode,
+                          ),
+                          onTap: () => showLanguagePickerSheet(
+                            context,
+                            selectedLanguageCode: ref
+                                .read(languageProvider)
+                                .languageCode,
+                          ),
+                        ),
+                        _SettingsRow(
                           label: 'Typography',
                           value: _typographyLabel(readingSettings),
                           onTap: () => showTypographySheet(context),
@@ -93,19 +105,29 @@ class SettingsScreen extends ConsumerWidget {
                       rows: [
                         _SettingsRow(
                           label: 'Notifications & Alerts',
-                          value: (ref.watch(notificationPreferencesProvider).valueOrNull?.enabled ?? true) ? 'On' : 'Off',
-                          onTap: () => context.push(Routes.notificationSettings),
+                          value:
+                              (ref
+                                      .watch(notificationPreferencesProvider)
+                                      .valueOrNull
+                                      ?.enabled ??
+                                  true)
+                              ? 'On'
+                              : 'Off',
+                          onTap: () =>
+                              context.push(Routes.notificationSettings),
                         ),
                       ],
                     ),
-                   
+
                     const SizedBox(height: AppSpacing.xl),
                     _Section(
                       label: 'DATA & STORAGE',
                       rows: [
                         _SettingsRow(
                           label: 'Data, Sync & Storage',
-                          value: ref.watch(dataSyncProvider).isSyncing ? 'Syncing...' : 'Up to date',
+                          value: ref.watch(dataSyncProvider).isSyncing
+                              ? 'Syncing...'
+                              : 'Up to date',
                           onTap: () => context.push(Routes.dataSync),
                         ),
                       ],
@@ -147,7 +169,6 @@ class SettingsScreen extends ConsumerWidget {
                           destructive: true,
                           onTap: () => _signOut(context, ref),
                         ),
-                       
                       ],
                     ),
                   ],
@@ -189,6 +210,20 @@ class SettingsScreen extends ConsumerWidget {
   ) async {
     final choice = await showThemePickerSheet(context, selected: selected);
     if (choice != null) await ref.read(themeProvider.notifier).setTheme(choice);
+  }
+}
+
+String _languageLabel(String code) {
+  switch (code) {
+    case 'fr':
+      return 'Français';
+    case 'es':
+      return 'Español';
+    case 'ar':
+      return 'العربية';
+    case 'en':
+    default:
+      return 'English';
   }
 }
 

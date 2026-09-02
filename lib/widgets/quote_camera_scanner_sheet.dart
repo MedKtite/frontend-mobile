@@ -29,7 +29,8 @@ Future<void> showQuoteCameraScannerSheet({
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadii.xl)),
     ),
-    builder: (_) => QuoteCameraScannerSheet(book: book, initialSource: initialSource),
+    builder: (_) =>
+        QuoteCameraScannerSheet(book: book, initialSource: initialSource),
   );
 }
 
@@ -122,9 +123,9 @@ class _QuoteCameraScannerSheetState
     } catch (e) {
       if (!mounted) return;
       setState(() => _isProcessingImage = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('OCR failed: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('OCR failed: $e')));
     }
   }
 
@@ -140,12 +141,14 @@ class _QuoteCameraScannerSheetState
     setState(() => _isSaving = true);
     final pageRef = _pageController.text.trim().isNotEmpty
         ? (_pageController.text.trim().startsWith('p.')
-            ? _pageController.text.trim()
-            : 'p. ${_pageController.text.trim()}')
+              ? _pageController.text.trim()
+              : 'p. ${_pageController.text.trim()}')
         : null;
 
     try {
-      final highlight = await ref.read(highlightServiceProvider).create(
+      final highlight = await ref
+          .read(highlightServiceProvider)
+          .create(
             HighlightCreateRequest(
               bookId: widget.book.id,
               colorTag: _selectedTag,
@@ -156,7 +159,9 @@ class _QuoteCameraScannerSheetState
 
       final noteBody = _noteController.text.trim();
       if (noteBody.isNotEmpty) {
-        await ref.read(noteServiceProvider).create(
+        await ref
+            .read(noteServiceProvider)
+            .create(
               NoteCreateRequest(
                 bookId: widget.book.id,
                 bodyMd: noteBody,
@@ -169,15 +174,15 @@ class _QuoteCameraScannerSheetState
 
       if (!mounted) return;
       Navigator.of(context).pop();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Saved to marginalia')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Saved to marginalia')));
     } catch (e) {
       if (!mounted) return;
       setState(() => _isSaving = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to save highlight: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to save highlight: $e')));
     }
   }
 
@@ -273,9 +278,9 @@ class _QuoteCameraScannerSheetState
                 TextFormField(
                   controller: _textController,
                   maxLines: 5,
-                  style: AppTypography.bodySerif(colors.text).copyWith(
-                    fontStyle: FontStyle.italic,
-                  ),
+                  style: AppTypography.bodySerif(
+                    colors.text,
+                  ).copyWith(fontStyle: FontStyle.italic),
                   decoration: InputDecoration(
                     labelText: 'Extracted Passage',
                     alignLabelWithHint: true,
@@ -330,8 +335,9 @@ class _QuoteCameraScannerSheetState
                                   color: isSelected ? tagColor : colors.border,
                                   width: isSelected ? 2 : 1,
                                 ),
-                                borderRadius:
-                                    BorderRadius.circular(AppRadii.full),
+                                borderRadius: BorderRadius.circular(
+                                  AppRadii.full,
+                                ),
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,

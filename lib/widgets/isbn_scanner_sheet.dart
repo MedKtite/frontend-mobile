@@ -244,7 +244,10 @@ class _ScannerOverlay extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        border: Border.all(color: Colors.black.withValues(alpha: 0.3), width: 1.5),
+        border: Border.all(
+          color: Colors.black.withValues(alpha: 0.3),
+          width: 1.5,
+        ),
         borderRadius: BorderRadius.circular(AppRadii.lg),
       ),
       child: Stack(

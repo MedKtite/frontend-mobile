@@ -17,7 +17,8 @@ class Book with _$Book {
     int? publishedYear,
     String? isbn13,
     String? googleId,
-    int? gutenbergId, // Google Books volume id — enables free public-domain reading
+    int?
+    gutenbergId, // Google Books volume id — enables free public-domain reading
     int? pageCount,
     int? durationSec,
     String? language,
@@ -39,4 +40,19 @@ class Book with _$Book {
   }) = _Book;
 
   factory Book.fromJson(Map<String, dynamic> json) => _$BookFromJson(json);
+}
+
+extension BookUploadX on Book {
+  /// Whether this book was uploaded by the user (EPUB, PDF, audio)
+  /// rather than pulled from the Gutenberg catalog or logged as physical.
+  bool get isUploaded {
+    if (gutenbergId != null) return false;
+    final f = format?.toLowerCase();
+    if (f == 'physical') return false;
+    return f == 'epub' ||
+        f == 'pdf' ||
+        f == 'm4b' ||
+        f == 'mp3' ||
+        readingFileKey != null;
+  }
 }

@@ -87,7 +87,8 @@ class _HelpSupportScreenState extends ConsumerState<HelpSupportScreen> {
       path: 'support@marginalia.app',
       queryParameters: {
         'subject': 'Marginalia Support Request',
-        'body': '\n\n---\nApp Version: $_appVersion\nDevice: ${syncState.currentDeviceName}\nUser: ${user?.email ?? 'Anonymous'}\n',
+        'body':
+            '\n\n---\nApp Version: $_appVersion\nDevice: ${syncState.currentDeviceName}\nUser: ${user?.email ?? 'Anonymous'}\n',
       },
     );
 
@@ -96,7 +97,10 @@ class _HelpSupportScreenState extends ConsumerState<HelpSupportScreen> {
         await launchUrl(uri);
       } else {
         if (mounted) {
-          showAppSnack(context, 'Please email us directly at support@marginalia.app');
+          showAppSnack(
+            context,
+            'Please email us directly at support@marginalia.app',
+          );
         }
       }
     } catch (_) {
@@ -115,11 +119,19 @@ class _HelpSupportScreenState extends ConsumerState<HelpSupportScreen> {
     final filteredFaqs = _searchQuery.isEmpty
         ? _faqs
         : _faqs
-            .where((f) =>
-                f.question.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-                f.answer.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-                f.category.toLowerCase().contains(_searchQuery.toLowerCase()))
-            .toList();
+              .where(
+                (f) =>
+                    f.question.toLowerCase().contains(
+                      _searchQuery.toLowerCase(),
+                    ) ||
+                    f.answer.toLowerCase().contains(
+                      _searchQuery.toLowerCase(),
+                    ) ||
+                    f.category.toLowerCase().contains(
+                      _searchQuery.toLowerCase(),
+                    ),
+              )
+              .toList();
 
     return Scaffold(
       body: SafeArea(
@@ -182,13 +194,19 @@ class _HelpSupportScreenState extends ConsumerState<HelpSupportScreen> {
                       onChanged: (val) => setState(() => _searchQuery = val),
                       style: AppTypography.body(colors.text),
                       decoration: InputDecoration(
-                        icon: Icon(Icons.search_rounded, color: colors.text3, size: 20),
+                        icon: Icon(
+                          Icons.search_rounded,
+                          color: colors.text3,
+                          size: 20,
+                        ),
                         hintText: 'Search help guides & questions...',
                         hintStyle: AppTypography.body(colors.text3),
                         border: InputBorder.none,
                         enabledBorder: InputBorder.none,
                         focusedBorder: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                        contentPadding: const EdgeInsets.symmetric(
+                          vertical: 12,
+                        ),
                       ),
                     ),
                   ),
@@ -221,7 +239,9 @@ class _HelpSupportScreenState extends ConsumerState<HelpSupportScreen> {
                                 if (i > 0)
                                   Divider(
                                     height: 1,
-                                    color: colors.border.withValues(alpha: 0.08),
+                                    color: colors.border.withValues(
+                                      alpha: 0.08,
+                                    ),
                                     indent: 16,
                                     endIndent: 16,
                                   ),
@@ -234,7 +254,6 @@ class _HelpSupportScreenState extends ConsumerState<HelpSupportScreen> {
                   const SizedBox(height: AppSpacing.xl),
 
                   // 3. System & App Diagnostics Card
-                  
                 ],
               ),
             ),
@@ -293,7 +312,9 @@ class _FaqTileState extends State<_FaqTile> {
           ),
         ),
         trailing: Icon(
-          _isExpanded ? Icons.remove_circle_outline_rounded : Icons.add_circle_outline_rounded,
+          _isExpanded
+              ? Icons.remove_circle_outline_rounded
+              : Icons.add_circle_outline_rounded,
           color: _isExpanded ? colors.gilt : colors.text3,
           size: 20,
         ),
@@ -303,11 +324,7 @@ class _FaqTileState extends State<_FaqTile> {
             child: Text(
               widget.item.answer,
               style: AppTypography.sans(
-                TextStyle(
-                  fontSize: 13.5,
-                  color: colors.text2,
-                  height: 1.45,
-                ),
+                TextStyle(fontSize: 13.5, color: colors.text2, height: 1.45),
               ),
             ),
           ),
@@ -356,9 +373,7 @@ class _ActionCard extends StatelessWidget {
                 shape: BoxShape.circle,
                 color: colors.gilt.withValues(alpha: 0.1),
               ),
-              child: Center(
-                child: Icon(icon, color: colors.gilt, size: 20),
-              ),
+              child: Center(child: Icon(icon, color: colors.gilt, size: 20)),
             ),
             const SizedBox(height: AppSpacing.md),
             Text(
@@ -386,8 +401,6 @@ class _ActionCard extends StatelessWidget {
     );
   }
 }
-
-
 
 class _TopBar extends StatelessWidget {
   final String title;
@@ -436,7 +449,10 @@ class _SectionHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     return Padding(
-      padding: const EdgeInsets.only(left: AppSpacing.sm, bottom: AppSpacing.xs),
+      padding: const EdgeInsets.only(
+        left: AppSpacing.sm,
+        bottom: AppSpacing.xs,
+      ),
       child: Text(
         title,
         style: AppTypography.sans(

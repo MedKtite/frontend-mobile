@@ -36,10 +36,7 @@ class ProfileService {
   }) async {
     await _dio.post<void>(
       '/me/password',
-      data: {
-        'current_password': currentPassword,
-        'new_password': newPassword,
-      },
+      data: {'current_password': currentPassword, 'new_password': newPassword},
     );
   }
 

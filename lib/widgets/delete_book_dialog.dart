@@ -17,7 +17,12 @@ class DeleteBookDialog extends StatelessWidget {
       backgroundColor: Colors.transparent,
       insetPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
       child: Container(
-        padding: const EdgeInsets.fromLTRB(AppSpacing.xl, AppSpacing.xl, AppSpacing.xl, AppSpacing.lg),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.xl,
+          AppSpacing.xl,
+          AppSpacing.xl,
+          AppSpacing.lg,
+        ),
         decoration: BoxDecoration(
           color: colors.surface,
           borderRadius: AppRadii.brXl,
@@ -33,7 +38,6 @@ class DeleteBookDialog extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-           
             Text('Delete book?', style: AppTypography.title2(colors.text)),
             const SizedBox(height: AppSpacing.sm),
             Text(
@@ -46,7 +50,10 @@ class DeleteBookDialog extends StatelessWidget {
               children: [
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(false),
-                  child: Text('Cancel', style: AppTypography.label(colors.text2)),
+                  child: Text(
+                    'Cancel',
+                    style: AppTypography.label(colors.text2),
+                  ),
                 ),
                 const SizedBox(width: AppSpacing.sm),
                 FilledButton(
@@ -54,8 +61,13 @@ class DeleteBookDialog extends StatelessWidget {
                   style: FilledButton.styleFrom(
                     backgroundColor: colors.accent,
                     foregroundColor: colors.bg,
-                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
-                    shape: const RoundedRectangleBorder(borderRadius: AppRadii.brFull),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.lg,
+                      vertical: AppSpacing.sm,
+                    ),
+                    shape: const RoundedRectangleBorder(
+                      borderRadius: AppRadii.brFull,
+                    ),
                   ),
                   child: Text('Delete', style: AppTypography.label(colors.bg)),
                 ),

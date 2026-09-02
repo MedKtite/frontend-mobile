@@ -30,8 +30,10 @@ class _CheckEmailScreenState extends ConsumerState<CheckEmailScreen>
     with WidgetsBindingObserver {
   static const _resendSeconds = 30;
 
-  final List<TextEditingController> _codeControllers =
-      List.generate(6, (_) => TextEditingController());
+  final List<TextEditingController> _codeControllers = List.generate(
+    6,
+    (_) => TextEditingController(),
+  );
   final List<FocusNode> _focusNodes = List.generate(6, (_) => FocusNode());
 
   Timer? _timer;
@@ -44,7 +46,9 @@ class _CheckEmailScreenState extends ConsumerState<CheckEmailScreen>
     WidgetsBinding.instance.addObserver(this);
     _startCountdown();
     // Check clipboard for 6-digit code when opening
-    WidgetsBinding.instance.addPostFrameCallback((_) => _checkClipboardForCode());
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _checkClipboardForCode(),
+    );
   }
 
   @override
@@ -77,8 +81,11 @@ class _CheckEmailScreenState extends ConsumerState<CheckEmailScreen>
         _lastCheckedClipboard = text;
         _populateCode(text);
         if (mounted) {
-          showAppSnack(context, 'Code $text pasted from clipboard',
-              type: SnackType.success);
+          showAppSnack(
+            context,
+            'Code $text pasted from clipboard',
+            type: SnackType.success,
+          );
         }
       }
     } catch (_) {
@@ -94,8 +101,7 @@ class _CheckEmailScreenState extends ConsumerState<CheckEmailScreen>
     FocusScope.of(context).unfocus();
   }
 
-  String get _currentCode =>
-      _codeControllers.map((c) => c.text.trim()).join();
+  String get _currentCode => _codeControllers.map((c) => c.text.trim()).join();
 
   void _startCountdown() {
     setState(() => _secondsLeft = _resendSeconds);
@@ -117,15 +123,20 @@ class _CheckEmailScreenState extends ConsumerState<CheckEmailScreen>
     if (!mounted) return;
     if (sent) {
       _startCountdown();
-      showAppSnack(context, 'New 6-digit code sent to your inbox',
-          type: SnackType.success);
+      showAppSnack(
+        context,
+        'New 6-digit code sent to your inbox',
+        type: SnackType.success,
+      );
     } else {
       final state = ref.read(authProvider);
       if (state is AuthUnauthenticated && state.message != null) {
         showAppSnack(
           context,
-          AuthErrorMessages.from(state.message,
-              context: AuthErrorContext.recovery),
+          AuthErrorMessages.from(
+            state.message,
+            context: AuthErrorContext.recovery,
+          ),
           type: SnackType.error,
         );
       }
@@ -135,8 +146,11 @@ class _CheckEmailScreenState extends ConsumerState<CheckEmailScreen>
   void _proceedToNewPassword() {
     final code = _currentCode;
     if (code.length != 6) {
-      showAppSnack(context, 'Please enter all 6 digits of the reset code.',
-          type: SnackType.error);
+      showAppSnack(
+        context,
+        'Please enter all 6 digits of the reset code.',
+        type: SnackType.error,
+      );
       return;
     }
     context.push(
@@ -214,9 +228,9 @@ class _CheckEmailScreenState extends ConsumerState<CheckEmailScreen>
                             textAlign: TextAlign.center,
                             keyboardType: TextInputType.number,
                             maxLength: 1,
-                            style: AppTypography.title2(colors.text).copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
+                            style: AppTypography.title2(
+                              colors.text,
+                            ).copyWith(fontWeight: FontWeight.bold),
                             decoration: InputDecoration(
                               counterText: '',
                               filled: true,
@@ -227,8 +241,10 @@ class _CheckEmailScreenState extends ConsumerState<CheckEmailScreen>
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: AppRadii.brMd,
-                                borderSide:
-                                    BorderSide(color: colors.accent, width: 2),
+                                borderSide: BorderSide(
+                                  color: colors.accent,
+                                  width: 2,
+                                ),
                               ),
                               contentPadding: EdgeInsets.zero,
                             ),
@@ -268,8 +284,8 @@ class _CheckEmailScreenState extends ConsumerState<CheckEmailScreen>
                         label: canResend
                             ? 'Resend 6-digit code'
                             : loading
-                                ? 'Sending…'
-                                : 'Resend code in ${_secondsLeft}s',
+                            ? 'Sending…'
+                            : 'Resend code in ${_secondsLeft}s',
                         muted: !canResend,
                         onTap: canResend ? _resend : null,
                       ),

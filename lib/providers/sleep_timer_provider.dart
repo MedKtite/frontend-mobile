@@ -138,5 +138,5 @@ class SleepTimerController extends StateNotifier<SleepTimerState?> {
 
 final sleepTimerProvider =
     StateNotifierProvider<SleepTimerController, SleepTimerState?>(
-  (ref) => SleepTimerController(ref),
-);
+      (ref) => SleepTimerController(ref),
+    );

@@ -7,22 +7,25 @@ import '../../app/theme/tokens/typography.dart';
 enum SnackType { success, error, warning, info }
 
 SnackBar appSnackBar(String message, SnackType type) => SnackBar(
-      elevation: 0,
-      backgroundColor: Colors.transparent,
-      behavior: SnackBarBehavior.floating,
-      padding: EdgeInsets.zero,
-      margin: const EdgeInsets.fromLTRB(
-        AppSpacing.lg,
-        0,
-        AppSpacing.lg,
-        AppSpacing.lg,
-      ),
-      duration: const Duration(seconds: 3),
-      content: _SnackContent(message: message, type: type),
-    );
+  elevation: 0,
+  backgroundColor: Colors.transparent,
+  behavior: SnackBarBehavior.floating,
+  padding: EdgeInsets.zero,
+  margin: const EdgeInsets.fromLTRB(
+    AppSpacing.lg,
+    0,
+    AppSpacing.lg,
+    AppSpacing.lg,
+  ),
+  duration: const Duration(seconds: 3),
+  content: _SnackContent(message: message, type: type),
+);
 
-void showAppSnack(BuildContext context, String message,
-    {SnackType type = SnackType.info}) {
+void showAppSnack(
+  BuildContext context,
+  String message, {
+  SnackType type = SnackType.info,
+}) {
   ScaffoldMessenger.of(context)
     ..hideCurrentSnackBar()
     ..showSnackBar(appSnackBar(message, type));
@@ -39,17 +42,25 @@ class _SnackContent extends StatelessWidget {
     final colors = context.appColors;
     final (icon, background, foreground) = switch (type) {
       SnackType.success => (
-          Icons.check_circle_outline_rounded,
-          colors.surface,
-          colors.success,
-        ),
-      SnackType.error => (Icons.error_outline_rounded, colors.danger, Colors.white),
+        Icons.check_circle_outline_rounded,
+        colors.surface,
+        colors.success,
+      ),
+      SnackType.error => (
+        Icons.error_outline_rounded,
+        colors.danger,
+        Colors.white,
+      ),
       SnackType.warning => (
-          Icons.warning_amber_rounded,
-          colors.warning,
-          colors.text,
-        ),
-      SnackType.info => (Icons.info_outline_rounded, colors.accent, Colors.white),
+        Icons.warning_amber_rounded,
+        colors.warning,
+        colors.text,
+      ),
+      SnackType.info => (
+        Icons.info_outline_rounded,
+        colors.accent,
+        Colors.white,
+      ),
     };
 
     return Container(
@@ -82,7 +93,8 @@ class _SnackContent extends StatelessWidget {
           ),
           const SizedBox(width: AppSpacing.sm),
           IconButton(
-            onPressed: () => ScaffoldMessenger.of(context).hideCurrentSnackBar(),
+            onPressed: () =>
+                ScaffoldMessenger.of(context).hideCurrentSnackBar(),
             icon: Icon(Icons.close_rounded, color: foreground),
             iconSize: 22,
             visualDensity: VisualDensity.compact,

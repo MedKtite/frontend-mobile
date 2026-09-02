@@ -48,7 +48,9 @@ class NotificationPreferencesModel {
 
     return NotificationPreferencesModel(
       enabled: json['enabled'] as bool? ?? true,
-      categories: parsedCats.isNotEmpty ? parsedCats : NotificationPreferencesModel.defaults().categories,
+      categories: parsedCats.isNotEmpty
+          ? parsedCats
+          : NotificationPreferencesModel.defaults().categories,
       ritualTimeLocal: (json['ritual_time_local'] as num?)?.toInt() ?? 19,
       passageTimeLocal: (json['passage_time_local'] as num?)?.toInt() ?? 8,
       quietStartLocal: (json['quiet_start_local'] as num?)?.toInt() ?? 22,
@@ -57,13 +59,13 @@ class NotificationPreferencesModel {
   }
 
   Map<String, dynamic> toJson() => {
-        'enabled': enabled,
-        'categories': categories,
-        'ritual_time_local': ritualTimeLocal,
-        'passage_time_local': passageTimeLocal,
-        'quiet_start_local': quietStartLocal,
-        'quiet_end_local': quietEndLocal,
-      };
+    'enabled': enabled,
+    'categories': categories,
+    'ritual_time_local': ritualTimeLocal,
+    'passage_time_local': passageTimeLocal,
+    'quiet_start_local': quietStartLocal,
+    'quiet_end_local': quietEndLocal,
+  };
 
   NotificationPreferencesModel copyWith({
     bool? enabled,

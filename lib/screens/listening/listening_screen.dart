@@ -25,7 +25,6 @@ import '../../widgets/book_cover.dart';
 import '../../widgets/tag_picker_sheet.dart';
 import '../../widgets/voice_memo_sheet.dart';
 
-
 class ListeningScreen extends ConsumerStatefulWidget {
   const ListeningScreen({super.key, required this.bookId, this.initialBook});
 
@@ -70,19 +69,25 @@ class _ListeningScreenState extends ConsumerState<ListeningScreen> {
   Future<void> _tagMoment() async {
     final sec = _ctrl.globalSec(_player.position);
     final stamp = _fmt(_dur(sec));
-    final tag =
-        await showTagPickerSheet(context, passage: 'Moment at $stamp');
+    final tag = await showTagPickerSheet(context, passage: 'Moment at $stamp');
     if (tag == null || !mounted) return;
     try {
-      await ref.read(highlightServiceProvider).create(HighlightCreateRequest(
-            bookId: widget.bookId,
-            colorTag: tag,
-            audioStartSec: sec,
-          ));
+      await ref
+          .read(highlightServiceProvider)
+          .create(
+            HighlightCreateRequest(
+              bookId: widget.bookId,
+              colorTag: tag,
+              audioStartSec: sec,
+            ),
+          );
       ref.invalidate(bookHighlightsProvider(widget.bookId));
       if (mounted) {
-        showAppSnack(context, 'Moment tagged at $stamp',
-            type: SnackType.success);
+        showAppSnack(
+          context,
+          'Moment tagged at $stamp',
+          type: SnackType.success,
+        );
       }
     } on ApiError catch (e) {
       if (mounted) showAppSnack(context, e.message, type: SnackType.error);
@@ -92,8 +97,9 @@ class _ListeningScreenState extends ConsumerState<ListeningScreen> {
   Future<void> _markFinished() async {
     try {
       await _ctrl.stop();
-      await ref.read(bookServiceProvider).update(
-          widget.bookId, const BookUpdateRequest(status: 'finished'));
+      await ref
+          .read(bookServiceProvider)
+          .update(widget.bookId, const BookUpdateRequest(status: 'finished'));
       ref.invalidate(libraryBooksProvider);
       if (mounted) {
         showAppSnack(context, 'Marked as finished', type: SnackType.success);
@@ -126,8 +132,11 @@ class _ListeningScreenState extends ConsumerState<ListeningScreen> {
                   // Minimize — playback continues behind the mini player.
                   GestureDetector(
                     onTap: () => context.pop(),
-                    child: Icon(Icons.keyboard_arrow_down_rounded,
-                        size: 28, color: colors.text2),
+                    child: Icon(
+                      Icons.keyboard_arrow_down_rounded,
+                      size: 28,
+                      color: colors.text2,
+                    ),
                   ),
                   Expanded(
                     child: Text(
@@ -137,8 +146,7 @@ class _ListeningScreenState extends ConsumerState<ListeningScreen> {
                     ),
                   ),
                   PopupMenuButton<String>(
-                    icon: Icon(Icons.more_horiz,
-                        size: 24, color: colors.text2),
+                    icon: Icon(Icons.more_horiz, size: 24, color: colors.text2),
                     color: colors.surface,
                     onSelected: (v) {
                       if (v == 'finished') _markFinished();
@@ -146,8 +154,10 @@ class _ListeningScreenState extends ConsumerState<ListeningScreen> {
                     itemBuilder: (_) => [
                       PopupMenuItem(
                         value: 'finished',
-                        child: Text('Mark as finished',
-                            style: AppTypography.label(colors.text)),
+                        child: Text(
+                          'Mark as finished',
+                          style: AppTypography.label(colors.text),
+                        ),
                       ),
                     ],
                   ),
@@ -158,8 +168,8 @@ class _ListeningScreenState extends ConsumerState<ListeningScreen> {
               child: _error != null
                   ? _message(colors, _error!)
                   : !mine
-                      ? const AppProgressLoading()
-                      : _playerBody(session, colors),
+                  ? const AppProgressLoading()
+                  : _playerBody(session, colors),
             ),
           ],
         ),
@@ -168,21 +178,24 @@ class _ListeningScreenState extends ConsumerState<ListeningScreen> {
   }
 
   Widget _message(AppColorsExtension colors, String text) => Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.pageHorizontal),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.headphones_outlined, size: 40, color: colors.text3),
-              const SizedBox(height: AppSpacing.lg),
-              Text(text,
-                  textAlign: TextAlign.center,
-                  style: AppTypography.subtitle(colors.text2)),
-            ],
+    child: Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.pageHorizontal,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.headphones_outlined, size: 40, color: colors.text3),
+          const SizedBox(height: AppSpacing.lg),
+          Text(
+            text,
+            textAlign: TextAlign.center,
+            style: AppTypography.subtitle(colors.text2),
           ),
-        ),
-      );
+        ],
+      ),
+    ),
+  );
 
   Widget _playerBody(AudioSession session, AppColorsExtension colors) {
     final book = session.book;
@@ -220,9 +233,11 @@ class _ListeningScreenState extends ConsumerState<ListeningScreen> {
             ),
           ),
           const SizedBox(height: AppSpacing.xxl),
-          Text(book.title,
-              textAlign: TextAlign.center,
-              style: AppTypography.title2(colors.text)),
+          Text(
+            book.title,
+            textAlign: TextAlign.center,
+            style: AppTypography.title2(colors.text),
+          ),
           const SizedBox(height: AppSpacing.sm),
           Text(
             [
@@ -233,11 +248,13 @@ class _ListeningScreenState extends ConsumerState<ListeningScreen> {
                 'a free LibriVox recording',
             ].join(' · '),
             textAlign: TextAlign.center,
-            style: AppTypography.serif(TextStyle(
-              color: colors.text2,
-              fontSize: 13,
-              fontStyle: FontStyle.italic,
-            )),
+            style: AppTypography.serif(
+              TextStyle(
+                color: colors.text2,
+                fontSize: 13,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
           ),
           const SizedBox(height: AppSpacing.xs),
           StreamBuilder<Duration>(
@@ -276,10 +293,14 @@ class _ListeningScreenState extends ConsumerState<ListeningScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(_fmt(_dur(sec)),
-                          style: AppTypography.caption(colors.text2)),
-                      Text('-${_fmt(_dur(max(0, totalSecs - sec)))}',
-                          style: AppTypography.caption(colors.text3)),
+                      Text(
+                        _fmt(_dur(sec)),
+                        style: AppTypography.caption(colors.text2),
+                      ),
+                      Text(
+                        '-${_fmt(_dur(max(0, totalSecs - sec)))}',
+                        style: AppTypography.caption(colors.text3),
+                      ),
                     ],
                   ),
                 ],
@@ -304,8 +325,9 @@ class _ListeningScreenState extends ConsumerState<ListeningScreen> {
                   ),
                   child: Text(
                     '${_speed % 1 == 0 ? _speed.toStringAsFixed(0) : _speed.toStringAsFixed(1)}×',
-                    style: AppTypography.label(colors.text)
-                        .copyWith(fontWeight: FontWeight.w500),
+                    style: AppTypography.label(
+                      colors.text,
+                    ).copyWith(fontWeight: FontWeight.w500),
                   ),
                 ),
               ),
@@ -357,9 +379,7 @@ class _ListeningScreenState extends ConsumerState<ListeningScreen> {
                   _player.setVolume(_muted ? 0 : 1);
                 },
                 child: Icon(
-                  _muted
-                      ? Icons.volume_off_rounded
-                      : Icons.volume_up_rounded,
+                  _muted ? Icons.volume_off_rounded : Icons.volume_up_rounded,
                   size: 24,
                   color: colors.text2,
                 ),
@@ -394,12 +414,17 @@ class _ListeningScreenState extends ConsumerState<ListeningScreen> {
                           ),
                         ],
                       ),
-                      child: Icon(Icons.mic_none_rounded,
-                          size: 24, color: colors.text),
+                      child: Icon(
+                        Icons.mic_none_rounded,
+                        size: 24,
+                        color: colors.text,
+                      ),
                     ),
                     const SizedBox(height: AppSpacing.sm),
-                    Text('VOICE MEMO',
-                        style: AppTypography.overline(colors.text3)),
+                    Text(
+                      'VOICE MEMO',
+                      style: AppTypography.overline(colors.text3),
+                    ),
                   ],
                 ),
               ),
@@ -425,8 +450,10 @@ class _ListeningScreenState extends ConsumerState<ListeningScreen> {
                       child: const Center(child: _TagDots()),
                     ),
                     const SizedBox(height: AppSpacing.sm),
-                    Text('TAG MOMENT',
-                        style: AppTypography.overline(colors.text3)),
+                    Text(
+                      'TAG MOMENT',
+                      style: AppTypography.overline(colors.text3),
+                    ),
                   ],
                 ),
               ),
@@ -449,7 +476,11 @@ Duration _dur(double sec) => Duration(milliseconds: (sec * 1000).round());
 
 /// Skip control — circular arrow with the second count beneath (Figma ↺15/↻30).
 class _SkipButton extends StatelessWidget {
-  const _SkipButton({required this.icon, required this.label, required this.onTap});
+  const _SkipButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
 
   final IconData icon;
   final String label;
@@ -469,8 +500,9 @@ class _SkipButton extends StatelessWidget {
             Icon(icon, size: 24, color: colors.text),
             Text(
               label,
-              style: AppTypography.caption(colors.text)
-                  .copyWith(fontSize: 9, fontWeight: FontWeight.w600),
+              style: AppTypography.caption(
+                colors.text,
+              ).copyWith(fontSize: 9, fontWeight: FontWeight.w600),
             ),
           ],
         ),
@@ -504,8 +536,7 @@ class _TagDots extends StatelessWidget {
               Container(
                 width: 8,
                 height: 8,
-                decoration:
-                    BoxDecoration(color: tone, shape: BoxShape.circle),
+                decoration: BoxDecoration(color: tone, shape: BoxShape.circle),
               ),
           ],
         ),
@@ -536,8 +567,9 @@ class _AudioProgressBarState extends State<_AudioProgressBar> {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     final maxValue = widget.totalSecs > 0 ? widget.totalSecs : 1.0;
-    final value =
-        (_dragValue ?? widget.positionSecs).clamp(0.0, maxValue).toDouble();
+    final value = (_dragValue ?? widget.positionSecs)
+        .clamp(0.0, maxValue)
+        .toDouble();
 
     return SliderTheme(
       data: SliderTheme.of(context).copyWith(

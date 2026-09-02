@@ -16,11 +16,7 @@ import '../../widgets/auth_scaffold.dart';
 import '../../widgets/glass_panel.dart';
 
 class ResetPasswordScreen extends ConsumerStatefulWidget {
-  const ResetPasswordScreen({
-    super.key,
-    required this.token,
-    this.email,
-  });
+  const ResetPasswordScreen({super.key, required this.token, this.email});
 
   final String token;
   final String? email;
@@ -62,7 +58,9 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
     }
 
     FocusScope.of(context).unfocus();
-    final reset = await ref.read(authProvider.notifier).resetPassword(
+    final reset = await ref
+        .read(authProvider.notifier)
+        .resetPassword(
           token: widget.token,
           password: _password.text,
           email: widget.email,
@@ -84,8 +82,10 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
     if (state is AuthUnauthenticated && state.message != null) {
       showAppSnack(
         context,
-        AuthErrorMessages.from(state.message,
-            context: AuthErrorContext.resetPassword),
+        AuthErrorMessages.from(
+          state.message,
+          context: AuthErrorContext.resetPassword,
+        ),
         type: SnackType.error,
       );
     }

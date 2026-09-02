@@ -86,7 +86,6 @@ class InsightsScreen extends ConsumerWidget {
             const SizedBox(height: AppSpacing.md),
             _MostAnnotated(books: insights.mostAnnotated),
             const SizedBox(height: AppSpacing.xxl),
-           
           ],
         ),
       ),
@@ -436,9 +435,9 @@ class _MostAnnotated extends StatelessWidget {
             ),
             Text(
               '0',
-              style: AppTypography.label(colors.text).copyWith(
-                fontWeight: FontWeight.w600,
-              ),
+              style: AppTypography.label(
+                colors.text,
+              ).copyWith(fontWeight: FontWeight.w600),
             ),
           ],
         ),
@@ -520,7 +519,6 @@ class _AnnotatedBookRow extends StatelessWidget {
     );
   }
 }
-
 
 class _Insights {
   const _Insights({

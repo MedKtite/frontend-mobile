@@ -207,7 +207,8 @@ class _AdvancedFiltersSheetState extends State<AdvancedFiltersSheet> {
                         _CategoryTagChip(
                           label: _categories[i].label,
                           icon: _categories[i].icon,
-                          selected: _selectedSubject.toLowerCase() ==
+                          selected:
+                              _selectedSubject.toLowerCase() ==
                               _categories[i].label.toLowerCase(),
                           onTap: () {
                             setState(() {
@@ -264,7 +265,9 @@ class _AdvancedFiltersSheetState extends State<AdvancedFiltersSheet> {
                   onTap: () => setState(() => _freeOnly = !_freeOnly),
                   borderRadius: AppRadii.brMd,
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: AppSpacing.xs,
+                    ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -325,10 +328,12 @@ class _AdvancedFiltersSheetState extends State<AdvancedFiltersSheet> {
                           ),
                         ),
                         child: Text(
-                          _count > 0 ? 'Apply Filters ($_count)' : 'Apply Filters',
-                          style: AppTypography.label(colors.bg).copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
+                          _count > 0
+                              ? 'Apply Filters ($_count)'
+                              : 'Apply Filters',
+                          style: AppTypography.label(
+                            colors.bg,
+                          ).copyWith(fontWeight: FontWeight.w600),
                         ),
                       ),
                     ),
@@ -372,26 +377,19 @@ class _CategoryTagChip extends StatelessWidget {
           ),
           decoration: BoxDecoration(
             borderRadius: AppRadii.brMd,
-            border: Border.all(
-              color: selected ? colors.text : colors.border,
-            ),
+            border: Border.all(color: selected ? colors.text : colors.border),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                icon,
-                size: 16,
-                color: selected ? colors.bg : colors.text2,
-              ),
+              Icon(icon, size: 16, color: selected ? colors.bg : colors.text2),
               const SizedBox(width: AppSpacing.xs),
               Text(
                 label,
-                style: AppTypography.caption(
-                  selected ? colors.bg : colors.text,
-                ).copyWith(
-                  fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-                ),
+                style: AppTypography.caption(selected ? colors.bg : colors.text)
+                    .copyWith(
+                      fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                    ),
               ),
             ],
           ),

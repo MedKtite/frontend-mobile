@@ -17,4 +17,5 @@ class SubscriptionService {
 }
 
 final subscriptionServiceProvider = Provider<SubscriptionService>(
-    (ref) => SubscriptionService(ref.watch(dioProvider)));
+  (ref) => SubscriptionService(ref.watch(dioProvider)),
+);

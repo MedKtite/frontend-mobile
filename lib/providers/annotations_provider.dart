@@ -13,30 +13,37 @@ import '../services/backend/tag_service.dart';
 
 /// The 7 system tags + the user's custom tags.
 final tagsProvider = FutureProvider<List<Tag>>(
-    (ref) => ref.watch(tagServiceProvider).listVisible());
+  (ref) => ref.watch(tagServiceProvider).listVisible(),
+);
 
 /// Highlight count per tag id (absent = zero).
 final tagCountsProvider = FutureProvider<Map<String, int>>(
-    (ref) => ref.watch(tagServiceProvider).counts());
+  (ref) => ref.watch(tagServiceProvider).counts(),
+);
 
 /// Every highlight carrying one tag, newest first.
 final tagHighlightsProvider = FutureProvider.family<List<Highlight>, String>(
-    (ref, tagId) => ref.watch(highlightServiceProvider).listByTag(tagId));
+  (ref, tagId) => ref.watch(highlightServiceProvider).listByTag(tagId),
+);
 
 /// The user's most-recent highlights across all books (server caps at 100).
 final allHighlightsProvider = FutureProvider<List<Highlight>>(
-    (ref) => ref.watch(highlightServiceProvider).listRecent(limit: 100));
+  (ref) => ref.watch(highlightServiceProvider).listRecent(limit: 100),
+);
 
 /// The user's most-recent notes across all books.
 final allNotesProvider = FutureProvider<List<Note>>(
-    (ref) => ref.watch(noteServiceProvider).listRecent(limit: 200));
+  (ref) => ref.watch(noteServiceProvider).listRecent(limit: 200),
+);
 
 /// Saved collection — bookmarked highlights and notes.
 final savedHighlightsProvider = FutureProvider<List<Highlight>>(
-    (ref) => ref.watch(highlightServiceProvider).listSaved());
+  (ref) => ref.watch(highlightServiceProvider).listSaved(),
+);
 
 final savedNotesProvider = FutureProvider<List<Note>>(
-    (ref) => ref.watch(noteServiceProvider).listSaved());
+  (ref) => ref.watch(noteServiceProvider).listSaved(),
+);
 
 /// Re-fetches every annotation list (after a save toggle, a new highlight
 /// made in the reader, a deleted note, …). Called from widgets.

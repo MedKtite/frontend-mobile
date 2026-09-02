@@ -52,7 +52,11 @@ class NotificationsNotifier extends StateNotifier<NotificationsState> {
 
   Future<void> load({String? tab}) async {
     final targetTab = tab ?? state.activeTab;
-    state = state.copyWith(isLoading: true, activeTab: targetTab, errorMessage: null);
+    state = state.copyWith(
+      isLoading: true,
+      activeTab: targetTab,
+      errorMessage: null,
+    );
 
     try {
       final items = await _service.getNotifications(tab: targetTab);
@@ -63,10 +67,7 @@ class NotificationsNotifier extends StateNotifier<NotificationsState> {
         isLoading: false,
       );
     } catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        errorMessage: e.toString(),
-      );
+      state = state.copyWith(isLoading: false, errorMessage: e.toString());
     }
   }
 
@@ -125,5 +126,5 @@ class NotificationsNotifier extends StateNotifier<NotificationsState> {
 
 final notificationsProvider =
     StateNotifierProvider<NotificationsNotifier, NotificationsState>((ref) {
-  return NotificationsNotifier(ref.watch(notificationServiceProvider));
-});
+      return NotificationsNotifier(ref.watch(notificationServiceProvider));
+    });

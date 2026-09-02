@@ -18,8 +18,10 @@ class AuthorAvatar extends StatelessWidget {
   final double size;
 
   String get _initials {
-    final words =
-        name.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
+    final words = name
+        .split(RegExp(r'\s+'))
+        .where((w) => w.isNotEmpty)
+        .toList();
     if (words.isEmpty) return '?';
     if (words.length == 1) return words.first[0].toUpperCase();
     return (words.first[0] + words.last[0]).toUpperCase();
@@ -40,11 +42,13 @@ class AuthorAvatar extends StatelessWidget {
       ),
       child: Text(
         _initials,
-        style: AppTypography.serif(TextStyle(
-          color: colors.text2,
-          fontSize: size * 0.34,
-          fontWeight: FontWeight.w500,
-        )),
+        style: AppTypography.serif(
+          TextStyle(
+            color: colors.text2,
+            fontSize: size * 0.34,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
       ),
     );
 

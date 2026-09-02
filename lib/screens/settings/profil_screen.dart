@@ -61,7 +61,10 @@ class ProfilScreen extends ConsumerWidget {
                 }
               } catch (e) {
                 if (context.mounted) {
-                  showAppSnack(context, 'Failed to delete account: ${e.toString()}');
+                  showAppSnack(
+                    context,
+                    'Failed to delete account: ${e.toString()}',
+                  );
                 }
               }
             },
@@ -83,12 +86,11 @@ class ProfilScreen extends ConsumerWidget {
     final user = auth is AuthAuthenticated ? auth.user : null;
 
     if (user == null) {
-      return const Scaffold(
-        body: AppProgressLoading(),
-      );
+      return const Scaffold(body: AppProgressLoading());
     }
 
-    final initial = user.avatarInitial ??
+    final initial =
+        user.avatarInitial ??
         (user.displayName.isNotEmpty ? user.displayName[0].toUpperCase() : 'M');
     final isGoogleAuth = user.authProvider == 'google';
 
@@ -128,18 +130,29 @@ class ProfilScreen extends ConsumerWidget {
                         value: user.displayName,
                         onTap: () => showEditProfileSheet(context, user: user),
                       ),
-                      Divider(height: 1, color: colors.border.withValues(alpha: 0.08), indent: 16),
+                      Divider(
+                        height: 1,
+                        color: colors.border.withValues(alpha: 0.08),
+                        indent: 16,
+                      ),
                       _ProfileInfoRow(
                         label: 'Monogram',
                         value: user.shortName ?? 'Not set',
                         onTap: () => showEditProfileSheet(context, user: user),
                       ),
-                      Divider(height: 1, color: colors.border.withValues(alpha: 0.08), indent: 16),
+                      Divider(
+                        height: 1,
+                        color: colors.border.withValues(alpha: 0.08),
+                        indent: 16,
+                      ),
                       _ProfileInfoRow(
                         label: 'Email',
                         value: user.email,
                         badge: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             color: colors.success.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(6),
@@ -156,10 +169,16 @@ class ProfilScreen extends ConsumerWidget {
                           ),
                         ),
                       ),
-                      Divider(height: 1, color: colors.border.withValues(alpha: 0.08), indent: 16),
+                      Divider(
+                        height: 1,
+                        color: colors.border.withValues(alpha: 0.08),
+                        indent: 16,
+                      ),
                       _ProfileInfoRow(
                         label: 'Sign-in Method',
-                        value: isGoogleAuth ? 'Google Account' : 'Email & Password',
+                        value: isGoogleAuth
+                            ? 'Google Account'
+                            : 'Email & Password',
                       ),
                     ],
                   ),
@@ -175,7 +194,9 @@ class ProfilScreen extends ConsumerWidget {
                         label: 'Password',
                         value: isGoogleAuth ? 'Managed by Google' : '••••••••',
                         showChevron: !isGoogleAuth,
-                        onTap: isGoogleAuth ? null : () => showChangePasswordSheet(context),
+                        onTap: isGoogleAuth
+                            ? null
+                            : () => showChangePasswordSheet(context),
                       ),
                     ],
                   ),
@@ -196,10 +217,16 @@ class ProfilScreen extends ConsumerWidget {
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               color: colors.gilt.withValues(alpha: 0.1),
-                              border: Border.all(color: colors.gilt.withValues(alpha: 0.25)),
+                              border: Border.all(
+                                color: colors.gilt.withValues(alpha: 0.25),
+                              ),
                             ),
                             child: Center(
-                              child: Icon(Icons.workspace_premium_rounded, color: colors.gilt, size: 22),
+                              child: Icon(
+                                Icons.workspace_premium_rounded,
+                                color: colors.gilt,
+                                size: 22,
+                              ),
                             ),
                           ),
                           const SizedBox(width: 14),
@@ -221,7 +248,10 @@ class ProfilScreen extends ConsumerWidget {
                                 Text(
                                   'Unlimited library & cloud reading sync',
                                   style: AppTypography.sans(
-                                    TextStyle(fontSize: 12.5, color: colors.text3),
+                                    TextStyle(
+                                      fontSize: 12.5,
+                                      color: colors.text3,
+                                    ),
                                   ),
                                 ),
                               ],
@@ -231,7 +261,9 @@ class ProfilScreen extends ConsumerWidget {
                             onPressed: () => context.push(Routes.paywall),
                             child: Text(
                               'Manage',
-                              style: AppTypography.label(colors.gilt).copyWith(fontWeight: FontWeight.w600),
+                              style: AppTypography.label(
+                                colors.gilt,
+                              ).copyWith(fontWeight: FontWeight.w600),
                             ),
                           ),
                         ],
@@ -248,13 +280,19 @@ class ProfilScreen extends ConsumerWidget {
                     child: ListTile(
                       title: Text(
                         'Delete Account & Data',
-                        style: AppTypography.body(colors.danger).copyWith(fontWeight: FontWeight.w600),
+                        style: AppTypography.body(
+                          colors.danger,
+                        ).copyWith(fontWeight: FontWeight.w600),
                       ),
                       subtitle: Text(
                         'Permanently erase your account, library, and notes.',
                         style: AppTypography.caption(colors.text3),
                       ),
-                      trailing: Icon(Icons.delete_forever_rounded, color: colors.danger, size: 22),
+                      trailing: Icon(
+                        Icons.delete_forever_rounded,
+                        color: colors.danger,
+                        size: 22,
+                      ),
                       onTap: () => _confirmDeleteAccount(context, ref),
                     ),
                   ),
@@ -296,11 +334,7 @@ class _ProfileHeroCard extends StatelessWidget {
       child: Row(
         children: [
           // Monogram / Photo Avatar
-          UserAvatar(
-            user: user,
-            size: 64,
-            isEditable: true,
-          ),
+          UserAvatar(user: user, size: 64, isEditable: true),
           const SizedBox(width: 16),
           // Name and Subtitle
           Expanded(
@@ -377,17 +411,11 @@ class _ProfileInfoRow extends StatelessWidget {
               ),
             ),
             const Spacer(),
-            if (badge != null) ...[
-              badge!,
-              const SizedBox(width: 8),
-            ],
+            if (badge != null) ...[badge!, const SizedBox(width: 8)],
             Text(
               value,
               style: AppTypography.sans(
-                TextStyle(
-                  fontSize: 13.5,
-                  color: colors.text2,
-                ),
+                TextStyle(fontSize: 13.5, color: colors.text2),
               ),
             ),
             if (showChevron || onTap != null) ...[
@@ -448,7 +476,10 @@ class _SectionHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     return Padding(
-      padding: const EdgeInsets.only(left: AppSpacing.sm, bottom: AppSpacing.xs),
+      padding: const EdgeInsets.only(
+        left: AppSpacing.sm,
+        bottom: AppSpacing.xs,
+      ),
       child: Text(
         title,
         style: AppTypography.sans(
@@ -482,7 +513,9 @@ class _CardContainer extends StatelessWidget {
           width: 1,
         ),
       ),
-      child: child ?? Column(mainAxisSize: MainAxisSize.min, children: children ?? []),
+      child:
+          child ??
+          Column(mainAxisSize: MainAxisSize.min, children: children ?? []),
     );
   }
 }

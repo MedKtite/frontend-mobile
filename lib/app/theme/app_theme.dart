@@ -10,7 +10,7 @@ class AppTheme {
   AppTheme._();
 
   static ThemeData light() => _build(brightness: Brightness.light);
-  static ThemeData dark()  => _build(brightness: Brightness.dark);
+  static ThemeData dark() => _build(brightness: Brightness.dark);
 
   static ThemeData _build({required Brightness brightness}) {
     final isLight = brightness == Brightness.light;
@@ -23,15 +23,15 @@ class AppTheme {
       scaffoldBackgroundColor: Colors.transparent,
       colorScheme: base.colorScheme.copyWith(
         brightness: brightness,
-        surface:    ext.surface,
-        primary:    ext.accent,
-        secondary:  ext.accent,
-        onSurface:  ext.text,
-        onPrimary:  isLight ? AppColors.lightSurface : AppColors.darkSurface,
-        outline:    ext.border,
+        surface: ext.surface,
+        primary: ext.accent,
+        secondary: ext.accent,
+        onSurface: ext.text,
+        onPrimary: isLight ? AppColors.lightSurface : AppColors.darkSurface,
+        outline: ext.border,
       ),
       textTheme: base.textTheme.apply(
-        bodyColor:    ext.text,
+        bodyColor: ext.text,
         displayColor: ext.text,
       ),
       // Inverted-ink primary button: text-color bg + bg-color label.
@@ -41,7 +41,9 @@ class AppTheme {
           foregroundColor: ext.bg,
           shape: const RoundedRectangleBorder(borderRadius: AppRadii.brFull),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          textStyle: AppTypography.label(ext.bg).copyWith(fontWeight: FontWeight.w600),
+          textStyle: AppTypography.label(
+            ext.bg,
+          ).copyWith(fontWeight: FontWeight.w600),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
@@ -50,12 +52,17 @@ class AppTheme {
           side: BorderSide(color: ext.border, width: 1),
           shape: const RoundedRectangleBorder(borderRadius: AppRadii.brFull),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          textStyle: AppTypography.label(ext.text).copyWith(fontWeight: FontWeight.w500),
+          textStyle: AppTypography.label(
+            ext.text,
+          ).copyWith(fontWeight: FontWeight.w500),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: false,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
         border: OutlineInputBorder(
           borderRadius: AppRadii.brMd,
           borderSide: BorderSide(color: ext.border, width: 1),
@@ -81,24 +88,36 @@ class AppTheme {
       timePickerTheme: TimePickerThemeData(
         backgroundColor: ext.surface,
         shape: const RoundedRectangleBorder(borderRadius: AppRadii.brXl),
-        hourMinuteShape: const RoundedRectangleBorder(borderRadius: AppRadii.brMd),
-        hourMinuteColor: WidgetStateColor.resolveWith((states) =>
-            states.contains(WidgetState.selected)
-                ? ext.gilt.withValues(alpha: 0.18)
-                : ext.bg),
-        hourMinuteTextColor: WidgetStateColor.resolveWith((states) =>
-            states.contains(WidgetState.selected) ? ext.gilt : ext.text),
-        dayPeriodShape: const RoundedRectangleBorder(borderRadius: AppRadii.brSm),
-        dayPeriodColor: WidgetStateColor.resolveWith((states) =>
-            states.contains(WidgetState.selected) ? ext.gilt : ext.surface2),
-        dayPeriodTextColor: WidgetStateColor.resolveWith((states) =>
-            states.contains(WidgetState.selected)
-                ? (isLight ? Colors.white : ext.text)
-                : ext.text2),
+        hourMinuteShape: const RoundedRectangleBorder(
+          borderRadius: AppRadii.brMd,
+        ),
+        hourMinuteColor: WidgetStateColor.resolveWith(
+          (states) => states.contains(WidgetState.selected)
+              ? ext.gilt.withValues(alpha: 0.18)
+              : ext.bg,
+        ),
+        hourMinuteTextColor: WidgetStateColor.resolveWith(
+          (states) =>
+              states.contains(WidgetState.selected) ? ext.gilt : ext.text,
+        ),
+        dayPeriodShape: const RoundedRectangleBorder(
+          borderRadius: AppRadii.brSm,
+        ),
+        dayPeriodColor: WidgetStateColor.resolveWith(
+          (states) =>
+              states.contains(WidgetState.selected) ? ext.gilt : ext.surface2,
+        ),
+        dayPeriodTextColor: WidgetStateColor.resolveWith(
+          (states) => states.contains(WidgetState.selected)
+              ? (isLight ? Colors.white : ext.text)
+              : ext.text2,
+        ),
         dialHandColor: ext.gilt,
         dialBackgroundColor: ext.bg,
-        dialTextColor: WidgetStateColor.resolveWith((states) =>
-            states.contains(WidgetState.selected) ? Colors.white : ext.text),
+        dialTextColor: WidgetStateColor.resolveWith(
+          (states) =>
+              states.contains(WidgetState.selected) ? Colors.white : ext.text,
+        ),
         entryModeIconColor: ext.gilt,
         helpTextStyle: AppTypography.overline(ext.text3),
       ),
@@ -108,8 +127,9 @@ class AppTheme {
       // (no snapshot) looks identical and avoids the crash entirely.
       pageTransitionsTheme: const PageTransitionsTheme(
         builders: {
-          TargetPlatform.android:
-              ZoomPageTransitionsBuilder(allowSnapshotting: false),
+          TargetPlatform.android: ZoomPageTransitionsBuilder(
+            allowSnapshotting: false,
+          ),
           TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
         },
       ),

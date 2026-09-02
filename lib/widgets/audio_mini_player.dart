@@ -32,14 +32,18 @@ class AudioMiniPlayer extends ConsumerWidget {
     final book = session.book;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.sm),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        0,
+        AppSpacing.lg,
+        AppSpacing.sm,
+      ),
       child: Dismissible(
         key: ValueKey('mini-${book.id}'),
         direction: DismissDirection.horizontal,
         onDismissed: (_) => ctrl.stop(),
         child: GestureDetector(
-          onTap: () =>
-              context.push(Routes.listeningPath(book.id), extra: book),
+          onTap: () => context.push(Routes.listeningPath(book.id), extra: book),
           child: Container(
             height: _height,
             clipBehavior: Clip.antiAlias,
@@ -101,17 +105,18 @@ class AudioMiniPlayer extends ConsumerWidget {
                               book.title,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: AppTypography.label(colors.text)
-                                  .copyWith(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w500),
+                              style: AppTypography.label(colors.text).copyWith(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
                             const SizedBox(height: 2),
                             StreamBuilder<Duration>(
                               stream: ctrl.player.positionStream,
                               builder: (context, snap) {
-                                final sec = ctrl
-                                    .globalSec(snap.data ?? Duration.zero);
+                                final sec = ctrl.globalSec(
+                                  snap.data ?? Duration.zero,
+                                );
                                 final chapter = ctrl.sectionTitle();
                                 return Text(
                                   (chapter != null && chapter.isNotEmpty)
@@ -119,8 +124,9 @@ class AudioMiniPlayer extends ConsumerWidget {
                                       : '${_fmt(sec)} of ${_fmt(session.totalSecs)}',
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: AppTypography.caption(colors.text3)
-                                      .copyWith(fontSize: 11),
+                                  style: AppTypography.caption(
+                                    colors.text3,
+                                  ).copyWith(fontSize: 11),
                                 );
                               },
                             ),
@@ -194,11 +200,9 @@ class _MiniCover extends StatelessWidget {
       child: Center(
         child: Text(
           title.isEmpty ? '?' : title[0].toUpperCase(),
-          style: AppTypography.serif(TextStyle(
-            color: fg,
-            fontSize: 16,
-            fontStyle: FontStyle.italic,
-          )),
+          style: AppTypography.serif(
+            TextStyle(color: fg, fontSize: 16, fontStyle: FontStyle.italic),
+          ),
         ),
       ),
     );

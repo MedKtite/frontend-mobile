@@ -79,10 +79,7 @@ class GlassPanel extends StatelessWidget {
         child: LiquidGlass(
           shape: LiquidRoundedSuperellipse(borderRadius: radius),
           child: DecoratedBox(
-            decoration: BoxDecoration(
-              border: hairline,
-              borderRadius: br,
-            ),
+            decoration: BoxDecoration(border: hairline, borderRadius: br),
             child: content,
           ),
         ),

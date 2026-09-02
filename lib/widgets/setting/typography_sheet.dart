@@ -137,11 +137,12 @@ class _SectionLabel extends StatelessWidget {
   final String text;
 
   @override
-  Widget build(BuildContext context) =>
-      Text(text, style: AppTypography.caption(context.appColors.text3).copyWith(
-        fontWeight: FontWeight.w700,
-        letterSpacing: 1.2,
-      ));
+  Widget build(BuildContext context) => Text(
+    text,
+    style: AppTypography.caption(
+      context.appColors.text3,
+    ).copyWith(fontWeight: FontWeight.w700, letterSpacing: 1.2),
+  );
 }
 
 /// 4-Font Selector: Source Serif, Newsreader, Inter, Lexend (Dyslexic).
@@ -155,8 +156,16 @@ class _TypefaceGrid extends StatelessWidget {
     final colors = context.appColors;
 
     final fonts = [
-      (ReaderFont.serif, 'Source Serif', GoogleFonts.sourceSerif4(fontSize: 14)),
-      (ReaderFont.newsreader, 'Newsreader', GoogleFonts.newsreader(fontSize: 14)),
+      (
+        ReaderFont.serif,
+        'Source Serif',
+        GoogleFonts.sourceSerif4(fontSize: 14),
+      ),
+      (
+        ReaderFont.newsreader,
+        'Newsreader',
+        GoogleFonts.newsreader(fontSize: 14),
+      ),
       (ReaderFont.sans, 'Inter', GoogleFonts.inter(fontSize: 14)),
       (ReaderFont.dyslexic, 'Dyslexic', GoogleFonts.lexend(fontSize: 13)),
     ];
@@ -194,7 +203,9 @@ class _TypefaceGrid extends StatelessWidget {
                   item.$2,
                   style: item.$3.copyWith(
                     color: isSelected ? colors.text : colors.text2,
-                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                    fontWeight: isSelected
+                        ? FontWeight.w600
+                        : FontWeight.normal,
                   ),
                 ),
               ),
@@ -312,11 +323,14 @@ class _SpacingRow extends StatelessWidget {
                     : null,
                 child: Text(
                   label,
-                  style: AppTypography.label(
-                    isSelected ? colors.text : colors.text2,
-                  ).copyWith(
-                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                  ),
+                  style:
+                      AppTypography.label(
+                        isSelected ? colors.text : colors.text2,
+                      ).copyWith(
+                        fontWeight: isSelected
+                            ? FontWeight.w600
+                            : FontWeight.normal,
+                      ),
                 ),
               ),
             ),
@@ -372,11 +386,14 @@ class _MarginRow extends StatelessWidget {
                     : null,
                 child: Text(
                   label,
-                  style: AppTypography.label(
-                    isSelected ? colors.text : colors.text2,
-                  ).copyWith(
-                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.normal,
-                  ),
+                  style:
+                      AppTypography.label(
+                        isSelected ? colors.text : colors.text2,
+                      ).copyWith(
+                        fontWeight: isSelected
+                            ? FontWeight.w700
+                            : FontWeight.normal,
+                      ),
                 ),
               ),
             ),

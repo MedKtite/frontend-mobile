@@ -209,7 +209,7 @@ class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
       subtitle: 'EPUB · PDF',
       onTap: _pickAndUpload,
     ),
-    
+
     const SizedBox(height: AppSpacing.md),
     _AddOption(
       icon: Icons.menu_book_outlined,
@@ -223,8 +223,6 @@ class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
       },
     ),
   ];
-
-
 }
 
 class _AddOption extends StatelessWidget {

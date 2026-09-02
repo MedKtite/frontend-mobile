@@ -12,7 +12,8 @@ class Subscription with _$Subscription {
   const factory Subscription({
     required String userId,
     required String tier, // free | pro
-    String? status, // active | in_grace_period | expired | billing_retry | cancelled
+    String?
+    status, // active | in_grace_period | expired | billing_retry | cancelled
     String? store, // app_store | play_store | stripe
     String? productId,
     String? currentPeriodStart,

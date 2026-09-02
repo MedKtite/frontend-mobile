@@ -23,5 +23,6 @@ class SearchService {
   }
 }
 
-final searchServiceProvider =
-    Provider<SearchService>((ref) => SearchService(ref.watch(dioProvider)));
+final searchServiceProvider = Provider<SearchService>(
+  (ref) => SearchService(ref.watch(dioProvider)),
+);

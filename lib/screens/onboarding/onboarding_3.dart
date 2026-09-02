@@ -14,7 +14,9 @@ class Onboarding3 extends StatelessWidget {
     final colors = context.appColors;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.pageHorizontal),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.pageHorizontal,
+      ),
       child: Stack(
         children: [
           Positioned.fill(
@@ -33,11 +35,15 @@ class Onboarding3 extends StatelessWidget {
                 style: AppTypography.subtitle(colors.text2),
               ),
               const Spacer(flex: 4),
-              Text('Your thoughts grow', style: AppTypography.display(colors.text,)),
+              Text(
+                'Your thoughts grow',
+                style: AppTypography.display(colors.text),
+              ),
               Text(
                 'with the book.',
-                style: AppTypography.display(colors.text)
-                    .copyWith(fontStyle: FontStyle.italic),
+                style: AppTypography.display(
+                  colors.text,
+                ).copyWith(fontStyle: FontStyle.italic),
               ),
               const SizedBox(height: AppSpacing.md),
               Text(
@@ -53,7 +59,6 @@ class Onboarding3 extends StatelessWidget {
     );
   }
 }
-
 
 class _RingsPainter extends CustomPainter {
   const _RingsPainter(this.color);

@@ -23,7 +23,8 @@ class _ChangePasswordSheet extends ConsumerStatefulWidget {
   const _ChangePasswordSheet();
 
   @override
-  ConsumerState<_ChangePasswordSheet> createState() => _ChangePasswordSheetState();
+  ConsumerState<_ChangePasswordSheet> createState() =>
+      _ChangePasswordSheetState();
 }
 
 class _ChangePasswordSheetState extends ConsumerState<_ChangePasswordSheet> {
@@ -79,7 +80,10 @@ class _ChangePasswordSheetState extends ConsumerState<_ChangePasswordSheet> {
       }
     } catch (e) {
       if (mounted) {
-        showAppSnack(context, 'Failed to update password. Verify current password.');
+        showAppSnack(
+          context,
+          'Failed to update password. Verify current password.',
+        );
       }
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
@@ -97,7 +101,10 @@ class _ChangePasswordSheetState extends ConsumerState<_ChangePasswordSheet> {
         color: colors.surface,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
         border: Border(
-          top: BorderSide(color: colors.border.withValues(alpha: 0.1), width: 1),
+          top: BorderSide(
+            color: colors.border.withValues(alpha: 0.1),
+            width: 1,
+          ),
         ),
       ),
       child: SafeArea(
@@ -148,7 +155,11 @@ class _ChangePasswordSheetState extends ConsumerState<_ChangePasswordSheet> {
                     ],
                   ),
                   IconButton(
-                    icon: Icon(Icons.close_rounded, color: colors.text3, size: 22),
+                    icon: Icon(
+                      Icons.close_rounded,
+                      color: colors.text3,
+                      size: 22,
+                    ),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                 ],
@@ -161,7 +172,8 @@ class _ChangePasswordSheetState extends ConsumerState<_ChangePasswordSheet> {
                 label: 'CURRENT PASSWORD',
                 controller: _currentController,
                 obscureText: _obscureCurrent,
-                onToggleVisibility: () => setState(() => _obscureCurrent = !_obscureCurrent),
+                onToggleVisibility: () =>
+                    setState(() => _obscureCurrent = !_obscureCurrent),
               ),
 
               const SizedBox(height: AppSpacing.md),
@@ -171,7 +183,8 @@ class _ChangePasswordSheetState extends ConsumerState<_ChangePasswordSheet> {
                 label: 'NEW PASSWORD',
                 controller: _newController,
                 obscureText: _obscureNew,
-                onToggleVisibility: () => setState(() => _obscureNew = !_obscureNew),
+                onToggleVisibility: () =>
+                    setState(() => _obscureNew = !_obscureNew),
               ),
 
               const SizedBox(height: AppSpacing.md),
@@ -181,7 +194,8 @@ class _ChangePasswordSheetState extends ConsumerState<_ChangePasswordSheet> {
                 label: 'CONFIRM NEW PASSWORD',
                 controller: _confirmController,
                 obscureText: _obscureConfirm,
-                onToggleVisibility: () => setState(() => _obscureConfirm = !_obscureConfirm),
+                onToggleVisibility: () =>
+                    setState(() => _obscureConfirm = !_obscureConfirm),
               ),
 
               const SizedBox(height: AppSpacing.xl),
@@ -192,7 +206,9 @@ class _ChangePasswordSheetState extends ConsumerState<_ChangePasswordSheet> {
                 style: FilledButton.styleFrom(
                   backgroundColor: colors.text,
                   foregroundColor: colors.bg,
-                  shape: const RoundedRectangleBorder(borderRadius: AppRadii.brFull),
+                  shape: const RoundedRectangleBorder(
+                    borderRadius: AppRadii.brFull,
+                  ),
                   padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
                 child: _isSubmitting
@@ -204,7 +220,9 @@ class _ChangePasswordSheetState extends ConsumerState<_ChangePasswordSheet> {
                       )
                     : Text(
                         'Update Password',
-                        style: AppTypography.label(colors.bg).copyWith(fontWeight: FontWeight.w600),
+                        style: AppTypography.label(
+                          colors.bg,
+                        ).copyWith(fontWeight: FontWeight.w600),
                       ),
               ),
             ],
@@ -256,10 +274,15 @@ class _PasswordField extends StatelessWidget {
             hintStyle: AppTypography.body(colors.text3),
             filled: true,
             fillColor: colors.bg,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 14,
+            ),
             suffixIcon: IconButton(
               icon: Icon(
-                obscureText ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                obscureText
+                    ? Icons.visibility_off_outlined
+                    : Icons.visibility_outlined,
                 color: colors.text3,
                 size: 20,
               ),
@@ -267,11 +290,15 @@ class _PasswordField extends StatelessWidget {
             ),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),
-              borderSide: BorderSide(color: colors.border.withValues(alpha: 0.1)),
+              borderSide: BorderSide(
+                color: colors.border.withValues(alpha: 0.1),
+              ),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),
-              borderSide: BorderSide(color: colors.border.withValues(alpha: 0.1)),
+              borderSide: BorderSide(
+                color: colors.border.withValues(alpha: 0.1),
+              ),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),

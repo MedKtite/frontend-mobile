@@ -9,7 +9,8 @@ import '../services/backend/subscription_service.dart';
 /// The user's current plan, from OUR backend (the RevenueCat webhook is the
 /// only writer — the client treats the server as the source of truth).
 final subscriptionProvider = FutureProvider<Subscription>(
-    (ref) => ref.watch(subscriptionServiceProvider).get());
+  (ref) => ref.watch(subscriptionServiceProvider).get(),
+);
 
 /// RevenueCat purchase plumbing. Keys arrive via --dart-define so dev builds
 /// without store setup degrade to a "not configured" message instead of
@@ -72,9 +73,9 @@ class ProPurchases {
         return false;
       }
       final eligibility =
-          await Purchases.checkTrialOrIntroductoryPriceEligibility(
-        [product.identifier],
-      );
+          await Purchases.checkTrialOrIntroductoryPriceEligibility([
+            product.identifier,
+          ]);
       return eligibility[product.identifier]?.status ==
           IntroEligibilityStatus.introEligibilityStatusEligible;
     } on PlatformException {

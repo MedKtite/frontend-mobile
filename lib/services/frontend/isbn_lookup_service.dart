@@ -122,11 +122,10 @@ class IsbnLookupService {
     final title = bookData['title'] as String? ?? 'Untitled';
 
     final authorsList = bookData['authors'] as List<dynamic>?;
-    final authorNames =
-        authorsList
-            ?.map((a) => (a as Map<String, dynamic>)['name'] as String?)
-            .whereType<String>()
-            .toList();
+    final authorNames = authorsList
+        ?.map((a) => (a as Map<String, dynamic>)['name'] as String?)
+        .whereType<String>()
+        .toList();
     final author = authorNames?.join(', ');
 
     final publishDate = bookData['publish_date'] as String?;

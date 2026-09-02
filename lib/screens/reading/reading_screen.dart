@@ -67,8 +67,9 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
   late final ValueNotifier<ReaderProgress> _progress = ValueNotifier(
     ReaderProgress(widget.initialBook?.progressPct ?? 0, ''),
   );
-  late final ValueNotifier<List<ReaderChapter>> _chapters =
-      ValueNotifier(const []);
+  late final ValueNotifier<List<ReaderChapter>> _chapters = ValueNotifier(
+    const [],
+  );
   late final ValueNotifier<int?> _currentChapterIndex = ValueNotifier(null);
   void Function(int)? _jumpToChapterCallback;
 
@@ -179,14 +180,13 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
                         title: displayBook?.title ?? 'Reading',
                         onOpenToc: chapterList.isNotEmpty
                             ? () => showTableOfContentsSheet(
-                                  context: context,
-                                  bookTitle: displayBook?.title ?? 'Reading',
-                                  chapters: chapterList,
-                                  currentChapterIndex:
-                                      _currentChapterIndex.value,
-                                  onSelectChapter: (idx) =>
-                                      _jumpToChapterCallback?.call(idx),
-                                )
+                                context: context,
+                                bookTitle: displayBook?.title ?? 'Reading',
+                                chapters: chapterList,
+                                currentChapterIndex: _currentChapterIndex.value,
+                                onSelectChapter: (idx) =>
+                                    _jumpToChapterCallback?.call(idx),
+                              )
                             : null,
                       );
                     },
@@ -412,7 +412,16 @@ class _NativeReaderState extends ConsumerState<_NativeReader> {
   bool _restoringPosition = false;
   bool _hasProgressToSave = false;
 
-  final List<({String chapterId, int chapterIndex, ReaderBlock block, int charOffset, int charLength})> _flattenedBlocks = [];
+  final List<
+    ({
+      String chapterId,
+      int chapterIndex,
+      ReaderBlock block,
+      int charOffset,
+      int charLength,
+    })
+  >
+  _flattenedBlocks = [];
   final List<int> _chapterStartIndices = [];
   int _totalCharacters = 0;
   int _currentVisibleIndex = 0;
@@ -482,7 +491,9 @@ class _NativeReaderState extends ConsumerState<_NativeReader> {
       }
     }
 
-    _totalCharacters = package.totalCharacters > 0 ? package.totalCharacters : (offset > 0 ? offset : 1);
+    _totalCharacters = package.totalCharacters > 0
+        ? package.totalCharacters
+        : (offset > 0 ? offset : 1);
   }
 
   void _jumpToChapter(int chapterIndex) {
@@ -494,8 +505,10 @@ class _NativeReaderState extends ConsumerState<_NativeReader> {
     if (total <= 0) return;
 
     final maxExtent = _scrollController.position.maxScrollExtent;
-    final targetOffset =
-        (maxExtent * (targetBlockIndex / total)).clamp(0.0, maxExtent);
+    final targetOffset = (maxExtent * (targetBlockIndex / total)).clamp(
+      0.0,
+      maxExtent,
+    );
 
     _scrollController.animateTo(
       targetOffset,
@@ -531,10 +544,17 @@ class _NativeReaderState extends ConsumerState<_NativeReader> {
       if (_minVisibleIndexInFrame != null) {
         _currentVisibleIndex = _minVisibleIndexInFrame!;
       }
-      final block = _flattenedBlocks[_currentVisibleIndex.clamp(0, _flattenedBlocks.length - 1)];
+      final block =
+          _flattenedBlocks[_currentVisibleIndex.clamp(
+            0,
+            _flattenedBlocks.length - 1,
+          )];
       pct = _totalCharacters > 0
           ? ((block.charOffset / _totalCharacters) * 100).clamp(0.0, 100.0)
-          : ((_currentVisibleIndex / _flattenedBlocks.length) * 100).clamp(0.0, 100.0);
+          : ((_currentVisibleIndex / _flattenedBlocks.length) * 100).clamp(
+              0.0,
+              100.0,
+            );
     }
 
     _minVisibleIndexInFrame = null;
@@ -542,7 +562,11 @@ class _NativeReaderState extends ConsumerState<_NativeReader> {
     _hasProgressToSave = true;
 
     // Track active chapter in Table of Contents
-    final currentBlock = _flattenedBlocks[_currentVisibleIndex.clamp(0, _flattenedBlocks.length - 1)];
+    final currentBlock =
+        _flattenedBlocks[_currentVisibleIndex.clamp(
+          0,
+          _flattenedBlocks.length - 1,
+        )];
     widget.currentChapterNotifier?.value = currentBlock.chapterIndex;
 
     final chapterTitle = _package!.chapters[currentBlock.chapterIndex].title;
@@ -553,7 +577,10 @@ class _NativeReaderState extends ConsumerState<_NativeReader> {
   }
 
   void _restorePosition() {
-    if (!mounted || !_scrollController.hasClients || _lastProgressPct <= 0 || _flattenedBlocks.isEmpty) {
+    if (!mounted ||
+        !_scrollController.hasClients ||
+        _lastProgressPct <= 0 ||
+        _flattenedBlocks.isEmpty) {
       return;
     }
     final maxExtent = _scrollController.position.maxScrollExtent;
@@ -570,13 +597,15 @@ class _NativeReaderState extends ConsumerState<_NativeReader> {
 
     _currentVisibleIndex = targetIdx;
     _restoringPosition = true;
-    final targetOffset =
-        (maxExtent * (targetIdx / _flattenedBlocks.length)).clamp(0.0, maxExtent);
+    final targetOffset = (maxExtent * (targetIdx / _flattenedBlocks.length))
+        .clamp(0.0, maxExtent);
     _scrollController.jumpTo(targetOffset);
     _restoringPosition = false;
 
-    final currentBlock = _flattenedBlocks[targetIdx.clamp(0, _flattenedBlocks.length - 1)];
-    final chapterTitle = _package?.chapters[currentBlock.chapterIndex].title ?? '';
+    final currentBlock =
+        _flattenedBlocks[targetIdx.clamp(0, _flattenedBlocks.length - 1)];
+    final chapterTitle =
+        _package?.chapters[currentBlock.chapterIndex].title ?? '';
     final label = chapterTitle.isNotEmpty ? chapterTitle : 'Reading';
     widget.progress.value = ReaderProgress(_lastProgressPct, label);
   }
@@ -759,19 +788,20 @@ class _NativeReaderState extends ConsumerState<_NativeReader> {
     final baseStyle = settings.bodyTextStyle();
 
     return switch (block.type) {
-      'heading' => settings.font == ReaderFont.sans
-          ? AppTypography.title2(colors.text).copyWith(
-              fontSize: settings.fontSize * 1.35,
-            )
-          : GoogleFonts.sourceSerif4(
-              fontSize: settings.fontSize * 1.35,
-              fontWeight: FontWeight.w600,
-              color: colors.text,
-            ),
+      'heading' =>
+        settings.font == ReaderFont.sans
+            ? AppTypography.title2(
+                colors.text,
+              ).copyWith(fontSize: settings.fontSize * 1.35)
+            : GoogleFonts.sourceSerif4(
+                fontSize: settings.fontSize * 1.35,
+                fontWeight: FontWeight.w600,
+                color: colors.text,
+              ),
       'quote' => baseStyle.copyWith(
-          fontStyle: FontStyle.italic,
-          color: colors.text2,
-        ),
+        fontStyle: FontStyle.italic,
+        color: colors.text2,
+      ),
       'listItem' => baseStyle,
       _ => baseStyle,
     };
@@ -783,15 +813,16 @@ class _NativeReaderState extends ConsumerState<_NativeReader> {
     ReaderBlock block,
     List<highlight_model.Highlight> highlights,
   ) {
-    final matches = highlights
-        .where(
-          (item) =>
-              item.textChapterRef == '$chapterId:${block.id}' &&
-              item.textStartOffset != null &&
-              item.textEndOffset != null,
-        )
-        .toList()
-      ..sort((a, b) => a.textStartOffset!.compareTo(b.textStartOffset!));
+    final matches =
+        highlights
+            .where(
+              (item) =>
+                  item.textChapterRef == '$chapterId:${block.id}' &&
+                  item.textStartOffset != null &&
+                  item.textEndOffset != null,
+            )
+            .toList()
+          ..sort((a, b) => a.textStartOffset!.compareTo(b.textStartOffset!));
     final spans = <InlineSpan>[];
     var cursor = 0;
     for (final item in matches) {
@@ -891,11 +922,12 @@ class _NativeReaderState extends ConsumerState<_NativeReader> {
     final settings = ref.watch(readingSettingsProvider);
     final highlights =
         ref.watch(bookHighlightsProvider(widget.book.id)).valueOrNull ??
-            const <highlight_model.Highlight>[];
+        const <highlight_model.Highlight>[];
     if (_error != null) {
       return ReaderMessage(icon: Icons.menu_book_outlined, text: _error!);
     }
-    if (package == null || _flattenedBlocks.isEmpty) return const ReaderTextLoading();
+    if (package == null || _flattenedBlocks.isEmpty)
+      return const ReaderTextLoading();
     return Stack(
       children: [
         Column(
@@ -1077,10 +1109,7 @@ class _TextLoading extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const AppProgressRing(
-                size: 36,
-                strokeWidth: 1.5,
-              ),
+              const AppProgressRing(size: 36, strokeWidth: 1.5),
               const SizedBox(height: AppSpacing.lg),
               Text(
                 'Loading text…',

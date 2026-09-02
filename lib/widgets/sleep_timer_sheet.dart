@@ -80,15 +80,20 @@ class _SleepTimerSheet extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Sleep Timer',
-                        style: AppTypography.title2(colors.text)),
+                    Text(
+                      'Sleep Timer',
+                      style: AppTypography.title2(colors.text),
+                    ),
                     Text(
                       isRunning
                           ? '${_fmtRemaining(sleepState.remaining)} remaining'
                           : 'Stops audio automatically',
-                      style: AppTypography.caption(
-                        isRunning ? colors.accent : colors.text3,
-                      ).copyWith(fontWeight: isRunning ? FontWeight.w600 : null),
+                      style:
+                          AppTypography.caption(
+                            isRunning ? colors.accent : colors.text3,
+                          ).copyWith(
+                            fontWeight: isRunning ? FontWeight.w600 : null,
+                          ),
                     ),
                   ],
                 ),
@@ -152,11 +157,7 @@ class _SleepTimerSheet extends ConsumerWidget {
             ),
             child: Row(
               children: [
-                Icon(
-                  Icons.vibration_rounded,
-                  size: 22,
-                  color: colors.accent,
-                ),
+                Icon(Icons.vibration_rounded, size: 22, color: colors.accent),
                 const SizedBox(width: AppSpacing.md),
                 Expanded(
                   child: Column(
@@ -164,8 +165,9 @@ class _SleepTimerSheet extends ConsumerWidget {
                     children: [
                       Text(
                         'Shake to Extend (+15 min)',
-                        style: AppTypography.label(colors.text)
-                            .copyWith(fontWeight: FontWeight.w600),
+                        style: AppTypography.label(
+                          colors.text,
+                        ).copyWith(fontWeight: FontWeight.w600),
                       ),
                       const SizedBox(height: 2),
                       Text(
@@ -191,7 +193,8 @@ class _SleepTimerSheet extends ConsumerWidget {
   }) {
     final colors = context.appColors;
     final sleepState = ref.watch(sleepTimerProvider);
-    final active = sleepState != null &&
+    final active =
+        sleepState != null &&
         !sleepState.isEndOfChapter &&
         sleepState.initialDuration == duration;
 
@@ -240,10 +243,9 @@ class _SleepTimerSheet extends ConsumerWidget {
           chapterSecs = (duration - pos).inSeconds.clamp(10, 7200);
         }
 
-        ref.read(sleepTimerProvider.notifier).start(
-              Duration(seconds: chapterSecs),
-              isEndOfChapter: true,
-            );
+        ref
+            .read(sleepTimerProvider.notifier)
+            .start(Duration(seconds: chapterSecs), isEndOfChapter: true);
         Navigator.of(context).pop();
       },
     );

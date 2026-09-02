@@ -17,21 +17,22 @@ class NotificationService {
   }) async {
     final res = await _dio.get<List<dynamic>>(
       '/me/notifications',
-      queryParameters: {
-        'tab': tab,
-        'limit': limit,
-        'offset': offset,
-      },
+      queryParameters: {'tab': tab, 'limit': limit, 'offset': offset},
     );
 
     final data = res.data ?? [];
     return data
-        .map((item) => NotificationItemModel.fromJson(item as Map<String, dynamic>))
+        .map(
+          (item) =>
+              NotificationItemModel.fromJson(item as Map<String, dynamic>),
+        )
         .toList();
   }
 
   Future<int> getUnreadCount() async {
-    final res = await _dio.get<Map<String, dynamic>>('/me/notifications/unread-count');
+    final res = await _dio.get<Map<String, dynamic>>(
+      '/me/notifications/unread-count',
+    );
     return (res.data?['unread_count'] as num?)?.toInt() ?? 0;
   }
 
@@ -48,11 +49,15 @@ class NotificationService {
   }
 
   Future<NotificationPreferencesModel> getPreferences() async {
-    final res = await _dio.get<Map<String, dynamic>>('/me/notifications/preferences');
+    final res = await _dio.get<Map<String, dynamic>>(
+      '/me/notifications/preferences',
+    );
     return NotificationPreferencesModel.fromJson(res.data ?? {});
   }
 
-  Future<NotificationPreferencesModel> updatePreferences(NotificationPreferencesModel prefs) async {
+  Future<NotificationPreferencesModel> updatePreferences(
+    NotificationPreferencesModel prefs,
+  ) async {
     final res = await _dio.patch<Map<String, dynamic>>(
       '/me/notifications/preferences',
       data: prefs.toJson(),

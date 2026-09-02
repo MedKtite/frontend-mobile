@@ -25,14 +25,17 @@ class SharingIntentService {
     );
 
     // Get media shared when the app was closed
-    ReceiveSharingIntent.instance.getInitialMedia().then((files) {
-      if (files.isNotEmpty) {
-        _handleSharedMedia(files);
-        ReceiveSharingIntent.instance.reset();
-      }
-    }).catchError((err) {
-      debugPrint('[SharingIntent] Error getting initial media: $err');
-    });
+    ReceiveSharingIntent.instance
+        .getInitialMedia()
+        .then((files) {
+          if (files.isNotEmpty) {
+            _handleSharedMedia(files);
+            ReceiveSharingIntent.instance.reset();
+          }
+        })
+        .catchError((err) {
+          debugPrint('[SharingIntent] Error getting initial media: $err');
+        });
   }
 
   void _handleSharedMedia(List<SharedMediaFile> files) {

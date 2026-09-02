@@ -33,10 +33,10 @@ class AppShell extends ConsumerWidget {
     void onSelect(NavTab tab) {
       switch (tab) {
         case NavTab.home ||
-              NavTab.discovery ||
-              NavTab.library ||
-              NavTab.margins ||
-              NavTab.insights:
+            NavTab.discovery ||
+            NavTab.library ||
+            NavTab.margins ||
+            NavTab.insights:
           final index = _tabs.indexOf(tab);
           // Returning to Home refreshes it in place — reading progress and
           // library changes made on other screens show up without a flash.

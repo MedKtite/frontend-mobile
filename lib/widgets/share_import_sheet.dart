@@ -80,10 +80,10 @@ class _SharedFileImportSheetState
   }
 
   String? _contentTypeFor(String ext) => switch (ext) {
-        'epub' => 'application/epub+zip',
-        'pdf' => 'application/pdf',
-        _ => null,
-      };
+    'epub' => 'application/epub+zip',
+    'pdf' => 'application/pdf',
+    _ => null,
+  };
 
   Future<void> _import() async {
     final title = _titleController.text.trim();
@@ -93,7 +93,11 @@ class _SharedFileImportSheetState
     }
     final contentType = _contentTypeFor(_ext);
     if (contentType == null) {
-      showAppSnack(context, 'Unsupported format ($_ext)', type: SnackType.error);
+      showAppSnack(
+        context,
+        'Unsupported format ($_ext)',
+        type: SnackType.error,
+      );
       return;
     }
 
@@ -125,7 +129,9 @@ class _SharedFileImportSheetState
         contentType: contentType,
       );
 
-      await ref.read(bookServiceProvider).create(
+      await ref
+          .read(bookServiceProvider)
+          .create(
             BookCreateRequest(
               title: title,
               format: _ext,
@@ -137,7 +143,11 @@ class _SharedFileImportSheetState
       if (!mounted) return;
       navigator.pop();
       router.go(Routes.library);
-      showAppSnack(context, 'Added “$title” to your library', type: SnackType.success);
+      showAppSnack(
+        context,
+        'Added “$title” to your library',
+        type: SnackType.success,
+      );
     } on ApiError catch (e) {
       if (mounted) {
         setState(() => _busy = false);
@@ -146,7 +156,11 @@ class _SharedFileImportSheetState
     } on DioException catch (_) {
       if (mounted) {
         setState(() => _busy = false);
-        showAppSnack(context, 'Upload failed — check your network connection', type: SnackType.error);
+        showAppSnack(
+          context,
+          'Upload failed — check your network connection',
+          type: SnackType.error,
+        );
       }
     }
   }
@@ -251,8 +265,9 @@ class _SharedFileImportSheetState
                 : const Icon(Icons.download_rounded, size: 20),
             label: Text(
               _busy ? 'Importing & preparing…' : 'Add to Marginalia',
-              style: AppTypography.label(colors.bg)
-                  .copyWith(fontWeight: FontWeight.w600),
+              style: AppTypography.label(
+                colors.bg,
+              ).copyWith(fontWeight: FontWeight.w600),
             ),
             style: FilledButton.styleFrom(
               backgroundColor: colors.accent,
@@ -324,7 +339,11 @@ class _SharedQuoteSheetState extends ConsumerState<_SharedQuoteSheet> {
   Future<void> _save() async {
     final book = _selectedBook;
     if (book == null) {
-      showAppSnack(context, 'Please select a book for this marginalia', type: SnackType.error);
+      showAppSnack(
+        context,
+        'Please select a book for this marginalia',
+        type: SnackType.error,
+      );
       return;
     }
 
@@ -332,7 +351,9 @@ class _SharedQuoteSheetState extends ConsumerState<_SharedQuoteSheet> {
     final navigator = Navigator.of(context);
 
     try {
-      final highlight = await ref.read(highlightServiceProvider).create(
+      final highlight = await ref
+          .read(highlightServiceProvider)
+          .create(
             HighlightCreateRequest(
               bookId: book.id,
               colorTag: _tag,
@@ -342,7 +363,9 @@ class _SharedQuoteSheetState extends ConsumerState<_SharedQuoteSheet> {
 
       final note = _noteController.text.trim();
       if (note.isNotEmpty) {
-        await ref.read(noteServiceProvider).create(
+        await ref
+            .read(noteServiceProvider)
+            .create(
               NoteCreateRequest(
                 bookId: book.id,
                 bodyMd: note,
@@ -354,7 +377,11 @@ class _SharedQuoteSheetState extends ConsumerState<_SharedQuoteSheet> {
       ref.invalidate(bookHighlightsProvider(book.id));
       if (!mounted) return;
       navigator.pop();
-      showAppSnack(context, 'Saved quote to “${book.title}”', type: SnackType.success);
+      showAppSnack(
+        context,
+        'Saved quote to “${book.title}”',
+        type: SnackType.success,
+      );
     } on ApiError catch (e) {
       if (mounted) {
         setState(() => _busy = false);
@@ -402,19 +429,16 @@ class _SharedQuoteSheetState extends ConsumerState<_SharedQuoteSheet> {
               color: colors.surface2,
               borderRadius: AppRadii.brMd,
               border: Border(
-                left: BorderSide(
-                  color: AppColors.forTag(_tag),
-                  width: 3.5,
-                ),
+                left: BorderSide(color: AppColors.forTag(_tag), width: 3.5),
               ),
             ),
             child: Text(
               '“${widget.quoteText.trim()}”',
               maxLines: 4,
               overflow: TextOverflow.ellipsis,
-              style: AppTypography.bodySerif(colors.text).copyWith(
-                fontStyle: FontStyle.italic,
-              ),
+              style: AppTypography.bodySerif(
+                colors.text,
+              ).copyWith(fontStyle: FontStyle.italic),
             ),
           ),
           const SizedBox(height: AppSpacing.lg),
@@ -432,9 +456,7 @@ class _SharedQuoteSheetState extends ConsumerState<_SharedQuoteSheet> {
                     label: Text(t),
                     selected: active,
                     selectedColor: tagColor.withValues(alpha: 0.2),
-                    side: BorderSide(
-                      color: active ? tagColor : colors.border,
-                    ),
+                    side: BorderSide(color: active ? tagColor : colors.border),
                     labelStyle: AppTypography.caption(
                       active ? tagColor : colors.text2,
                     ).copyWith(fontWeight: FontWeight.w600),
@@ -511,8 +533,9 @@ class _SharedQuoteSheetState extends ConsumerState<_SharedQuoteSheet> {
                   )
                 : Text(
                     'Save Quote',
-                    style: AppTypography.label(colors.bg)
-                        .copyWith(fontWeight: FontWeight.w600),
+                    style: AppTypography.label(
+                      colors.bg,
+                    ).copyWith(fontWeight: FontWeight.w600),
                   ),
           ),
         ],

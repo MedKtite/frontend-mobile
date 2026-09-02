@@ -22,15 +22,24 @@ typedef BookExtras = ({
   int? year,
 });
 
-typedef ExtrasRef = ({int? gutenbergId, String? googleId, String? title, String? author});
+typedef ExtrasRef = ({
+  int? gutenbergId,
+  String? googleId,
+  String? title,
+  String? author,
+});
 
-final bookExtrasProvider =
-    FutureProvider.family<BookExtras, ExtrasRef>((ref, key) async {
+final bookExtrasProvider = FutureProvider.family<BookExtras, ExtrasRef>((
+  ref,
+  key,
+) async {
   // The two sources are independent. Start both immediately and merge their
   // results when ready instead of making the backend wait for Gutendex.
   final gutenbergFuture = _loadGutenbergExtras(key.gutenbergId);
-  final catalogFuture =
-      _loadCatalogExtras(ref.read(catalogServiceProvider), key);
+  final catalogFuture = _loadCatalogExtras(
+    ref.read(catalogServiceProvider),
+    key,
+  );
 
   final gutenberg = await gutenbergFuture;
   final match = await catalogFuture;
@@ -52,9 +61,9 @@ Future<CatalogBook?> _loadCatalogExtras(
   if ((key.title ?? '').isEmpty) return null;
   try {
     return await catalog.lookup(
-          title: _searchTitle(key.title!),
-          author: _primaryAuthor(key.author),
-        );
+      title: _searchTitle(key.title!),
+      author: _primaryAuthor(key.author),
+    );
   } catch (_) {
     return null;
   }
@@ -79,8 +88,9 @@ Future<({String? description, int? downloads})> _loadGutenbergExtras(
         description = (s.first as String)
             // Gutendex appends a provenance note — drop it for the page.
             .replaceAll(
-                RegExp(r'\(This is an automatically generated summary\.?\)\s*$'),
-                '')
+              RegExp(r'\(This is an automatically generated summary\.?\)\s*$'),
+              '',
+            )
             .trim();
       }
       downloads = (res.data?['download_count'] as num?)?.toInt();
@@ -99,9 +109,12 @@ Future<({String? description, int? downloads})> _loadGutenbergExtras(
 String _searchTitle(String raw) {
   var t = raw.split(';').first;
   t = t.replaceAll(
-      RegExp(r',?\s*(volume|vol\.?|book|part)\s+[ivxlcdm0-9]+\s*$',
-          caseSensitive: false),
-      '');
+    RegExp(
+      r',?\s*(volume|vol\.?|book|part)\s+[ivxlcdm0-9]+\s*$',
+      caseSensitive: false,
+    ),
+    '',
+  );
   t = t.trim();
   return t.isEmpty ? raw.trim() : t;
 }

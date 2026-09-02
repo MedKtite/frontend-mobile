@@ -9,12 +9,12 @@ import '../services/backend/auth_service.dart';
 import '../services/backend/book_service.dart';
 import 'state/auth_state.dart';
 
-
 class AuthController extends StateNotifier<AuthState> {
   final AuthService _service;
   final BookService _books;
 
-  AuthController(this._service, this._books) : super(const AuthState.initial()) {
+  AuthController(this._service, this._books)
+    : super(const AuthState.initial()) {
     _restore();
   }
 
@@ -67,7 +67,10 @@ class AuthController extends StateNotifier<AuthState> {
     }
   }
 
-  Future<void> loginWithGoogle({required String token, String? timezone}) async {
+  Future<void> loginWithGoogle({
+    required String token,
+    String? timezone,
+  }) async {
     await _oauthLogin(
       OAuthLoginRequest(token: token, timezone: timezone),
       _service.loginWithGoogle,
@@ -125,7 +128,11 @@ class AuthController extends StateNotifier<AuthState> {
   }) async {
     state = const AuthState.loading();
     try {
-      await _service.resetPassword(token: token, password: password, email: email);
+      await _service.resetPassword(
+        token: token,
+        password: password,
+        email: email,
+      );
       state = const AuthState.unauthenticated();
       return true;
     } on ApiError catch (e) {
@@ -139,8 +146,7 @@ class AuthController extends StateNotifier<AuthState> {
   }
 }
 
-final authProvider =
-    StateNotifierProvider<AuthController, AuthState>((ref) {
+final authProvider = StateNotifierProvider<AuthController, AuthState>((ref) {
   return AuthController(
     ref.watch(authServiceProvider),
     ref.watch(bookServiceProvider),

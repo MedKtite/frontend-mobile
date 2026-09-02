@@ -45,5 +45,6 @@ class NoteService {
   }
 }
 
-final noteServiceProvider =
-    Provider<NoteService>((ref) => NoteService(ref.watch(dioProvider)));
+final noteServiceProvider = Provider<NoteService>(
+  (ref) => NoteService(ref.watch(dioProvider)),
+);

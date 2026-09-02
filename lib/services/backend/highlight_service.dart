@@ -23,8 +23,7 @@ class HighlightService {
 
   /// GET /me/highlights/by-book/{bookId} — every highlight for one book.
   Future<List<Highlight>> listForBook(String bookId) async {
-    final res =
-        await _dio.get<List<dynamic>>('/me/highlights/by-book/$bookId');
+    final res = await _dio.get<List<dynamic>>('/me/highlights/by-book/$bookId');
     return (res.data ?? const [])
         .map((e) => Highlight.fromJson(e as Map<String, dynamic>))
         .toList();
@@ -67,5 +66,6 @@ class HighlightService {
   }
 }
 
-final highlightServiceProvider =
-    Provider<HighlightService>((ref) => HighlightService(ref.watch(dioProvider)));
+final highlightServiceProvider = Provider<HighlightService>(
+  (ref) => HighlightService(ref.watch(dioProvider)),
+);

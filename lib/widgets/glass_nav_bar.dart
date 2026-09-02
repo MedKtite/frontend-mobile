@@ -9,11 +9,7 @@ import '../app/theme/tokens/typography.dart';
 enum NavTab { home, discovery, library, margins, insights, profile }
 
 class GlassNavBar extends StatelessWidget {
-  const GlassNavBar({
-    super.key,
-    required this.current,
-    required this.onSelect,
-  });
+  const GlassNavBar({super.key, required this.current, required this.onSelect});
 
   final NavTab current;
   final ValueChanged<NavTab> onSelect;
@@ -27,10 +23,25 @@ class GlassNavBar extends StatelessWidget {
   // glyph (null icon → _TagDotsIcon) per the reference design.
   static const _items = <(NavTab, IconData?, IconData?, String)>[
     (NavTab.home, Icons.home_outlined, Icons.home_rounded, 'Home'),
-    (NavTab.discovery, Icons.explore_outlined, Icons.explore_rounded, 'Discovery'),
-    (NavTab.library, Icons.auto_stories_outlined, Icons.auto_stories_rounded, 'Library'),
+    (
+      NavTab.discovery,
+      Icons.explore_outlined,
+      Icons.explore_rounded,
+      'Discovery',
+    ),
+    (
+      NavTab.library,
+      Icons.auto_stories_outlined,
+      Icons.auto_stories_rounded,
+      'Library',
+    ),
     (NavTab.margins, null, null, 'Margins'),
-    (NavTab.insights, Icons.bar_chart_outlined, Icons.bar_chart_rounded, 'Insights'),
+    (
+      NavTab.insights,
+      Icons.bar_chart_outlined,
+      Icons.bar_chart_rounded,
+      'Insights',
+    ),
   ];
 
   @override
@@ -84,10 +95,7 @@ class GlassNavBar extends StatelessWidget {
           ),
           child: LiquidGlass(
             shape: LiquidRoundedSuperellipse(borderRadius: _radius),
-            child: DecoratedBox(
-              decoration: const BoxDecoration(),
-              child: bar,
-            ),
+            child: DecoratedBox(decoration: const BoxDecoration(), child: bar),
           ),
         ),
       );
@@ -193,8 +201,10 @@ class _TagDotsIcon extends StatelessWidget {
                 Container(
                   width: 7,
                   height: 7,
-                  decoration:
-                      BoxDecoration(color: tone, shape: BoxShape.circle),
+                  decoration: BoxDecoration(
+                    color: tone,
+                    shape: BoxShape.circle,
+                  ),
                 ),
             ],
           ),

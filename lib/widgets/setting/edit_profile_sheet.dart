@@ -40,7 +40,9 @@ class _EditProfileSheetState extends ConsumerState<_EditProfileSheet> {
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.user.displayName);
-    _shortNameController = TextEditingController(text: widget.user.shortName ?? '');
+    _shortNameController = TextEditingController(
+      text: widget.user.shortName ?? '',
+    );
   }
 
   @override
@@ -97,7 +99,10 @@ class _EditProfileSheetState extends ConsumerState<_EditProfileSheet> {
         color: colors.surface,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
         border: Border(
-          top: BorderSide(color: colors.border.withValues(alpha: 0.1), width: 1),
+          top: BorderSide(
+            color: colors.border.withValues(alpha: 0.1),
+            width: 1,
+          ),
         ),
       ),
       child: SafeArea(
@@ -148,7 +153,11 @@ class _EditProfileSheetState extends ConsumerState<_EditProfileSheet> {
                     ],
                   ),
                   IconButton(
-                    icon: Icon(Icons.close_rounded, color: colors.text3, size: 22),
+                    icon: Icon(
+                      Icons.close_rounded,
+                      color: colors.text3,
+                      size: 22,
+                    ),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                 ],
@@ -160,11 +169,7 @@ class _EditProfileSheetState extends ConsumerState<_EditProfileSheet> {
               Center(
                 child: Column(
                   children: [
-                    UserAvatar(
-                      user: currentUser,
-                      size: 76,
-                      isEditable: true,
-                    ),
+                    UserAvatar(user: currentUser, size: 76, isEditable: true),
                     const SizedBox(height: 8),
                     Text(
                       'Tap photo to change or remove',
@@ -199,14 +204,21 @@ class _EditProfileSheetState extends ConsumerState<_EditProfileSheet> {
                   hintStyle: AppTypography.body(colors.text3),
                   filled: true,
                   fillColor: colors.bg,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide(color: colors.border.withValues(alpha: 0.1)),
+                    borderSide: BorderSide(
+                      color: colors.border.withValues(alpha: 0.1),
+                    ),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide(color: colors.border.withValues(alpha: 0.1)),
+                    borderSide: BorderSide(
+                      color: colors.border.withValues(alpha: 0.1),
+                    ),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(16),
@@ -239,15 +251,22 @@ class _EditProfileSheetState extends ConsumerState<_EditProfileSheet> {
                   hintStyle: AppTypography.body(colors.text3),
                   filled: true,
                   fillColor: colors.bg,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
                   counterText: '',
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide(color: colors.border.withValues(alpha: 0.1)),
+                    borderSide: BorderSide(
+                      color: colors.border.withValues(alpha: 0.1),
+                    ),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide(color: colors.border.withValues(alpha: 0.1)),
+                    borderSide: BorderSide(
+                      color: colors.border.withValues(alpha: 0.1),
+                    ),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(16),
@@ -264,7 +283,9 @@ class _EditProfileSheetState extends ConsumerState<_EditProfileSheet> {
                 style: FilledButton.styleFrom(
                   backgroundColor: colors.text,
                   foregroundColor: colors.bg,
-                  shape: const RoundedRectangleBorder(borderRadius: AppRadii.brFull),
+                  shape: const RoundedRectangleBorder(
+                    borderRadius: AppRadii.brFull,
+                  ),
                   padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
                 child: _isSaving
@@ -276,7 +297,9 @@ class _EditProfileSheetState extends ConsumerState<_EditProfileSheet> {
                       )
                     : Text(
                         'Save Changes',
-                        style: AppTypography.label(colors.bg).copyWith(fontWeight: FontWeight.w600),
+                        style: AppTypography.label(
+                          colors.bg,
+                        ).copyWith(fontWeight: FontWeight.w600),
                       ),
               ),
             ],

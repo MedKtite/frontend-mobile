@@ -34,7 +34,8 @@ class NotificationsScreen extends ConsumerWidget {
             const SizedBox(height: AppSpacing.sm),
             _TabFilterBar(
               activeTab: state.activeTab,
-              onTabSelected: (tab) => ref.read(notificationsProvider.notifier).setTab(tab),
+              onTabSelected: (tab) =>
+                  ref.read(notificationsProvider.notifier).setTab(tab),
             ),
             const SizedBox(height: AppSpacing.sm),
             Expanded(
@@ -43,17 +44,22 @@ class NotificationsScreen extends ConsumerWidget {
                   : RefreshIndicator(
                       color: colors.gilt,
                       backgroundColor: colors.surface,
-                      onRefresh: () => ref.read(notificationsProvider.notifier).load(),
+                      onRefresh: () =>
+                          ref.read(notificationsProvider.notifier).load(),
                       child: state.items.isEmpty
                           ? _EmptyNotificationsView(tab: state.activeTab)
                           : _NotificationsList(
                               items: state.items,
                               onTapItem: (item) {
-                                ref.read(notificationsProvider.notifier).markAsRead(item.id);
+                                ref
+                                    .read(notificationsProvider.notifier)
+                                    .markAsRead(item.id);
                                 _handleNotificationTap(context, item);
                               },
                               onDeleteItem: (item) {
-                                ref.read(notificationsProvider.notifier).deleteNotification(item.id);
+                                ref
+                                    .read(notificationsProvider.notifier)
+                                    .deleteNotification(item.id);
                               },
                             ),
                     ),
@@ -68,7 +74,10 @@ class NotificationsScreen extends ConsumerWidget {
     context.push(Routes.notificationSettings);
   }
 
-  void _handleNotificationTap(BuildContext context, NotificationItemModel item) {
+  void _handleNotificationTap(
+    BuildContext context,
+    NotificationItemModel item,
+  ) {
     final route = item.data?['target_route'] as String?;
     if (route != null && route.isNotEmpty) {
       Navigator.of(context).pushNamed(route);
@@ -83,10 +92,7 @@ class _TopBar extends StatelessWidget {
   final VoidCallback onBack;
   final VoidCallback onOpenSettings;
 
-  const _TopBar({
-    required this.onBack,
-    required this.onOpenSettings,
-  });
+  const _TopBar({required this.onBack, required this.onOpenSettings});
 
   @override
   Widget build(BuildContext context) {
@@ -166,11 +172,7 @@ class _CircleIconButton extends StatelessWidget {
             ),
           ),
           child: Center(
-            child: Icon(
-              icon,
-              size: iconSize,
-              color: iconColor ?? colors.text,
-            ),
+            child: Icon(icon, size: iconSize, color: iconColor ?? colors.text),
           ),
         ),
       ),
@@ -185,17 +187,16 @@ class _TabFilterBar extends StatelessWidget {
   final String activeTab;
   final ValueChanged<String> onTabSelected;
 
-  const _TabFilterBar({
-    required this.activeTab,
-    required this.onTabSelected,
-  });
+  const _TabFilterBar({required this.activeTab, required this.onTabSelected});
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.pageHorizontal),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.pageHorizontal,
+      ),
       child: Container(
         height: 46,
         padding: const EdgeInsets.all(4),
@@ -324,21 +325,25 @@ class _NotificationsList extends StatelessWidget {
         if (todayItems.isNotEmpty) ...[
           _SectionHeader(title: 'TODAY'),
           const SizedBox(height: AppSpacing.xs),
-          ...todayItems.map((item) => _NotificationCard(
-                item: item,
-                onTap: () => onTapItem(item),
-                onDelete: () => onDeleteItem(item),
-              )),
+          ...todayItems.map(
+            (item) => _NotificationCard(
+              item: item,
+              onTap: () => onTapItem(item),
+              onDelete: () => onDeleteItem(item),
+            ),
+          ),
           const SizedBox(height: AppSpacing.md),
         ],
         if (earlierItems.isNotEmpty) ...[
           _SectionHeader(title: 'EARLIER'),
           const SizedBox(height: AppSpacing.xs),
-          ...earlierItems.map((item) => _NotificationCard(
-                item: item,
-                onTap: () => onTapItem(item),
-                onDelete: () => onDeleteItem(item),
-              )),
+          ...earlierItems.map(
+            (item) => _NotificationCard(
+              item: item,
+              onTap: () => onTapItem(item),
+              onDelete: () => onDeleteItem(item),
+            ),
+          ),
           const SizedBox(height: AppSpacing.xl),
         ],
       ],
@@ -459,10 +464,7 @@ class _NotificationCard extends StatelessWidget {
                             Text(
                               _formatTime(item.createdAt),
                               style: AppTypography.sans(
-                                TextStyle(
-                                  fontSize: 12,
-                                  color: colors.text3,
-                                ),
+                                TextStyle(fontSize: 12, color: colors.text3),
                               ),
                             ),
                           ],
@@ -477,7 +479,9 @@ class _NotificationCard extends StatelessWidget {
                             Expanded(
                               child: Text(
                                 item.body,
-                                style: item.parsedCategory == NotificationCategory.quoteOfTheDay
+                                style:
+                                    item.parsedCategory ==
+                                        NotificationCategory.quoteOfTheDay
                                     ? GoogleFonts.sourceSerif4(
                                         fontSize: 13.5,
                                         fontStyle: FontStyle.italic,
@@ -597,13 +601,7 @@ class _CategoryIconBadge extends StatelessWidget {
           width: 1,
         ),
       ),
-      child: Center(
-        child: Icon(
-          icon,
-          size: 20,
-          color: colors.gilt,
-        ),
-      ),
+      child: Center(child: Icon(icon, size: 20, color: colors.gilt)),
     );
   }
 }
@@ -652,10 +650,7 @@ class _EmptyNotificationsView extends StatelessWidget {
               message,
               textAlign: TextAlign.center,
               style: AppTypography.sans(
-                TextStyle(
-                  fontSize: 14,
-                  color: colors.text3,
-                ),
+                TextStyle(fontSize: 14, color: colors.text3),
               ),
             ),
           ],
@@ -668,113 +663,115 @@ class _EmptyNotificationsView extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────────────────────
 // Notification Preferences Bottom Sheet (Settings / Filter)
 // ─────────────────────────────────────────────────────────────────────────────
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final colors = context.appColors;
-    final prefsAsync = ref.watch(notificationPreferencesProvider);
+@override
+Widget build(BuildContext context, WidgetRef ref) {
+  final colors = context.appColors;
+  final prefsAsync = ref.watch(notificationPreferencesProvider);
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      child: SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Handle bar
-            Center(
-              child: Container(
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: colors.border.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(2),
-                ),
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+    decoration: BoxDecoration(
+      color: colors.surface,
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+    ),
+    child: SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Handle bar
+          Center(
+            child: Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: colors.border.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(2),
               ),
             ),
-            const SizedBox(height: AppSpacing.md),
+          ),
+          const SizedBox(height: AppSpacing.md),
 
-            // Sheet Header
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          // Sheet Header
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Notification Settings',
+                style: GoogleFonts.sourceSerif4(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w600,
+                  color: colors.text,
+                ),
+              ),
+              TextButton(
+                onPressed: () {
+                  ref.read(notificationsProvider.notifier).markAllAsRead();
+                  Navigator.of(context).pop();
+                },
+                child: Text(
+                  'Mark all as read',
+                  style: TextStyle(color: colors.gilt, fontSize: 13),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+
+          prefsAsync.when(
+            loading: () => const Padding(
+              padding: EdgeInsets.all(24),
+              child: AppProgressLoading(),
+            ),
+            error: (err, _) => Center(
+              child: Text(
+                'Failed to load settings',
+                style: TextStyle(color: colors.danger),
+              ),
+            ),
+            data: (prefs) => Column(
               children: [
-                Text(
-                  'Notification Settings',
-                  style: GoogleFonts.sourceSerif4(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w600,
-                    color: colors.text,
-                  ),
+                _PreferenceToggleRow(
+                  title: 'Daily Reading Reminder',
+                  subtitle: 'Gentle nudge at your preferred reading time',
+                  value: prefs.categories['reading_reminder'] ?? true,
+                  onChanged: (val) => ref
+                      .read(notificationPreferencesProvider.notifier)
+                      .toggleCategory('reading_reminder', val),
                 ),
-                TextButton(
-                  onPressed: () {
-                    ref.read(notificationsProvider.notifier).markAllAsRead();
-                    Navigator.of(context).pop();
-                  },
-                  child: Text(
-                    'Mark all as read',
-                    style: TextStyle(color: colors.gilt, fontSize: 13),
-                  ),
+                _PreferenceToggleRow(
+                  title: 'Reading Streaks & Goals',
+                  subtitle: 'Celebrate milestones and streak preservation',
+                  value: prefs.categories['streak_update'] ?? true,
+                  onChanged: (val) => ref
+                      .read(notificationPreferencesProvider.notifier)
+                      .toggleCategory('streak_update', val),
                 ),
+                _PreferenceToggleRow(
+                  title: 'Memory Resurface & Quotes',
+                  subtitle: 'Daily passage from your personal highlights',
+                  value: prefs.categories['passage'] ?? true,
+                  onChanged: (val) => ref
+                      .read(notificationPreferencesProvider.notifier)
+                      .toggleCategory('passage', val),
+                ),
+                _PreferenceToggleRow(
+                  title: 'Weekly Reading Insights',
+                  subtitle: 'Sunday summary of reading time & margin notes',
+                  value: prefs.categories['weekly_insights'] ?? true,
+                  onChanged: (val) => ref
+                      .read(notificationPreferencesProvider.notifier)
+                      .toggleCategory('weekly_insights', val),
+                ),
+                const SizedBox(height: AppSpacing.sm),
               ],
             ),
-            const SizedBox(height: AppSpacing.sm),
-
-            prefsAsync.when(
-              loading: () => const Padding(
-                padding: EdgeInsets.all(24),
-                child: AppProgressLoading(),
-              ),
-              error: (err, _) => Center(
-                child: Text('Failed to load settings', style: TextStyle(color: colors.danger)),
-              ),
-              data: (prefs) => Column(
-                children: [
-                  _PreferenceToggleRow(
-                    title: 'Daily Reading Reminder',
-                    subtitle: 'Gentle nudge at your preferred reading time',
-                    value: prefs.categories['reading_reminder'] ?? true,
-                    onChanged: (val) => ref
-                        .read(notificationPreferencesProvider.notifier)
-                        .toggleCategory('reading_reminder', val),
-                  ),
-                  _PreferenceToggleRow(
-                    title: 'Reading Streaks & Goals',
-                    subtitle: 'Celebrate milestones and streak preservation',
-                    value: prefs.categories['streak_update'] ?? true,
-                    onChanged: (val) => ref
-                        .read(notificationPreferencesProvider.notifier)
-                        .toggleCategory('streak_update', val),
-                  ),
-                  _PreferenceToggleRow(
-                    title: 'Memory Resurface & Quotes',
-                    subtitle: 'Daily passage from your personal highlights',
-                    value: prefs.categories['passage'] ?? true,
-                    onChanged: (val) => ref
-                        .read(notificationPreferencesProvider.notifier)
-                        .toggleCategory('passage', val),
-                  ),
-                  _PreferenceToggleRow(
-                    title: 'Weekly Reading Insights',
-                    subtitle: 'Sunday summary of reading time & margin notes',
-                    value: prefs.categories['weekly_insights'] ?? true,
-                    onChanged: (val) => ref
-                        .read(notificationPreferencesProvider.notifier)
-                        .toggleCategory('weekly_insights', val),
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                ],
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
-    );
-  }
-
+    ),
+  );
+}
 
 class _PreferenceToggleRow extends StatelessWidget {
   final String title;
@@ -813,10 +810,7 @@ class _PreferenceToggleRow extends StatelessWidget {
                 Text(
                   subtitle,
                   style: AppTypography.sans(
-                    TextStyle(
-                      fontSize: 12.5,
-                      color: colors.text3,
-                    ),
+                    TextStyle(fontSize: 12.5, color: colors.text3),
                   ),
                 ),
               ],

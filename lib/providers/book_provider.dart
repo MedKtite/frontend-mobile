@@ -8,7 +8,9 @@ import '../services/backend/book_service.dart';
 /// whereas Library hands over the whole object via the route's `extra`.
 /// Surfaces the error as an `AsyncError`; autoDispose so a closed reader
 /// doesn't linger.
-final bookByIdProvider =
-    FutureProvider.autoDispose.family<Book, String>((ref, id) async {
+final bookByIdProvider = FutureProvider.autoDispose.family<Book, String>((
+  ref,
+  id,
+) async {
   return ref.watch(bookServiceProvider).getOne(id);
 });

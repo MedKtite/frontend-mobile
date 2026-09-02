@@ -31,12 +31,15 @@ class ReadingMiniBar extends ConsumerWidget {
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(
-          AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.sm),
+        AppSpacing.lg,
+        0,
+        AppSpacing.lg,
+        AppSpacing.sm,
+      ),
       child: Dismissible(
         key: ValueKey('reading-mini-${book.id}'),
         direction: DismissDirection.horizontal,
-        onDismissed: (_) =>
-            ref.read(readingMiniProvider.notifier).state = null,
+        onDismissed: (_) => ref.read(readingMiniProvider.notifier).state = null,
         child: GestureDetector(
           onTap: () => context.push(Routes.readingPath(book.id), extra: book),
           child: Container(
@@ -90,18 +93,19 @@ class ReadingMiniBar extends ConsumerWidget {
                               book.title,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: AppTypography.label(colors.text)
-                                  .copyWith(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w500),
+                              style: AppTypography.label(colors.text).copyWith(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
                             const SizedBox(height: 2),
                             Text(
                               '${session.label} · ${session.pct.round()}%',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: AppTypography.caption(colors.text3)
-                                  .copyWith(fontSize: 11),
+                              style: AppTypography.caption(
+                                colors.text3,
+                              ).copyWith(fontSize: 11),
                             ),
                           ],
                         ),
@@ -114,8 +118,11 @@ class ReadingMiniBar extends ConsumerWidget {
                           color: colors.text,
                           shape: BoxShape.circle,
                         ),
-                        child: Icon(Icons.menu_book_rounded,
-                            size: 18, color: colors.bg),
+                        child: Icon(
+                          Icons.menu_book_rounded,
+                          size: 18,
+                          color: colors.bg,
+                        ),
                       ),
                     ],
                   ),
@@ -150,11 +157,9 @@ class _MiniCover extends StatelessWidget {
       child: Center(
         child: Text(
           title.isEmpty ? '?' : title[0].toUpperCase(),
-          style: AppTypography.serif(TextStyle(
-            color: fg,
-            fontSize: 16,
-            fontStyle: FontStyle.italic,
-          )),
+          style: AppTypography.serif(
+            TextStyle(color: fg, fontSize: 16, fontStyle: FontStyle.italic),
+          ),
         ),
       ),
     );

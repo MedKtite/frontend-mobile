@@ -18,8 +18,8 @@ class FcmPushService {
       final platform = Platform.isIOS
           ? 'ios'
           : Platform.isAndroid
-              ? 'android'
-              : 'web';
+          ? 'android'
+          : 'web';
 
       // Example registration placeholder. When Firebase is initialized,
       // FirebaseMessaging.instance.getToken() provides the token.
@@ -38,7 +38,9 @@ class FcmPushService {
         deviceName: '${Platform.operatingSystem} device',
         pushPermission: 'granted',
       );
-      debugPrint('[FCM] Device push token registered successfully with backend');
+      debugPrint(
+        '[FCM] Device push token registered successfully with backend',
+      );
     } catch (e) {
       debugPrint('[FCM] Failed to sync push token with backend: $e');
     }

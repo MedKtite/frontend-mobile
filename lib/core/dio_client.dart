@@ -4,7 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 // Platform-specific pieces (adapter, cookies, default base URL): the web
 // build compiles the browser variant, everything else the dart:io variant.
 import 'dio_support/dio_support_web.dart'
-    if (dart.library.io) 'dio_support/dio_support_io.dart' as platform;
+    if (dart.library.io) 'dio_support/dio_support_io.dart'
+    as platform;
 
 /// The whole client networking layer in one file: the [dioProvider], the
 /// [DioFactory] that builds the configured Dio, the request interceptors
@@ -17,8 +18,9 @@ import 'dio_support/dio_support_web.dart'
 /// is set will throw with a clear message.
 final dioProvider = Provider<Dio>((ref) {
   throw UnimplementedError(
-      'dioProvider must be overridden in ProviderScope at app startup. '
-      'See main.dart.');
+    'dioProvider must be overridden in ProviderScope at app startup. '
+    'See main.dart.',
+  );
 });
 
 /// Builds a Dio configured for the Marginalia backend.
@@ -34,20 +36,21 @@ class DioFactory {
   /// Default: 10.0.2.2 on the Android emulator (its alias for the host
   /// machine — a REAL phone can't reach it), localhost elsewhere.
   static const _envBaseUrl = String.fromEnvironment('API_BASE_URL');
-  static String get defaultBaseUrl => _envBaseUrl.isNotEmpty
-      ? _envBaseUrl
-      : platform.platformDefaultBaseUrl();
+  static String get defaultBaseUrl =>
+      _envBaseUrl.isNotEmpty ? _envBaseUrl : platform.platformDefaultBaseUrl();
 
   static Future<Dio> create({String? baseUrl}) async {
-    final dio = _ApiErrorDio(BaseOptions(
-      baseUrl: baseUrl ?? defaultBaseUrl,
-      connectTimeout: const Duration(seconds: 10),
-      receiveTimeout: const Duration(seconds: 30),
-      headers: {'Accept': 'application/json'},
-      contentType: 'application/json',
-      // We translate non-2xx to typed errors ourselves below — Dio shouldn't throw.
-      validateStatus: (_) => true,
-    ));
+    final dio = _ApiErrorDio(
+      BaseOptions(
+        baseUrl: baseUrl ?? defaultBaseUrl,
+        connectTimeout: const Duration(seconds: 10),
+        receiveTimeout: const Duration(seconds: 30),
+        headers: {'Accept': 'application/json'},
+        contentType: 'application/json',
+        // We translate non-2xx to typed errors ourselves below — Dio shouldn't throw.
+        validateStatus: (_) => true,
+      ),
+    );
 
     // Cookie handling is platform-specific: persistent jar on mobile,
     // browser-managed (no-op) on web.
@@ -99,7 +102,10 @@ class AuthInterceptor extends Interceptor {
   AuthInterceptor(this._dio);
 
   @override
-  Future<void> onError(DioException err, ErrorInterceptorHandler handler) async {
+  Future<void> onError(
+    DioException err,
+    ErrorInterceptorHandler handler,
+  ) async {
     final req = err.requestOptions;
     final status = err.response?.statusCode ?? 0;
 
@@ -123,11 +129,11 @@ class AuthInterceptor extends Interceptor {
 
     try {
       final retryOptions = Options(
-        method:  req.method,
+        method: req.method,
         headers: req.headers,
-        extra:   {...req.extra, '__retried__': true},
+        extra: {...req.extra, '__retried__': true},
         responseType: req.responseType,
-        contentType:  req.contentType,
+        contentType: req.contentType,
       );
       final response = await _dio.request<dynamic>(
         req.path,
@@ -150,7 +156,10 @@ class AuthInterceptor extends Interceptor {
 /// into a single [ApiError] thrown from the repository.
 class _ErrorMappingInterceptor extends Interceptor {
   @override
-  void onResponse(Response<dynamic> response, ResponseInterceptorHandler handler) {
+  void onResponse(
+    Response<dynamic> response,
+    ResponseInterceptorHandler handler,
+  ) {
     final code = response.statusCode ?? 0;
     if (code >= 200 && code < 300) {
       return handler.next(response);
@@ -159,7 +168,11 @@ class _ErrorMappingInterceptor extends Interceptor {
     if (body is Map<String, dynamic>) {
       throw ApiError.fromJson(body);
     }
-    throw ApiError(status: code, error: 'http', message: body?.toString() ?? 'HTTP $code');
+    throw ApiError(
+      status: code,
+      error: 'http',
+      message: body?.toString() ?? 'HTTP $code',
+    );
   }
 
   @override
@@ -182,19 +195,19 @@ class ApiError implements Exception {
   ApiError({required this.status, required this.error, required this.message});
 
   factory ApiError.fromJson(Map<String, dynamic> json) => ApiError(
-        status:  (json['status'] as num?)?.toInt() ?? 0,
-        error:   json['error']?.toString() ?? '',
-        message: json['message']?.toString() ?? '',
-      );
+    status: (json['status'] as num?)?.toInt() ?? 0,
+    error: json['error']?.toString() ?? '',
+    message: json['message']?.toString() ?? '',
+  );
 
   factory ApiError.network(String message) =>
       ApiError(status: 0, error: 'network', message: message);
 
   bool get isUnauthorized => status == 401;
-  bool get isForbidden    => status == 403;
-  bool get isNotFound     => status == 404;
-  bool get isConflict     => status == 409;
-  bool get isBadRequest   => status == 400;
+  bool get isForbidden => status == 403;
+  bool get isNotFound => status == 404;
+  bool get isConflict => status == 409;
+  bool get isBadRequest => status == 400;
 
   @override
   String toString() => 'ApiError($status, $error): $message';

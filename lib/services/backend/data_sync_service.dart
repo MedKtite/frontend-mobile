@@ -18,7 +18,9 @@ class DataSyncService {
     try {
       if (Platform.isAndroid) {
         final info = await plugin.androidInfo;
-        final brand = info.brand.isNotEmpty ? info.brand[0].toUpperCase() + info.brand.substring(1) : '';
+        final brand = info.brand.isNotEmpty
+            ? info.brand[0].toUpperCase() + info.brand.substring(1)
+            : '';
         return '$brand ${info.model}'.trim();
       } else if (Platform.isIOS) {
         final info = await plugin.iosInfo;
@@ -77,7 +79,10 @@ class DataSyncService {
       final tempDir = await getTemporaryDirectory();
       int totalSize = 0;
       if (tempDir.existsSync()) {
-        await for (final file in tempDir.list(recursive: true, followLinks: false)) {
+        await for (final file in tempDir.list(
+          recursive: true,
+          followLinks: false,
+        )) {
           if (file is File) {
             totalSize += await file.length();
           }

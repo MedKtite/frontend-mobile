@@ -98,7 +98,9 @@ class SocialAuthService {
     }
     final code = callbackUri.queryParameters['code'];
     if (code == null || code.isEmpty) {
-      throw const SocialAuthException('X did not return an authorization code.');
+      throw const SocialAuthException(
+        'X did not return an authorization code.',
+      );
     }
 
     final response = await http.post(

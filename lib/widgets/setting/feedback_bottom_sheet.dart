@@ -29,7 +29,8 @@ class _FeedbackBottomSheet extends ConsumerStatefulWidget {
   const _FeedbackBottomSheet();
 
   @override
-  ConsumerState<_FeedbackBottomSheet> createState() => _FeedbackBottomSheetState();
+  ConsumerState<_FeedbackBottomSheet> createState() =>
+      _FeedbackBottomSheetState();
 }
 
 class _FeedbackBottomSheetState extends ConsumerState<_FeedbackBottomSheet> {
@@ -79,7 +80,9 @@ class _FeedbackBottomSheetState extends ConsumerState<_FeedbackBottomSheet> {
         email: user?.email,
         appVersion: _includeDiagnostics ? appVersion : null,
         deviceModel: _includeDiagnostics ? deviceName : null,
-        osVersion: _includeDiagnostics ? (kIsWeb ? 'Web' : Platform.operatingSystemVersion) : null,
+        osVersion: _includeDiagnostics
+            ? (kIsWeb ? 'Web' : Platform.operatingSystemVersion)
+            : null,
       );
 
       if (mounted) {
@@ -106,7 +109,10 @@ class _FeedbackBottomSheetState extends ConsumerState<_FeedbackBottomSheet> {
         color: colors.surface,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
         border: Border(
-          top: BorderSide(color: colors.border.withValues(alpha: 0.1), width: 1),
+          top: BorderSide(
+            color: colors.border.withValues(alpha: 0.1),
+            width: 1,
+          ),
         ),
       ),
       child: SafeArea(
@@ -157,7 +163,11 @@ class _FeedbackBottomSheetState extends ConsumerState<_FeedbackBottomSheet> {
                     ],
                   ),
                   IconButton(
-                    icon: Icon(Icons.close_rounded, color: colors.text3, size: 22),
+                    icon: Icon(
+                      Icons.close_rounded,
+                      color: colors.text3,
+                      size: 22,
+                    ),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                 ],
@@ -187,7 +197,10 @@ class _FeedbackBottomSheetState extends ConsumerState<_FeedbackBottomSheet> {
                     onTap: () => setState(() => _selectedCategory = cat),
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 150),
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 9,
+                      ),
                       decoration: BoxDecoration(
                         color: isSelected ? colors.gilt : colors.bg,
                         borderRadius: BorderRadius.circular(20),
@@ -202,7 +215,9 @@ class _FeedbackBottomSheetState extends ConsumerState<_FeedbackBottomSheet> {
                         style: AppTypography.sans(
                           TextStyle(
                             fontSize: 12.5,
-                            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                            fontWeight: isSelected
+                                ? FontWeight.w600
+                                : FontWeight.w500,
                             color: isSelected ? Colors.white : colors.text2,
                           ),
                         ),
@@ -232,18 +247,23 @@ class _FeedbackBottomSheetState extends ConsumerState<_FeedbackBottomSheet> {
                 maxLines: 4,
                 style: AppTypography.body(colors.text),
                 decoration: InputDecoration(
-                  hintText: 'Describe what happened, or share an idea that would make your reading better...',
+                  hintText:
+                      'Describe what happened, or share an idea that would make your reading better...',
                   hintStyle: AppTypography.body(colors.text3),
                   filled: true,
                   fillColor: colors.bg,
                   contentPadding: const EdgeInsets.all(14),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide(color: colors.border.withValues(alpha: 0.1)),
+                    borderSide: BorderSide(
+                      color: colors.border.withValues(alpha: 0.1),
+                    ),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide(color: colors.border.withValues(alpha: 0.1)),
+                    borderSide: BorderSide(
+                      color: colors.border.withValues(alpha: 0.1),
+                    ),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(16),
@@ -256,7 +276,8 @@ class _FeedbackBottomSheetState extends ConsumerState<_FeedbackBottomSheet> {
 
               // Diagnostics checkbox switch
               GestureDetector(
-                onTap: () => setState(() => _includeDiagnostics = !_includeDiagnostics),
+                onTap: () =>
+                    setState(() => _includeDiagnostics = !_includeDiagnostics),
                 child: Row(
                   children: [
                     Icon(
@@ -287,7 +308,9 @@ class _FeedbackBottomSheetState extends ConsumerState<_FeedbackBottomSheet> {
                 style: FilledButton.styleFrom(
                   backgroundColor: colors.text,
                   foregroundColor: colors.bg,
-                  shape: const RoundedRectangleBorder(borderRadius: AppRadii.brFull),
+                  shape: const RoundedRectangleBorder(
+                    borderRadius: AppRadii.brFull,
+                  ),
                   padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
                 child: _isSubmitting
@@ -299,7 +322,9 @@ class _FeedbackBottomSheetState extends ConsumerState<_FeedbackBottomSheet> {
                       )
                     : Text(
                         'Send Feedback',
-                        style: AppTypography.label(colors.bg).copyWith(fontWeight: FontWeight.w600),
+                        style: AppTypography.label(
+                          colors.bg,
+                        ).copyWith(fontWeight: FontWeight.w600),
                       ),
               ),
             ],

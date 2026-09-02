@@ -85,11 +85,11 @@ class ReaderPalette {
   );
 
   static ReaderPalette of(ReaderThemeMode m) => switch (m) {
-        ReaderThemeMode.light => light,
-        ReaderThemeMode.sepia => sepia,
-        ReaderThemeMode.dark => dark,
-        ReaderThemeMode.black => black,
-      };
+    ReaderThemeMode.light => light,
+    ReaderThemeMode.sepia => sepia,
+    ReaderThemeMode.dark => dark,
+    ReaderThemeMode.black => black,
+  };
 }
 
 @immutable
@@ -113,28 +113,28 @@ class ReadingSettings {
   static const defaults = ReadingSettings();
 
   double get fontSize => switch (size) {
-        ReaderSize.small => 16,
-        ReaderSize.medium => 18,
-        ReaderSize.large => 21,
-        ReaderSize.xlarge => 24,
-      };
+    ReaderSize.small => 16,
+    ReaderSize.medium => 18,
+    ReaderSize.large => 21,
+    ReaderSize.xlarge => 24,
+  };
 
   double get lineHeight => switch (spacing) {
-        ReaderSpacing.tight => 1.4,
-        ReaderSpacing.normal => 1.65,
-        ReaderSpacing.loose => 1.95,
-      };
+    ReaderSpacing.tight => 1.4,
+    ReaderSpacing.normal => 1.65,
+    ReaderSpacing.loose => 1.95,
+  };
 
   double get horizontalMargin => switch (margin) {
-        ReaderMargin.narrow => 16.0,
-        ReaderMargin.normal => 24.0,
-        ReaderMargin.wide => 36.0,
-      };
+    ReaderMargin.narrow => 16.0,
+    ReaderMargin.normal => 24.0,
+    ReaderMargin.wide => 36.0,
+  };
 
   TextAlign get textAlign => switch (alignment) {
-        ReaderAlignment.left => TextAlign.left,
-        ReaderAlignment.justify => TextAlign.justify,
-      };
+    ReaderAlignment.left => TextAlign.left,
+    ReaderAlignment.justify => TextAlign.justify,
+  };
 
   ReaderPalette get palette => ReaderPalette.of(theme);
 
@@ -142,8 +142,8 @@ class ReadingSettings {
   /// choices (sepia, dark, or black) remain independent and are preserved.
   ReaderPalette paletteFor(Brightness appBrightness) =>
       appBrightness == Brightness.dark && theme == ReaderThemeMode.light
-          ? ReaderPalette.dark
-          : palette;
+      ? ReaderPalette.dark
+      : palette;
 
   /// The reflowable EPUB body style: family + size + line-height + ink color.
   TextStyle bodyTextStyle() {
@@ -167,36 +167,36 @@ class ReadingSettings {
     ReaderMargin? margin,
     ReaderAlignment? alignment,
     ReaderThemeMode? theme,
-  }) =>
-      ReadingSettings(
-        font: font ?? this.font,
-        size: size ?? this.size,
-        spacing: spacing ?? this.spacing,
-        margin: margin ?? this.margin,
-        alignment: alignment ?? this.alignment,
-        theme: theme ?? this.theme,
-      );
+  }) => ReadingSettings(
+    font: font ?? this.font,
+    size: size ?? this.size,
+    spacing: spacing ?? this.spacing,
+    margin: margin ?? this.margin,
+    alignment: alignment ?? this.alignment,
+    theme: theme ?? this.theme,
+  );
 
   Map<String, dynamic> toJson() => {
-        'font': font.name,
-        'size': size.name,
-        'spacing': spacing.name,
-        'margin': margin.name,
-        'alignment': alignment.name,
-        'theme': theme.name,
-      };
+    'font': font.name,
+    'size': size.name,
+    'spacing': spacing.name,
+    'margin': margin.name,
+    'alignment': alignment.name,
+    'theme': theme.name,
+  };
 
   factory ReadingSettings.fromJson(Map<String, dynamic> j) => ReadingSettings(
-        font: _byName(ReaderFont.values, j['font'], ReaderFont.serif),
-        size: _byName(ReaderSize.values, j['size'], ReaderSize.medium),
-        spacing:
-            _byName(ReaderSpacing.values, j['spacing'], ReaderSpacing.normal),
-        margin: _byName(ReaderMargin.values, j['margin'], ReaderMargin.normal),
-        alignment: _byName(
-            ReaderAlignment.values, j['alignment'], ReaderAlignment.left),
-        theme:
-            _byName(ReaderThemeMode.values, j['theme'], ReaderThemeMode.light),
-      );
+    font: _byName(ReaderFont.values, j['font'], ReaderFont.serif),
+    size: _byName(ReaderSize.values, j['size'], ReaderSize.medium),
+    spacing: _byName(ReaderSpacing.values, j['spacing'], ReaderSpacing.normal),
+    margin: _byName(ReaderMargin.values, j['margin'], ReaderMargin.normal),
+    alignment: _byName(
+      ReaderAlignment.values,
+      j['alignment'],
+      ReaderAlignment.left,
+    ),
+    theme: _byName(ReaderThemeMode.values, j['theme'], ReaderThemeMode.light),
+  );
 
   static T _byName<T extends Enum>(List<T> values, Object? name, T fallback) {
     for (final v in values) {
@@ -258,4 +258,5 @@ class ReadingSettingsController extends StateNotifier<ReadingSettings> {
 
 final readingSettingsProvider =
     StateNotifierProvider<ReadingSettingsController, ReadingSettings>(
-        (ref) => ReadingSettingsController());
+      (ref) => ReadingSettingsController(),
+    );

@@ -77,9 +77,9 @@ class _LogPhysicalBookSheetState extends ConsumerState<_LogPhysicalBookSheet> {
 
     if (result is CatalogBook) {
       _populateFromCatalog(result);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Found “${result.title}”')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Found “${result.title}”')));
     } else if (result is String) {
       _isbn.text = result;
       await _lookupIsbn(result);
@@ -97,9 +97,9 @@ class _LogPhysicalBookSheetState extends ConsumerState<_LogPhysicalBookSheet> {
       if (!mounted) return;
       if (book != null) {
         _populateFromCatalog(book);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Autofilled “${book.title}”')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Autofilled “${book.title}”')));
       }
     } catch (_) {
       // Best-effort lookup
@@ -232,9 +232,9 @@ class _LogPhysicalBookSheetState extends ConsumerState<_LogPhysicalBookSheet> {
                             children: [
                               Text(
                                 'Scan ISBN barcode',
-                                style: AppTypography.body(colors.text).copyWith(
-                                  fontWeight: FontWeight.w600,
-                                ),
+                                style: AppTypography.body(
+                                  colors.text,
+                                ).copyWith(fontWeight: FontWeight.w600),
                               ),
                               Text(
                                 'Auto-fills title, author, and cover',
@@ -243,10 +243,7 @@ class _LogPhysicalBookSheetState extends ConsumerState<_LogPhysicalBookSheet> {
                             ],
                           ),
                         ),
-                        Icon(
-                          Icons.chevron_right_rounded,
-                          color: colors.text3,
-                        ),
+                        Icon(Icons.chevron_right_rounded, color: colors.text3),
                       ],
                     ),
                   ),

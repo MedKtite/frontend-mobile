@@ -4,7 +4,6 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
-
 import '../../app/routes.dart';
 import '../../app/theme/tokens/colors.dart';
 import '../../app/theme/tokens/radii.dart';
@@ -34,7 +33,6 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(homeProvider);
-
 
     ref.watch(trendingBooksProvider);
     ref.watch(topAuthorsProvider);
@@ -67,20 +65,16 @@ class HomeScreen extends ConsumerWidget {
             listening: null,
             onPlay: () {},
           ),
-          HomeLoaded(
-            :final passage,
-            :final listening,
-          ) =>
-            _PopulatedHome(
-              greetingName: name,
-              avatarInitial: initial,
-              passage: passage,
-              listening: listening,
-              onPlay: () {
-                final l = listening;
-                if (l != null) context.push(Routes.listeningPath(l.id));
-              },
-            ),
+          HomeLoaded(:final passage, :final listening) => _PopulatedHome(
+            greetingName: name,
+            avatarInitial: initial,
+            passage: passage,
+            listening: listening,
+            onPlay: () {
+              final l = listening;
+              if (l != null) context.push(Routes.listeningPath(l.id));
+            },
+          ),
           HomeError(:final message) => SafeArea(
             bottom: false,
             child: _ErrorState(
@@ -266,9 +260,7 @@ class _HomeHero extends ConsumerWidget {
         //   ),
         // ),
         Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.xl,
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -309,7 +301,10 @@ class _HomeHero extends ConsumerWidget {
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 color: colors.gilt,
-                                border: Border.all(color: colors.surface, width: 1.5),
+                                border: Border.all(
+                                  color: colors.surface,
+                                  width: 1.5,
+                                ),
                               ),
                             ),
                           ),
@@ -369,8 +364,6 @@ class _HomeHero extends ConsumerWidget {
     );
   }
 }
-
-
 
 class _HeroAction extends StatelessWidget {
   const _HeroAction({required this.onTap, required this.child});
@@ -608,7 +601,8 @@ class _ContinueRow extends ConsumerWidget {
             scrollDirection: Axis.horizontal,
             itemCount: displayBooks.length,
             separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.md),
-            itemBuilder: (context, i) => _ContinueRowCard(book: displayBooks[i]),
+            itemBuilder: (context, i) =>
+                _ContinueRowCard(book: displayBooks[i]),
           ),
         ),
         const SizedBox(height: AppSpacing.xxl),
@@ -635,7 +629,6 @@ class _ContinueRowCard extends StatelessWidget {
           decoration: BoxDecoration(
             color: colors.accent.withValues(alpha: 0.04),
             borderRadius: AppRadii.brMd,
-          
           ),
           padding: const EdgeInsets.all(AppSpacing.md),
           child: Row(

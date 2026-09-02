@@ -122,14 +122,20 @@ class _VoiceMemoSheetState extends ConsumerState<_VoiceMemoSheet> {
         });
       } else {
         if (mounted) {
-          showAppSnack(context, 'Microphone permission denied',
-              type: SnackType.error);
+          showAppSnack(
+            context,
+            'Microphone permission denied',
+            type: SnackType.error,
+          );
         }
       }
     } catch (e) {
       if (mounted) {
-        showAppSnack(context, 'Could not start recording',
-            type: SnackType.error);
+        showAppSnack(
+          context,
+          'Could not start recording',
+          type: SnackType.error,
+        );
       }
     }
   }
@@ -154,13 +160,16 @@ class _VoiceMemoSheetState extends ConsumerState<_VoiceMemoSheet> {
     final navigator = Navigator.of(context);
 
     try {
-      final highlight = await ref.read(highlightServiceProvider).create(
+      final highlight = await ref
+          .read(highlightServiceProvider)
+          .create(
             HighlightCreateRequest(
               bookId: widget.bookId,
               colorTag: _tag,
               audioStartSec: widget.audioStartSec,
               textChapterRef: widget.textChapterRef,
-              passageText: 'Voice reflection (${_formatTimer(_recordDurationSec)})',
+              passageText:
+                  'Voice reflection (${_formatTimer(_recordDurationSec)})',
             ),
           );
 
@@ -169,7 +178,9 @@ class _VoiceMemoSheetState extends ConsumerState<_VoiceMemoSheet> {
           ? '🎙️ Voice Memo: $userText'
           : '🎙️ Spoken reflection (${_formatTimer(_recordDurationSec)})';
 
-      await ref.read(noteServiceProvider).create(
+      await ref
+          .read(noteServiceProvider)
+          .create(
             NoteCreateRequest(
               bookId: widget.bookId,
               bodyMd: body,
@@ -180,8 +191,11 @@ class _VoiceMemoSheetState extends ConsumerState<_VoiceMemoSheet> {
       ref.invalidate(bookHighlightsProvider(widget.bookId));
       if (!mounted) return;
       navigator.pop();
-      showAppSnack(context, 'Voice memo saved to “${widget.bookTitle}”',
-          type: SnackType.success);
+      showAppSnack(
+        context,
+        'Voice memo saved to “${widget.bookTitle}”',
+        type: SnackType.success,
+      );
     } on ApiError catch (e) {
       if (mounted) {
         setState(() => _busy = false);
@@ -190,8 +204,11 @@ class _VoiceMemoSheetState extends ConsumerState<_VoiceMemoSheet> {
     } catch (_) {
       if (mounted) {
         setState(() => _busy = false);
-        showAppSnack(context, 'Could not save voice memo',
-            type: SnackType.error);
+        showAppSnack(
+          context,
+          'Could not save voice memo',
+          type: SnackType.error,
+        );
       }
     }
   }
@@ -222,10 +239,7 @@ class _VoiceMemoSheetState extends ConsumerState<_VoiceMemoSheet> {
             ),
           ),
           const SizedBox(height: AppSpacing.lg),
-          Text(
-            'Record Voice Memo',
-            style: AppTypography.title2(colors.text),
-          ),
+          Text('Record Voice Memo', style: AppTypography.title2(colors.text)),
           const SizedBox(height: AppSpacing.xs),
           Text(
             widget.audioStartSec != null
@@ -260,10 +274,11 @@ class _VoiceMemoSheetState extends ConsumerState<_VoiceMemoSheet> {
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: (_isRecording
-                                  ? const Color(0xFFEF5350)
-                                  : colors.accent)
-                              .withValues(alpha: 0.35),
+                          color:
+                              (_isRecording
+                                      ? const Color(0xFFEF5350)
+                                      : colors.accent)
+                                  .withValues(alpha: 0.35),
                           blurRadius: 20,
                           spreadRadius: _isRecording ? 4 : 1,
                         ),
@@ -279,18 +294,17 @@ class _VoiceMemoSheetState extends ConsumerState<_VoiceMemoSheet> {
                 const SizedBox(height: AppSpacing.lg),
                 Text(
                   _formatTimer(_recordDurationSec),
-                  style: AppTypography.display(colors.text).copyWith(
-                    fontSize: 28,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: AppTypography.display(
+                    colors.text,
+                  ).copyWith(fontSize: 28, fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: AppSpacing.xs),
                 Text(
                   _isRecording
                       ? 'Recording… Tap red button to stop'
                       : _recordedFilePath != null
-                          ? 'Memo recorded. Ready to save.'
-                          : 'Tap microphone to start recording',
+                      ? 'Memo recorded. Ready to save.'
+                      : 'Tap microphone to start recording',
                   style: AppTypography.caption(
                     _isRecording ? const Color(0xFFEF5350) : colors.text2,
                   ).copyWith(fontWeight: FontWeight.w500),
@@ -315,9 +329,7 @@ class _VoiceMemoSheetState extends ConsumerState<_VoiceMemoSheet> {
                     label: Text(t),
                     selected: active,
                     selectedColor: tagColor.withValues(alpha: 0.2),
-                    side: BorderSide(
-                      color: active ? tagColor : colors.border,
-                    ),
+                    side: BorderSide(color: active ? tagColor : colors.border),
                     labelStyle: AppTypography.caption(
                       active ? tagColor : colors.text2,
                     ).copyWith(fontWeight: FontWeight.w600),
@@ -365,8 +377,9 @@ class _VoiceMemoSheetState extends ConsumerState<_VoiceMemoSheet> {
                   )
                 : Text(
                     'Save Voice Memo',
-                    style: AppTypography.label(colors.bg)
-                        .copyWith(fontWeight: FontWeight.w600),
+                    style: AppTypography.label(
+                      colors.bg,
+                    ).copyWith(fontWeight: FontWeight.w600),
                   ),
           ),
         ],

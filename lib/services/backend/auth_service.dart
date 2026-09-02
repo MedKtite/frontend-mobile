@@ -7,12 +7,14 @@ import '../../models/oauth_login_request.dart';
 import '../../models/register_request.dart';
 import '../../models/user.dart';
 
-
 class AuthService {
   final Dio _dio;
   AuthService(this._dio);
 
-  Future<User> register(RegisterRequest req, {bool emailUpdates = false}) async {
+  Future<User> register(
+    RegisterRequest req, {
+    bool emailUpdates = false,
+  }) async {
     final res = await _dio.post<Map<String, dynamic>>(
       '/auth/register',
       data: req.toJson(),
@@ -20,11 +22,16 @@ class AuthService {
     final user = User.fromJson(res.data!);
 
     try {
-      final preferences = await _dio.get<Map<String, dynamic>>('/me/notifications/preferences');
+      final preferences = await _dio.get<Map<String, dynamic>>(
+        '/me/notifications/preferences',
+      );
       final categories = Map<String, dynamic>.from(
         (preferences.data?['categories'] as Map?) ?? const <String, dynamic>{},
       )..['email_updates'] = emailUpdates;
-      await _dio.patch<void>('/me/notifications/preferences', data: {'categories': categories});
+      await _dio.patch<void>(
+        '/me/notifications/preferences',
+        data: {'categories': categories},
+      );
     } on ApiError {
       // Registration succeeded; preference sync is non-fatal.
     }
@@ -66,10 +73,7 @@ class AuthService {
   }
 
   Future<void> requestPasswordReset(String email) async {
-    await _dio.post<void>(
-      '/auth/password/forgot',
-      data: {'email': email},
-    );
+    await _dio.post<void>('/auth/password/forgot', data: {'email': email});
   }
 
   Future<void> resetPassword({
@@ -89,5 +93,6 @@ class AuthService {
   }
 }
 
-final authServiceProvider =
-    Provider<AuthService>((ref) => AuthService(ref.watch(dioProvider)));
+final authServiceProvider = Provider<AuthService>(
+  (ref) => AuthService(ref.watch(dioProvider)),
+);

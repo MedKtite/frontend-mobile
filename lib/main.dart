@@ -3,10 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:flutter_localizations/flutter_localizations.dart';
+
 import 'app/routes.dart';
 import 'app/theme/app_theme.dart';
 import 'core/dio_client.dart';
 import 'core/widgets/app_background.dart';
+import 'providers/language_provider.dart';
 import 'providers/theme_provider.dart';
 import 'services/frontend/launch_service.dart';
 import 'services/frontend/sharing_intent_service.dart';
@@ -64,6 +67,18 @@ class MarginaliaApp extends ConsumerWidget {
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
       themeMode: ref.watch(themeProvider),
+      locale: ref.watch(languageProvider),
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('en'),
+        Locale('fr'),
+        Locale('es'),
+        Locale('ar'),
+      ],
       routerConfig: router,
       builder: (context, child) =>
           AppBackground(child: child ?? const SizedBox.shrink()),

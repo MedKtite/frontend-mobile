@@ -1,4 +1,3 @@
-
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,9 +5,8 @@ import 'package:package_info_plus/package_info_plus.dart';
 
 /// Collects client and device metadata without contacting the backend.
 class DeviceInfoService {
-  DeviceInfoService({
-    DeviceInfoPlugin? deviceInfo,
-  }) : _deviceInfo = deviceInfo ?? DeviceInfoPlugin();
+  DeviceInfoService({DeviceInfoPlugin? deviceInfo})
+    : _deviceInfo = deviceInfo ?? DeviceInfoPlugin();
 
   final DeviceInfoPlugin _deviceInfo;
 
@@ -41,8 +39,9 @@ class DeviceInfoService {
   }
 }
 
-final deviceInfoServiceProvider =
-    Provider<DeviceInfoService>((ref) => DeviceInfoService());
+final deviceInfoServiceProvider = Provider<DeviceInfoService>(
+  (ref) => DeviceInfoService(),
+);
 
 final deviceInfoProvider = FutureProvider<Map<String, dynamic>>(
   (ref) => ref.watch(deviceInfoServiceProvider).getAll(),

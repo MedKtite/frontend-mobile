@@ -27,7 +27,6 @@ class LoginScreen extends ConsumerStatefulWidget {
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _socialAuth = SocialAuthService();
 
-
   final _formKey = GlobalKey<FormState>();
   final _email = TextEditingController();
   final _password = TextEditingController();
@@ -47,7 +46,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         .login(email: _email.text.trim(), password: _password.text);
   }
 
-
   Future<void> _socialLogin(String provider) async {
     try {
       final token = provider == 'Google'
@@ -61,7 +59,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         await auth.loginWithX(token: token);
       }
     } on SocialAuthException catch (e) {
-      if (mounted) showAppSnack(context, AuthErrorMessages.from(e.message, context: AuthErrorContext.signIn), type: SnackType.error);
+      if (mounted) {
+        showAppSnack(
+          context,
+          AuthErrorMessages.from(e.message, context: AuthErrorContext.signIn),
+          type: SnackType.error,
+        );
+      }
     }
   }
 
@@ -155,7 +159,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              
               GestureDetector(
                 onTap: () => context.push(
                   Routes.forgotPassword,

@@ -127,8 +127,12 @@ GoRouter createAppRouter({
         final extra = state.extra;
         final token = extra is Map<String, dynamic>
             ? (extra['code'] ?? extra['token'] ?? '')
-            : (extra is String ? extra : (state.uri.queryParameters['token'] ?? ''));
-        final email = extra is Map<String, dynamic> ? extra['email'] as String? : null;
+            : (extra is String
+                  ? extra
+                  : (state.uri.queryParameters['token'] ?? ''));
+        final email = extra is Map<String, dynamic>
+            ? extra['email'] as String?
+            : null;
         return _AuthGuard(
           child: ResetPasswordScreen(token: token.toString(), email: email),
         );

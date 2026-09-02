@@ -25,7 +25,8 @@ enum _Filter {
   saved('Saved', 'SAVED FOR LATER'),
   reading('Reading', 'IN PROGRESS'),
   listening('Listening', 'LISTENING'),
-  finished('Finished', 'RECENTLY FINISHED');
+  finished('Finished', 'RECENTLY FINISHED'),
+  uploads('Uploads', 'MY UPLOADS');
 
   const _Filter(this.label, this.section);
   final String label;
@@ -37,6 +38,7 @@ enum _Filter {
     _Filter.reading => b.status == 'reading',
     _Filter.listening => b.status == 'listening',
     _Filter.finished => b.status == 'finished',
+    _Filter.uploads => b.isUploaded,
   };
 }
 
@@ -199,8 +201,14 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     final visible = sorted.where((book) {
       if (!_filter.matches(book)) return false;
       if (query.isEmpty) return true;
+      final matchesFormat = book.format?.toLowerCase().contains(query) ?? false;
+      final matchesUpload =
+          (query.contains('upload') || query.contains('my upload')) &&
+          book.isUploaded;
       return book.title.toLowerCase().contains(query) ||
-          (book.author?.toLowerCase().contains(query) ?? false);
+          (book.author?.toLowerCase().contains(query) ?? false) ||
+          matchesFormat ||
+          matchesUpload;
     }).toList();
 
     return [
@@ -221,9 +229,13 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
           padding: const EdgeInsets.symmetric(vertical: AppSpacing.xxxl),
           child: Center(
             child: Text(
-              query.isEmpty
-                  ? 'Nothing here yet.'
-                  : 'No saved books match your search.',
+              query.isNotEmpty
+                  ? 'No saved books match your search.'
+                  : switch (_filter) {
+                      _Filter.uploads =>
+                        'No uploaded books yet.\nTap + to import an EPUB or PDF.',
+                      _ => 'Nothing here yet.',
+                    },
               textAlign: TextAlign.center,
               style: AppTypography.subtitle(colors.text2),
             ),
@@ -417,6 +429,7 @@ class _GridCell extends StatelessWidget {
       coverUrl: proxiedCoverUrl(book.coverUrl),
       width: width,
       processingStatus: book.processingStatus,
+      badge: book.isUploaded ? 'Upload' : null,
       onTap: () => context.push(Routes.bookDetail, extra: book),
       onLongPress: onDelete,
     );

@@ -96,8 +96,11 @@ class _CatalogBookScreenState extends ConsumerState<CatalogBookScreen> {
     final contentType = _contentTypeFor(ext);
     if (bytes == null || contentType == null) {
       if (mounted) {
-        showAppSnack(context, 'Unsupported file — pick an EPUB or PDF.',
-            type: SnackType.warning);
+        showAppSnack(
+          context,
+          'Unsupported file — pick an EPUB or PDF.',
+          type: SnackType.warning,
+        );
       }
       return;
     }
@@ -122,7 +125,9 @@ class _CatalogBookScreenState extends ConsumerState<CatalogBookScreen> {
         contentLength: bytes.length,
         contentType: contentType,
       );
-      await ref.read(bookServiceProvider).create(
+      await ref
+          .read(bookServiceProvider)
+          .create(
             BookCreateRequest(
               title: book.title,
               format: ext,
@@ -146,8 +151,12 @@ class _CatalogBookScreenState extends ConsumerState<CatalogBookScreen> {
       });
       messenger
         ..hideCurrentSnackBar()
-        ..showSnackBar(appSnackBar(
-            'Added “${book.title}” to your library', SnackType.success));
+        ..showSnackBar(
+          appSnackBar(
+            'Added “${book.title}” to your library',
+            SnackType.success,
+          ),
+        );
       router.go(Routes.library);
     } on ApiError catch (e) {
       if (!mounted) return;
@@ -160,11 +169,14 @@ class _CatalogBookScreenState extends ConsumerState<CatalogBookScreen> {
       setState(() => _adding = false);
       messenger
         ..hideCurrentSnackBar()
-        ..showSnackBar(appSnackBar(
-            'Upload failed — check your connection.', SnackType.error));
+        ..showSnackBar(
+          appSnackBar(
+            'Upload failed — check your connection.',
+            SnackType.error,
+          ),
+        );
     }
   }
-
 
   Future<void> _createLibraryBook({
     required String status,
@@ -176,7 +188,9 @@ class _CatalogBookScreenState extends ConsumerState<CatalogBookScreen> {
     setState(() => _adding = true);
     String? error;
     try {
-      await ref.read(bookServiceProvider).create(
+      await ref
+          .read(bookServiceProvider)
+          .create(
             BookCreateRequest(
               title: book.title,
               format: format,
@@ -615,10 +629,7 @@ class _CatalogBookScreenState extends ConsumerState<CatalogBookScreen> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const AppProgressRing(
-              size: 18,
-              strokeWidth: 1.5,
-            ),
+            const AppProgressRing(size: 18, strokeWidth: 1.5),
             const SizedBox(width: AppSpacing.md),
             Text(
               'Uploading and adding to library…',

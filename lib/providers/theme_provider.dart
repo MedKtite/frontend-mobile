@@ -14,7 +14,8 @@ class ThemeController extends StateNotifier<ThemeMode> {
   Future<void> _restore() async {
     try {
       final saved = await SecureStorage.read(_storageKey);
-      state = ThemeMode.values.where((mode) => mode.name == saved).firstOrNull ??
+      state =
+          ThemeMode.values.where((mode) => mode.name == saved).firstOrNull ??
           ThemeMode.system;
     } catch (_) {
       state = ThemeMode.system;

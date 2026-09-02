@@ -15,7 +15,8 @@ import 'state/home_state.dart';
 /// recent highlights (`/me/highlights`), then derives the resume/resurface
 /// surfaces. Requires an authenticated session (cookies) — reached after login.
 class HomeController extends StateNotifier<HomeState> {
-  HomeController(this._books, this._highlights) : super(const HomeState.loading()) {
+  HomeController(this._books, this._highlights)
+    : super(const HomeState.loading()) {
     load();
   }
 
@@ -115,8 +116,8 @@ class HomeController extends StateNotifier<HomeState> {
       final ref = h.textChapterRef;
       final humanRef =
           (ref != null && ref.isNotEmpty && !ref.startsWith('epubcfi('))
-              ? ref
-              : null;
+          ? ref
+          : null;
       final source = [
         if (book != null) book.title,
         if (humanRef != null) humanRef,
@@ -159,8 +160,7 @@ class HomeController extends StateNotifier<HomeState> {
   static String _openedKey(Book b) => b.lastOpenedAt ?? b.createdAt ?? '';
 }
 
-final homeProvider =
-    StateNotifierProvider<HomeController, HomeState>((ref) {
+final homeProvider = StateNotifierProvider<HomeController, HomeState>((ref) {
   final controller = HomeController(
     ref.watch(bookServiceProvider),
     ref.watch(highlightServiceProvider),

@@ -140,9 +140,9 @@ class _TableOfContentsSheetState extends State<TableOfContentsSheet> {
                     ),
                     child: Text(
                       '${widget.chapters.length} chapters',
-                      style: AppTypography.caption(colors.text2).copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
+                      style: AppTypography.caption(
+                        colors.text2,
+                      ).copyWith(fontWeight: FontWeight.w600),
                     ),
                   ),
                 ],
@@ -164,10 +164,18 @@ class _TableOfContentsSheetState extends State<TableOfContentsSheet> {
                   style: AppTypography.body(colors.text),
                   decoration: InputDecoration(
                     hintText: 'Search chapters…',
-                    prefixIcon: Icon(Icons.search, size: 20, color: colors.text3),
+                    prefixIcon: Icon(
+                      Icons.search,
+                      size: 20,
+                      color: colors.text3,
+                    ),
                     suffixIcon: _query.isNotEmpty
                         ? IconButton(
-                            icon: Icon(Icons.clear, size: 18, color: colors.text3),
+                            icon: Icon(
+                              Icons.clear,
+                              size: 18,
+                              color: colors.text3,
+                            ),
                             onPressed: () {
                               _searchController.clear();
                               setState(() => _query = '');
@@ -255,13 +263,19 @@ class _TableOfContentsSheetState extends State<TableOfContentsSheet> {
                                   width: 32,
                                   alignment: Alignment.centerLeft,
                                   child: Text(
-                                    (originalIndex + 1).toString().padLeft(2, '0'),
-                                    style: AppTypography.caption(
-                                      isCurrent ? colors.accent : colors.text3,
-                                    ).copyWith(
-                                      fontWeight: FontWeight.w700,
-                                      letterSpacing: 0.5,
+                                    (originalIndex + 1).toString().padLeft(
+                                      2,
+                                      '0',
                                     ),
+                                    style:
+                                        AppTypography.caption(
+                                          isCurrent
+                                              ? colors.accent
+                                              : colors.text3,
+                                        ).copyWith(
+                                          fontWeight: FontWeight.w700,
+                                          letterSpacing: 0.5,
+                                        ),
                                   ),
                                 ),
                                 const SizedBox(width: AppSpacing.sm),
@@ -269,17 +283,21 @@ class _TableOfContentsSheetState extends State<TableOfContentsSheet> {
                                 // Title & stats
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         displayTitle,
-                                        style: AppTypography.bodySerif(
-                                          isCurrent ? colors.accent : colors.text,
-                                        ).copyWith(
-                                          fontWeight: isCurrent
-                                              ? FontWeight.w700
-                                              : FontWeight.normal,
-                                        ),
+                                        style:
+                                            AppTypography.bodySerif(
+                                              isCurrent
+                                                  ? colors.accent
+                                                  : colors.text,
+                                            ).copyWith(
+                                              fontWeight: isCurrent
+                                                  ? FontWeight.w700
+                                                  : FontWeight.normal,
+                                            ),
                                       ),
                                       if (totalChars > 0) ...[
                                         const SizedBox(height: 2),

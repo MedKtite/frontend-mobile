@@ -57,12 +57,7 @@ class AppProgressLoading extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (useRing) {
-      return Center(
-        child: AppProgressRing(
-          size: ringSize,
-          strokeWidth: 1.5,
-        ),
-      );
+      return Center(child: AppProgressRing(size: ringSize, strokeWidth: 1.5));
     }
     return Center(
       child: SizedBox(

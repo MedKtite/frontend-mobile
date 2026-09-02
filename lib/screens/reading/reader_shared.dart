@@ -42,10 +42,7 @@ class ReaderLoading extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const AppProgressRing(
-                size: 36,
-                strokeWidth: 1.5,
-              ),
+              const AppProgressRing(size: 36, strokeWidth: 1.5),
               const SizedBox(height: AppSpacing.lg),
               Text(
                 'Loading text…',
@@ -62,11 +59,7 @@ class ReaderLoading extends StatelessWidget {
 
 /// Back · Table of Contents · centered book title · "Aa" type control.
 class ReaderTopBar extends StatelessWidget {
-  const ReaderTopBar({
-    super.key,
-    required this.title,
-    this.onOpenToc,
-  });
+  const ReaderTopBar({super.key, required this.title, this.onOpenToc});
 
   final String title;
   final VoidCallback? onOpenToc;
@@ -88,9 +81,7 @@ class ReaderTopBar extends StatelessWidget {
             // them instead of running underneath the back arrow / "Aa".
             Align(
               child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 72,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 72),
                 child: Text(
                   title,
                   maxLines: 1,

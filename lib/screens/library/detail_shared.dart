@@ -57,8 +57,9 @@ class StatChip extends StatelessWidget {
             const SizedBox(width: AppSpacing.xs),
             Text(
               value,
-              style: AppTypography.label(colors.text)
-                  .copyWith(fontWeight: FontWeight.w700),
+              style: AppTypography.label(
+                colors.text,
+              ).copyWith(fontWeight: FontWeight.w700),
             ),
           ],
         ),

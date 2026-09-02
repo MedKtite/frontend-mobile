@@ -144,16 +144,13 @@ class AppProgressRing extends StatelessWidget {
           );
 
     if (!showLabel) {
-      return SizedBox(
-        width: size,
-        height: size,
-        child: ringWidget,
-      );
+      return SizedBox(width: size, height: size, child: ringWidget);
     }
 
     final colors = context.appColors;
     final pctText = '${(clamped * 100).round()}%';
-    final effectiveTextStyle = labelStyle ??
+    final effectiveTextStyle =
+        labelStyle ??
         AppTypography.caption(colors.text2).copyWith(
           fontSize: (size * 0.32).clamp(10.0, 14.0),
           fontWeight: FontWeight.w500,
@@ -163,17 +160,9 @@ class AppProgressRing extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        SizedBox(
-          width: size,
-          height: size,
-          child: ringWidget,
-        ),
+        SizedBox(width: size, height: size, child: ringWidget),
         const SizedBox(height: AppSpacing.xs),
-        Text(
-          pctText,
-          textAlign: TextAlign.center,
-          style: effectiveTextStyle,
-        ),
+        Text(pctText, textAlign: TextAlign.center, style: effectiveTextStyle),
       ],
     );
   }

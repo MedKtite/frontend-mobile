@@ -90,7 +90,8 @@ class UserAvatar extends ConsumerWidget {
 
   void _showAvatarOptions(BuildContext context, WidgetRef ref) {
     final colors = context.appColors;
-    final hasCustomAvatar = user?.avatarUrl != null && user!.avatarUrl!.isNotEmpty;
+    final hasCustomAvatar =
+        user?.avatarUrl != null && user!.avatarUrl!.isNotEmpty;
 
     showModalBottomSheet<void>(
       context: context,
@@ -132,9 +133,16 @@ class UserAvatar extends ConsumerWidget {
                     color: colors.gilt.withValues(alpha: 0.12),
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(Icons.photo_library_outlined, color: colors.gilt, size: 20),
+                  child: Icon(
+                    Icons.photo_library_outlined,
+                    color: colors.gilt,
+                    size: 20,
+                  ),
                 ),
-                title: Text('Choose from Gallery / Files', style: AppTypography.body(colors.text)),
+                title: Text(
+                  'Choose from Gallery / Files',
+                  style: AppTypography.body(colors.text),
+                ),
                 onTap: () {
                   Navigator.of(ctx).pop();
                   _pickAndUploadImage(context, ref);
@@ -148,9 +156,16 @@ class UserAvatar extends ConsumerWidget {
                       color: colors.danger.withValues(alpha: 0.12),
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(Icons.delete_outline_rounded, color: colors.danger, size: 20),
+                    child: Icon(
+                      Icons.delete_outline_rounded,
+                      color: colors.danger,
+                      size: 20,
+                    ),
                   ),
-                  title: Text('Remove Photo', style: AppTypography.body(colors.danger)),
+                  title: Text(
+                    'Remove Photo',
+                    style: AppTypography.body(colors.danger),
+                  ),
                   onTap: () {
                     Navigator.of(ctx).pop();
                     _removeAvatar(context, ref);
@@ -166,8 +181,11 @@ class UserAvatar extends ConsumerWidget {
 
   Widget _buildImageContent(BuildContext context) {
     final avatarUrl = user?.avatarUrl;
-    final initial = user?.avatarInitial ??
-        (user?.displayName.isNotEmpty == true ? user!.displayName[0].toUpperCase() : 'M');
+    final initial =
+        user?.avatarInitial ??
+        (user?.displayName.isNotEmpty == true
+            ? user!.displayName[0].toUpperCase()
+            : 'M');
 
     if (avatarUrl != null && avatarUrl.isNotEmpty) {
       if (avatarUrl.startsWith('data:image')) {
