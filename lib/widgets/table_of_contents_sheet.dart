@@ -4,6 +4,7 @@ import '../app/theme/tokens/colors.dart';
 import '../app/theme/tokens/radii.dart';
 import '../app/theme/tokens/spacing.dart';
 import '../app/theme/tokens/typography.dart';
+import '../core/widgets/app_text_field.dart';
 import '../models/reader_package.dart';
 
 /// Shows the Table of Contents modal sheet for in-book navigation.
@@ -65,11 +66,17 @@ class _TableOfContentsSheetState extends State<TableOfContentsSheet> {
     final size = MediaQuery.of(context).size;
 
     final filteredChapters = widget.chapters.asMap().entries.where((entry) {
-      if (_query.isEmpty) return true;
+      if (_query.trim().isEmpty) return true;
       final title = entry.value.title.toLowerCase();
       final indexStr = '${entry.key + 1}';
-      final q = _query.toLowerCase();
-      return title.contains(q) || indexStr == q;
+      final q = _query.toLowerCase().trim();
+      final cleanQ = q.replaceAll(
+        RegExp(r'^(chapter|ch|cha|sec|section)\s*'),
+        '',
+      );
+      return title.contains(q) ||
+          indexStr == q ||
+          (cleanQ.isNotEmpty && indexStr == cleanQ);
     }).toList();
 
     return Container(
@@ -158,46 +165,18 @@ class _TableOfContentsSheetState extends State<TableOfContentsSheet> {
                   AppSpacing.pageHorizontal,
                   AppSpacing.sm,
                 ),
-                child: TextField(
+                child: AppTextField(
                   controller: _searchController,
+                  hint: 'Search chapters…',
+                  search: true,
+                  prefixIcon: Icons.search,
+                  fillColor: colors.surface2,
+                  textInputAction: TextInputAction.search,
                   onChanged: (val) => setState(() => _query = val.trim()),
-                  style: AppTypography.body(colors.text),
-                  decoration: InputDecoration(
-                    hintText: 'Search chapters…',
-                    prefixIcon: Icon(
-                      Icons.search,
-                      size: 20,
-                      color: colors.text3,
-                    ),
-                    suffixIcon: _query.isNotEmpty
-                        ? IconButton(
-                            icon: Icon(
-                              Icons.clear,
-                              size: 18,
-                              color: colors.text3,
-                            ),
-                            onPressed: () {
-                              _searchController.clear();
-                              setState(() => _query = '');
-                            },
-                          )
-                        : null,
-                    isDense: true,
-                    filled: true,
-                    fillColor: colors.surface2,
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.md,
-                      vertical: AppSpacing.sm,
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppRadii.md),
-                      borderSide: BorderSide(color: colors.border),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppRadii.md),
-                      borderSide: BorderSide(color: colors.border),
-                    ),
-                  ),
+                  onClear: () {
+                    _searchController.clear();
+                    setState(() => _query = '');
+                  },
                 ),
               ),
             ],

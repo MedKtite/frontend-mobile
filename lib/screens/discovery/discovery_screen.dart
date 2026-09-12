@@ -501,17 +501,43 @@ class _DiscoveryScreenState extends ConsumerState<DiscoveryScreen> {
                 : 'No catalog matches. Try fewer words or another filter.',
           );
         }
-        return _CatalogGrid(
-          books: books,
-          onOpen: (book) => context.push(Routes.catalogBook, extra: book),
+        final hasGutenberg = _freeOnly || books.any(
+          (b) =>
+              b.source?.toUpperCase() == 'GUTENBERG' ||
+              b.gutenbergId != null ||
+              b.isReadable,
+        );
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (hasGutenberg) ...[
+              _GutenbergAttributionBanner(freeOnly: _freeOnly),
+              const SizedBox(height: AppSpacing.md),
+            ],
+            _CatalogGrid(
+              books: books,
+              onOpen: (book) => context.push(Routes.catalogBook, extra: book),
+            ),
+          ],
         );
       },
     );
   }
 
-  Widget _busy(AppColorsExtension colors) => const Padding(
-    padding: EdgeInsets.symmetric(vertical: AppSpacing.xxl),
-    child: AppProgressLoading(),
+  Widget _busy(AppColorsExtension colors) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: AppSpacing.xxl),
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const AppProgressLoading(),
+        const SizedBox(height: AppSpacing.md),
+        Text(
+          'Searching catalog & Project Gutenberg…',
+          style: AppTypography.caption(colors.text3),
+        ),
+      ],
+    ),
   );
 
   Widget _message(AppColorsExtension colors, String message) => Padding(
@@ -1049,3 +1075,42 @@ class _CatalogCell extends StatelessWidget {
     );
   }
 }
+
+class _GutenbergAttributionBanner extends StatelessWidget {
+  const _GutenbergAttributionBanner({required this.freeOnly});
+
+  final bool freeOnly;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: AppRadii.brMd,
+        border: Border.all(color: colors.border),
+      ),
+      child: Row(
+        children: [
+          // Icon(
+          //   Icons.auto_stories_outlined,
+          //   size: 16,
+          //   color: colors.accent,
+          // ),
+          // const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Text(
+              'Free public domain books are provided courtesy of Project Gutenberg.',
+              style: AppTypography.caption(colors.text2),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+

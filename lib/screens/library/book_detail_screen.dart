@@ -123,18 +123,22 @@ class BookDetailScreen extends ConsumerWidget {
       );
     }
 
+    final needExtras =
+        displayBook.description == null ||
+        displayBook.pageCount == null ||
+        displayBook.publishedYear == null;
     final extrasKey = (
       gutenbergId: displayBook.gutenbergId,
       googleId: displayBook.googleId,
       title: displayBook.title,
       author: displayBook.author,
     );
-    final extrasAsync = ref.watch(bookExtrasProvider(extrasKey));
-    if (extrasAsync.isLoading) {
-      return const Scaffold(body: SafeArea(child: AppProgressLoading()));
-    }
+    final extrasAsync = needExtras
+        ? ref.watch(bookExtrasProvider(extrasKey))
+        : null;
+    final loadingExtras = extrasAsync?.isLoading ?? false;
 
-    final extras = extrasAsync.valueOrNull;
+    final extras = extrasAsync?.valueOrNull;
     final description = cleanHtml(
       displayBook.description ?? extras?.description,
     );
@@ -216,7 +220,15 @@ class BookDetailScreen extends ConsumerWidget {
                         ],
                       ),
 
-                      if (description.isNotEmpty) ...[
+                      if (loadingExtras && description.isEmpty) ...[
+                        const SizedBox(height: AppSpacing.xl),
+                        Text(
+                          'Description',
+                          style: AppTypography.title3(colors.text),
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                        const AppProgressLoading(width: 140),
+                      ] else if (description.isNotEmpty) ...[
                         const SizedBox(height: AppSpacing.xl),
                         Text(
                           'Description',
@@ -232,8 +244,9 @@ class BookDetailScreen extends ConsumerWidget {
                       // Marginalia & Highlights Section (shown only when highlights exist)
                       highlightsAsync.when(
                         data: (highlights) {
-                          if (highlights.isEmpty)
+                          if (highlights.isEmpty) {
                             return const SizedBox.shrink();
+                          }
                           return Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [

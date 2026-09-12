@@ -81,7 +81,10 @@ Future<({String? description, int? downloads})> _loadGutenbergExtras(
     try {
       final res = await dio.get<Map<String, dynamic>>(
         'https://gutendex.com/books/$gutenbergId',
-        options: Options(receiveTimeout: const Duration(seconds: 10)),
+        options: Options(
+          connectTimeout: const Duration(seconds: 2),
+          receiveTimeout: const Duration(seconds: 2),
+        ),
       );
       final s = res.data?['summaries'];
       if (s is List && s.isNotEmpty && s.first is String) {

@@ -121,6 +121,11 @@ class _TypographySheet extends ConsumerWidget {
               ),
 
               const SizedBox(height: AppSpacing.lg),
+              const _SectionLabel('BOOK MODE VIEW'),
+              const SizedBox(height: AppSpacing.sm),
+              _BookModeRow(value: s.scrollMode, onChanged: ctrl.setScrollMode),
+
+              const SizedBox(height: AppSpacing.lg),
               const _SectionLabel('THEME'),
               const SizedBox(height: AppSpacing.sm),
               _ThemeRow(value: s.theme, onChanged: ctrl.setTheme),
@@ -508,6 +513,79 @@ class _ThemeRow extends StatelessWidget {
           ),
         );
       }).toList(),
+    );
+  }
+}
+
+class _BookModeRow extends StatelessWidget {
+  const _BookModeRow({required this.value, required this.onChanged});
+  final ReaderScrollMode value;
+  final ValueChanged<ReaderScrollMode> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+
+    final options = [
+      (ReaderScrollMode.vertical, 'Vertical', Icons.swap_vert_rounded),
+      (ReaderScrollMode.horizontal, 'Horizontal', Icons.swap_horiz_rounded),
+    ];
+
+    return Container(
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: colors.surface2,
+        borderRadius: BorderRadius.circular(AppRadii.lg),
+      ),
+      child: Row(
+        children: options.map((opt) {
+          final isSelected = value == opt.$1;
+          return Expanded(
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => onChanged(opt.$1),
+              child: Container(
+                height: 42,
+                alignment: Alignment.center,
+                decoration: isSelected
+                    ? BoxDecoration(
+                        color: colors.bg,
+                        borderRadius: BorderRadius.circular(AppRadii.md),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.08),
+                            blurRadius: 2,
+                            offset: const Offset(0, 1),
+                          ),
+                        ],
+                      )
+                    : null,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      opt.$3,
+                      size: 18,
+                      color: isSelected ? colors.text : colors.text2,
+                    ),
+                    const SizedBox(width: AppSpacing.xs),
+                    Text(
+                      opt.$2,
+                      style: AppTypography.label(
+                        isSelected ? colors.text : colors.text2,
+                      ).copyWith(
+                        fontWeight: isSelected
+                            ? FontWeight.w600
+                            : FontWeight.normal,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
     );
   }
 }

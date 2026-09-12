@@ -18,6 +18,7 @@ import '../../providers/theme_provider.dart';
 import '../../providers/language_provider.dart';
 import '../../providers/reading_settings_provider.dart';
 import '../../widgets/auth_scaffold.dart';
+// import '../../widgets/setting/book_mode_picker_sheet.dart';
 import '../../widgets/setting/language_picker_sheet.dart';
 import '../../widgets/setting/theme_picker_sheet.dart';
 import '../../widgets/setting/typography_sheet.dart';
@@ -91,6 +92,21 @@ class SettingsScreen extends ConsumerWidget {
                                 .languageCode,
                           ),
                         ),
+                      ],
+                    ),
+
+                    const SizedBox(height: AppSpacing.xl),
+                    _Section(
+                      label: 'READING EXPERIENCE',
+                      rows: [
+                        // _SettingsRow(
+                        //   label: 'Book mode view',
+                        //   value: readingSettings.scrollMode.label,
+                        //   onTap: () => showBookModePickerSheet(
+                        //     context,
+                        //     selected: readingSettings.scrollMode,
+                        //   ),
+                        // ),
                         _SettingsRow(
                           label: 'Typography',
                           value: _typographyLabel(readingSettings),

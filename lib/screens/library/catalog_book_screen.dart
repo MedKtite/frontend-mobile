@@ -451,6 +451,12 @@ class _CatalogBookScreenState extends ConsumerState<CatalogBookScreen> {
                           style: AppTypography.bodySerif(colors.text2),
                         ),
                       ],
+                      if (book.isReadable ||
+                          book.gutenbergId != null ||
+                          book.source?.toUpperCase() == 'GUTENBERG') ...[
+                        const SizedBox(height: AppSpacing.xl),
+                        // _gutenbergAttribution(colors),
+                      ],
                       // Metadata-only titles keep the get/request/upload
                       // stack in the body; readable ones get the pinned CTA.
                       if (!book.isReadable && ownedBook == null) ...[
@@ -617,6 +623,40 @@ class _CatalogBookScreenState extends ConsumerState<CatalogBookScreen> {
   }
 
   // ── METADATA_ONLY: buy · upload ───────────────────────────────────────
+
+  // Widget _gutenbergAttribution(AppColorsExtension colors) {
+  //   return Container(
+  //     padding: const EdgeInsets.all(AppSpacing.md),
+  //     decoration: BoxDecoration(
+  //       color: colors.surface,
+  //       borderRadius: AppRadii.brMd,
+  //       border: Border.all(color: colors.border),
+  //     ),
+  //     child: Row(
+  //       crossAxisAlignment: CrossAxisAlignment.start,
+  //       children: [
+  //         Expanded(
+  //           child: Column(
+  //             crossAxisAlignment: CrossAxisAlignment.start,
+  //             children: [
+  //               Text(
+  //                 'Project Gutenberg Edition',
+  //                 style: AppTypography.caption(colors.text).copyWith(
+  //                   fontWeight: FontWeight.w600,
+  //                 ),
+  //               ),
+  //               const SizedBox(height: 2),
+  //               Text(
+  //                 'This is a free public domain work provided courtesy of Project Gutenberg. You can read it directly in Marginalia or save it to your library.',
+  //                 style: AppTypography.caption(colors.text2),
+  //               ),
+  //             ],
+  //           ),
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
 
   Widget _storeActions(AppColorsExtension colors) {
     if (_adding) {

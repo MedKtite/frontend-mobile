@@ -17,6 +17,7 @@ class BookCard extends StatelessWidget {
     this.processingStatus,
     this.progressPct,
     this.badge,
+    this.badgeIcon,
     this.onTap,
     this.onLongPress,
   });
@@ -30,6 +31,7 @@ class BookCard extends StatelessWidget {
   final String? processingStatus;
   final double? progressPct;
   final String? badge;
+  final IconData? badgeIcon;
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
 
@@ -87,7 +89,7 @@ class BookCard extends StatelessWidget {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(
-                              Icons.upload_file_rounded,
+                              badgeIcon ?? Icons.upload_file_rounded,
                               size: 10,
                               color: colors.bg,
                             ),

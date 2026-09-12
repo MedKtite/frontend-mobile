@@ -86,12 +86,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         await auth.loginWithX(token: token);
       }
     } on SocialAuthException catch (e) {
-      if (mounted)
+      if (mounted) {
         showAppSnack(
           context,
           AuthErrorMessages.from(e.message, context: AuthErrorContext.register),
           type: SnackType.error,
         );
+      }
     }
   }
 

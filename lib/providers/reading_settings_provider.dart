@@ -25,6 +25,21 @@ enum ReaderMargin { narrow, normal, wide }
 
 enum ReaderAlignment { left, justify }
 
+enum ReaderScrollMode {
+  vertical,
+  horizontal;
+
+  String get label => switch (this) {
+    ReaderScrollMode.vertical => 'Vertical',
+    ReaderScrollMode.horizontal => 'Horizontal',
+  };
+
+  Axis get axis => switch (this) {
+    ReaderScrollMode.vertical => Axis.vertical,
+    ReaderScrollMode.horizontal => Axis.horizontal,
+  };
+}
+
 enum ReaderThemeMode { light, sepia, dark, black }
 
 /// The reading-surface palette per [ReaderThemeMode] — independent of the app's
@@ -101,6 +116,7 @@ class ReadingSettings {
     this.margin = ReaderMargin.normal,
     this.alignment = ReaderAlignment.left,
     this.theme = ReaderThemeMode.light,
+    this.scrollMode = ReaderScrollMode.vertical,
   });
 
   final ReaderFont font;
@@ -109,6 +125,7 @@ class ReadingSettings {
   final ReaderMargin margin;
   final ReaderAlignment alignment;
   final ReaderThemeMode theme;
+  final ReaderScrollMode scrollMode;
 
   static const defaults = ReadingSettings();
 
@@ -167,6 +184,7 @@ class ReadingSettings {
     ReaderMargin? margin,
     ReaderAlignment? alignment,
     ReaderThemeMode? theme,
+    ReaderScrollMode? scrollMode,
   }) => ReadingSettings(
     font: font ?? this.font,
     size: size ?? this.size,
@@ -174,6 +192,7 @@ class ReadingSettings {
     margin: margin ?? this.margin,
     alignment: alignment ?? this.alignment,
     theme: theme ?? this.theme,
+    scrollMode: scrollMode ?? this.scrollMode,
   );
 
   Map<String, dynamic> toJson() => {
@@ -183,6 +202,7 @@ class ReadingSettings {
     'margin': margin.name,
     'alignment': alignment.name,
     'theme': theme.name,
+    'scrollMode': scrollMode.name,
   };
 
   factory ReadingSettings.fromJson(Map<String, dynamic> j) => ReadingSettings(
@@ -196,6 +216,11 @@ class ReadingSettings {
       ReaderAlignment.left,
     ),
     theme: _byName(ReaderThemeMode.values, j['theme'], ReaderThemeMode.light),
+    scrollMode: _byName(
+      ReaderScrollMode.values,
+      j['scrollMode'],
+      ReaderScrollMode.vertical,
+    ),
   );
 
   static T _byName<T extends Enum>(List<T> values, Object? name, T fallback) {
@@ -252,6 +277,11 @@ class ReadingSettingsController extends StateNotifier<ReadingSettings> {
 
   void setTheme(ReaderThemeMode v) {
     state = state.copyWith(theme: v);
+    _persist();
+  }
+
+  void setScrollMode(ReaderScrollMode v) {
+    state = state.copyWith(scrollMode: v);
     _persist();
   }
 }

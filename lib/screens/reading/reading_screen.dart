@@ -339,6 +339,7 @@ class _PdfReaderState extends ConsumerState<_PdfReader> {
 
   @override
   Widget build(BuildContext context) {
+    final settings = ref.watch(readingSettingsProvider);
     if (_error != null) {
       return const ReaderMessage(
         icon: Icons.broken_image_outlined,
@@ -350,7 +351,7 @@ class _PdfReaderState extends ConsumerState<_PdfReader> {
         Expanded(
           child: PdfView(
             controller: _controller,
-            scrollDirection: Axis.horizontal,
+            scrollDirection: settings.scrollMode.axis,
             onDocumentLoaded: (doc) {
               _total = doc.pagesCount;
               _report();
@@ -926,8 +927,9 @@ class _NativeReaderState extends ConsumerState<_NativeReader> {
     if (_error != null) {
       return ReaderMessage(icon: Icons.menu_book_outlined, text: _error!);
     }
-    if (package == null || _flattenedBlocks.isEmpty)
+    if (package == null || _flattenedBlocks.isEmpty) {
       return const ReaderTextLoading();
+    }
     return Stack(
       children: [
         Column(
@@ -938,21 +940,48 @@ class _NativeReaderState extends ConsumerState<_NativeReader> {
                   _onScroll(notification);
                   return false;
                 },
-                child: ListView.builder(
-                  controller: _scrollController,
-                  padding: EdgeInsets.symmetric(
-                    horizontal: settings.horizontalMargin,
-                    vertical: AppSpacing.lg,
-                  ),
-                  itemCount: _flattenedBlocks.length,
-                  itemBuilder: (context, index) {
-                    _onBlockRendered(index);
-                    final item = _flattenedBlocks[index];
-                    return _block(
-                      context,
-                      item.chapterId,
-                      item.block,
-                      highlights,
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final isHorizontal =
+                        settings.scrollMode == ReaderScrollMode.horizontal;
+                    return ListView.builder(
+                      controller: _scrollController,
+                      scrollDirection: settings.scrollMode.axis,
+                      physics: isHorizontal
+                          ? const PageScrollPhysics()
+                          : null,
+                      padding: isHorizontal
+                          ? EdgeInsets.zero
+                          : EdgeInsets.symmetric(
+                              horizontal: settings.horizontalMargin,
+                              vertical: AppSpacing.lg,
+                            ),
+                      itemCount: _flattenedBlocks.length,
+                      itemBuilder: (context, index) {
+                        _onBlockRendered(index);
+                        final item = _flattenedBlocks[index];
+                        final blockWidget = _block(
+                          context,
+                          item.chapterId,
+                          item.block,
+                          highlights,
+                        );
+                        if (isHorizontal) {
+                          return SizedBox(
+                            width: constraints.maxWidth,
+                            child: Padding(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: settings.horizontalMargin,
+                                vertical: AppSpacing.lg,
+                              ),
+                              child: SingleChildScrollView(
+                                child: blockWidget,
+                              ),
+                            ),
+                          );
+                        }
+                        return blockWidget;
+                      },
                     );
                   },
                 ),
