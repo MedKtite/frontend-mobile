@@ -102,6 +102,58 @@ class AuthInterceptor extends Interceptor {
   AuthInterceptor(this._dio);
 
   @override
+  Future<void> onResponse(
+    Response<dynamic> response,
+    ResponseInterceptorHandler handler,
+  ) async {
+    final status = response.statusCode ?? 0;
+    final req = response.requestOptions;
+
+    final isRefresh = req.path.endsWith('/auth/refresh');
+    final isAuthCall = req.path.contains('/auth/');
+    final alreadyRetried = req.extra['__retried__'] == true;
+
+    // Intercept 401 Unauthorized or 403 Forbidden (expired JWT before reaching controller)
+    if ((status == 401 || status == 403) &&
+        !isRefresh &&
+        !isAuthCall &&
+        !alreadyRetried) {
+      try {
+        _ongoingRefresh ??= _refresh();
+        await _ongoingRefresh;
+        _ongoingRefresh = null;
+      } catch (_) {
+        _ongoingRefresh = null;
+        // Refresh failed — pass to _ErrorMappingInterceptor to throw ApiError
+        return handler.next(response);
+      }
+
+      try {
+        final retryOptions = Options(
+          method: req.method,
+          headers: req.headers,
+          extra: {...req.extra, '__retried__': true},
+          responseType: req.responseType,
+          contentType: req.contentType,
+        );
+        final retryResponse = await _dio.request<dynamic>(
+          req.path,
+          data: req.data,
+          queryParameters: req.queryParameters,
+          options: retryOptions,
+        );
+        return handler.resolve(retryResponse);
+      } on DioException catch (retryErr) {
+        return handler.reject(retryErr);
+      } catch (e) {
+        return handler.next(response);
+      }
+    }
+
+    return handler.next(response);
+  }
+
+  @override
   Future<void> onError(
     DioException err,
     ErrorInterceptorHandler handler,
@@ -113,7 +165,10 @@ class AuthInterceptor extends Interceptor {
     final isAuthCall = req.path.contains('/auth/');
     final alreadyRetried = req.extra['__retried__'] == true;
 
-    if (status != 401 || isRefresh || isAuthCall || alreadyRetried) {
+    if ((status != 401 && status != 403) ||
+        isRefresh ||
+        isAuthCall ||
+        alreadyRetried) {
       return handler.next(err);
     }
 
@@ -123,7 +178,7 @@ class AuthInterceptor extends Interceptor {
       _ongoingRefresh = null;
     } catch (_) {
       _ongoingRefresh = null;
-      // Refresh failed — pass the original 401 through.
+      // Refresh failed — pass the original error through.
       return handler.next(err);
     }
 
@@ -179,9 +234,16 @@ class _ErrorMappingInterceptor extends Interceptor {
   void onError(DioException err, ErrorInterceptorHandler handler) {
     // Transport-layer failures (timeouts, no network) — wrap as ApiError.
     if (err.error is ApiError) {
-      throw err.error as ApiError;
+      return handler.next(err);
     }
-    throw ApiError.network(err.message ?? 'Network error');
+    return handler.next(
+      DioException(
+        requestOptions: err.requestOptions,
+        response: err.response,
+        type: err.type,
+        error: ApiError.network(err.message ?? 'Network error'),
+      ),
+    );
   }
 }
 

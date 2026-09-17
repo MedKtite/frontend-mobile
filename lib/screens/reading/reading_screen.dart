@@ -71,7 +71,8 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
     const [],
   );
   late final ValueNotifier<int?> _currentChapterIndex = ValueNotifier(null);
-  void Function(int)? _jumpToChapterCallback;
+  late final ValueNotifier<bool> _isNavigatingChapter = ValueNotifier(false);
+  Future<void> Function(int)? _jumpToChapterCallback;
 
   late final HomeController _homeController;
   late final StateController<ReadingMiniSession?> _miniController;
@@ -109,6 +110,7 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
     _progress.dispose();
     _chapters.dispose();
     _currentChapterIndex.dispose();
+    _isNavigatingChapter.dispose();
     super.dispose();
   }
 
@@ -171,30 +173,84 @@ class _ReadingScreenState extends ConsumerState<ReadingScreen> {
           return Scaffold(
             backgroundColor: colors.bg,
             body: SafeArea(
-              child: Column(
+              child: Stack(
                 children: [
-                  ValueListenableBuilder<List<ReaderChapter>>(
-                    valueListenable: _chapters,
-                    builder: (context, chapterList, _) {
-                      return ReaderTopBar(
-                        title: displayBook?.title ?? 'Reading',
-                        onOpenToc: chapterList.isNotEmpty
-                            ? () => showTableOfContentsSheet(
-                                context: context,
-                                bookTitle: displayBook?.title ?? 'Reading',
-                                chapters: chapterList,
-                                currentChapterIndex: _currentChapterIndex.value,
-                                onSelectChapter: (idx) =>
-                                    _jumpToChapterCallback?.call(idx),
-                              )
-                            : null,
+                  Column(
+                    children: [
+                      ValueListenableBuilder<List<ReaderChapter>>(
+                        valueListenable: _chapters,
+                        builder: (context, chapterList, _) {
+                          return ReaderTopBar(
+                            title: displayBook?.title ?? 'Reading',
+                            onOpenToc: chapterList.isNotEmpty
+                                ? () => showTableOfContentsSheet(
+                                    context: context,
+                                    bookTitle: displayBook?.title ?? 'Reading',
+                                    chapters: chapterList,
+                                    currentChapterIndex:
+                                        _currentChapterIndex.value,
+                                    onSelectChapter: (idx) async {
+                                      _isNavigatingChapter.value = true;
+                                      try {
+                                        await _jumpToChapterCallback?.call(idx);
+                                        await Future.delayed(
+                                          const Duration(milliseconds: 350),
+                                        );
+                                      } finally {
+                                        if (mounted) {
+                                          _isNavigatingChapter.value = false;
+                                        }
+                                      }
+                                    },
+                                  )
+                                : null,
+                          );
+                        },
+                      ),
+                      Expanded(
+                        child: readerBook != null
+                            ? _body(context, readerBook)
+                            : const _TextLoading(),
+                      ),
+                    ],
+                  ),
+
+                  // Non-blocking circular progress indicator while navigating to chapter
+                  ValueListenableBuilder<bool>(
+                    valueListenable: _isNavigatingChapter,
+                    builder: (context, isNavigating, _) {
+                      if (!isNavigating) return const SizedBox.shrink();
+                      return Positioned.fill(
+                        child: IgnorePointer(
+                          ignoring: true,
+                          child: Center(
+                            child: Container(
+                              width: 52,
+                              height: 52,
+                              decoration: BoxDecoration(
+                                color: colors.surface.withValues(alpha: 0.95),
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: colors.border.withValues(alpha: 0.6),
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.08),
+                                    blurRadius: 16,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              alignment: Alignment.center,
+                              child: const AppProgressRing(
+                                size: 26,
+                                strokeWidth: 1.5,
+                              ),
+                            ),
+                          ),
+                        ),
                       );
                     },
-                  ),
-                  Expanded(
-                    child: readerBook != null
-                        ? _body(context, readerBook)
-                        : const _TextLoading(),
                   ),
                 ],
               ),
@@ -393,7 +449,7 @@ class _NativeReader extends ConsumerStatefulWidget {
   final ValueNotifier<ReaderProgress> progress;
   final ValueNotifier<List<ReaderChapter>>? chaptersNotifier;
   final ValueNotifier<int?>? currentChapterNotifier;
-  final ValueChanged<void Function(int)>? onRegisterJump;
+  final ValueChanged<Future<void> Function(int)>? onRegisterJump;
 
   @override
   ConsumerState<_NativeReader> createState() => _NativeReaderState();
@@ -497,7 +553,7 @@ class _NativeReaderState extends ConsumerState<_NativeReader> {
         : (offset > 0 ? offset : 1);
   }
 
-  void _jumpToChapter(int chapterIndex) {
+  Future<void> _jumpToChapter(int chapterIndex) async {
     if (_package == null || !_scrollController.hasClients) return;
     if (chapterIndex < 0 || chapterIndex >= _chapterStartIndices.length) return;
 
@@ -511,13 +567,13 @@ class _NativeReaderState extends ConsumerState<_NativeReader> {
       maxExtent,
     );
 
-    _scrollController.animateTo(
+    widget.currentChapterNotifier?.value = chapterIndex;
+
+    await _scrollController.animateTo(
       targetOffset,
       duration: const Duration(milliseconds: 450),
       curve: Curves.easeInOutCubic,
     );
-
-    widget.currentChapterNotifier?.value = chapterIndex;
   }
 
   void _onBlockRendered(int index) {

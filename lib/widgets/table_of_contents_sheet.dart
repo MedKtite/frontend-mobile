@@ -19,7 +19,7 @@ Future<void> showTableOfContentsSheet({
     context: context,
     useRootNavigator: true,
     isScrollControlled: true,
-    backgroundColor: context.appColors.surface,
+    backgroundColor: Colors.transparent,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadii.xl)),
     ),
@@ -53,6 +53,7 @@ class TableOfContentsSheet extends StatefulWidget {
 class _TableOfContentsSheetState extends State<TableOfContentsSheet> {
   final _searchController = TextEditingController();
   String _query = '';
+  bool _hasSelected = false;
 
   @override
   void dispose() {
@@ -82,7 +83,7 @@ class _TableOfContentsSheetState extends State<TableOfContentsSheet> {
     return Container(
       height: size.height * 0.80,
       decoration: BoxDecoration(
-        color: colors.surface,
+        color: colors.bg,
         borderRadius: const BorderRadius.vertical(
           top: Radius.circular(AppRadii.xl),
         ),
@@ -141,7 +142,7 @@ class _TableOfContentsSheetState extends State<TableOfContentsSheet> {
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: colors.surface2,
+                      color: colors.surface,
                       borderRadius: BorderRadius.circular(AppRadii.full),
                       border: Border.all(color: colors.border),
                     ),
@@ -165,23 +166,21 @@ class _TableOfContentsSheetState extends State<TableOfContentsSheet> {
                   AppSpacing.pageHorizontal,
                   AppSpacing.sm,
                 ),
-                child: AppTextField(
-                  controller: _searchController,
-                  hint: 'Search chapters…',
-                  search: true,
-                  prefixIcon: Icons.search,
-                  fillColor: colors.surface2,
-                  textInputAction: TextInputAction.search,
-                  onChanged: (val) => setState(() => _query = val.trim()),
-                  onClear: () {
-                    _searchController.clear();
-                    setState(() => _query = '');
-                  },
+                child: SizedBox(
+                  height: 42,
+                  child: AppTextField(
+                    controller: _searchController,
+                    hint: 'Search chapters...',
+                    fillColor: colors.surface,
+                    prefixIcon: Icons.search_rounded,
+                    textInputAction: TextInputAction.search,
+                    onChanged: (val) => setState(() => _query = val.trim()),
+                  ),
                 ),
               ),
             ],
 
-            const Divider(height: 1),
+            const SizedBox(height: AppSpacing.xs),
 
             // Chapter List
             Expanded(
@@ -193,16 +192,15 @@ class _TableOfContentsSheetState extends State<TableOfContentsSheet> {
                       ),
                     )
                   : ListView.separated(
-                      padding: const EdgeInsets.symmetric(
-                        vertical: AppSpacing.sm,
+                      padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.pageHorizontal,
+                        AppSpacing.xs,
+                        AppSpacing.pageHorizontal,
+                        AppSpacing.xl,
                       ),
                       itemCount: filteredChapters.length,
-                      separatorBuilder: (_, __) => Divider(
-                        height: 1,
-                        indent: AppSpacing.pageHorizontal,
-                        endIndent: AppSpacing.pageHorizontal,
-                        color: colors.border.withValues(alpha: 0.5),
-                      ),
+                      separatorBuilder: (_, __) =>
+                          const SizedBox(height: AppSpacing.sm),
                       itemBuilder: (context, idx) {
                         final entry = filteredChapters[idx];
                         final originalIndex = entry.key;
@@ -221,96 +219,118 @@ class _TableOfContentsSheetState extends State<TableOfContentsSheet> {
                             ? chapter.title.trim()
                             : 'Chapter ${originalIndex + 1}';
 
-                        return InkWell(
-                          onTap: () {
-                            Navigator.of(context).pop();
-                            widget.onSelectChapter(originalIndex);
-                          },
-                          child: Container(
+                        return Container(
+                          decoration: BoxDecoration(
                             color: isCurrent
                                 ? colors.accent.withValues(alpha: 0.08)
-                                : Colors.transparent,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: AppSpacing.pageHorizontal,
-                              vertical: AppSpacing.md,
+                                : colors.surface,
+                            borderRadius: BorderRadius.circular(AppRadii.lg),
+                            border: Border.all(
+                              color: isCurrent
+                                  ? colors.accent.withValues(alpha: 0.5)
+                                  : colors.border,
+                              width: 1,
                             ),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                // Chapter Number
-                                Container(
-                                  width: 32,
-                                  alignment: Alignment.centerLeft,
-                                  child: Text(
-                                    (originalIndex + 1).toString().padLeft(
-                                      2,
-                                      '0',
-                                    ),
-                                    style:
-                                        AppTypography.caption(
-                                          isCurrent
-                                              ? colors.accent
-                                              : colors.text3,
-                                        ).copyWith(
-                                          fontWeight: FontWeight.w700,
-                                          letterSpacing: 0.5,
-                                        ),
-                                  ),
+                          ),
+                          child: Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(AppRadii.lg),
+                              onTap: () {
+                                if (_hasSelected) return;
+                                _hasSelected = true;
+                                Navigator.of(context).pop();
+                                widget.onSelectChapter(originalIndex);
+                              },
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: AppSpacing.lg,
+                                  vertical: 14,
                                 ),
-                                const SizedBox(width: AppSpacing.sm),
-
-                                // Title & stats
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        displayTitle,
-                                        style:
-                                            AppTypography.bodySerif(
-                                              isCurrent
-                                                  ? colors.accent
-                                                  : colors.text,
-                                            ).copyWith(
-                                              fontWeight: isCurrent
-                                                  ? FontWeight.w700
-                                                  : FontWeight.normal,
-                                            ),
-                                      ),
-                                      if (totalChars > 0) ...[
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          '$estMin min read · ${chapter.blocks.length} paragraphs',
-                                          style: AppTypography.caption(
-                                            colors.text3,
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  children: [
+                                    // Chapter Number
+                                    SizedBox(
+                                      width: 28,
+                                      child: Text(
+                                        (originalIndex + 1).toString().padLeft(
+                                          2,
+                                          '0',
+                                        ),
+                                        style: AppTypography.serif(
+                                          TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w600,
+                                            color: isCurrent
+                                                ? colors.accent
+                                                : colors.text3,
+                                            letterSpacing: 0.5,
                                           ),
                                         ),
-                                      ],
-                                    ],
-                                  ),
-                                ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: AppSpacing.sm),
 
-                                if (isCurrent)
-                                  Container(
-                                    padding: const EdgeInsets.all(4),
-                                    decoration: BoxDecoration(
-                                      color: colors.accent,
-                                      shape: BoxShape.circle,
+                                    // Title & stats
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            displayTitle,
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: AppTypography.serif(
+                                              TextStyle(
+                                                fontSize: 15.5,
+                                                height: 1.25,
+                                                fontWeight: isCurrent
+                                                    ? FontWeight.w700
+                                                    : FontWeight.w600,
+                                                color: isCurrent
+                                                    ? colors.accent
+                                                    : colors.text,
+                                              ),
+                                            ),
+                                          ),
+                                          if (totalChars > 0) ...[
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              '$estMin min read • ${chapter.blocks.length} paragraphs',
+                                              style: AppTypography.caption(
+                                                colors.text3,
+                                              ).copyWith(fontSize: 12),
+                                            ),
+                                          ],
+                                        ],
+                                      ),
                                     ),
-                                    child: const Icon(
-                                      Icons.check,
-                                      size: 14,
-                                      color: Colors.white,
-                                    ),
-                                  )
-                                else
-                                  Icon(
-                                    Icons.chevron_right_rounded,
-                                    size: 18,
-                                    color: colors.text3,
-                                  ),
-                              ],
+                                    const SizedBox(width: AppSpacing.sm),
+
+                                    if (isCurrent)
+                                      Container(
+                                        padding: const EdgeInsets.all(4),
+                                        decoration: BoxDecoration(
+                                          color: colors.accent,
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: const Icon(
+                                          Icons.check_rounded,
+                                          size: 14,
+                                          color: Colors.white,
+                                        ),
+                                      )
+                                    else
+                                      Icon(
+                                        Icons.chevron_right_rounded,
+                                        size: 20,
+                                        color: colors.text3,
+                                      ),
+                                  ],
+                                ),
+                              ),
                             ),
                           ),
                         );
